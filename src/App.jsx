@@ -2,10 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 //IMPORTACION DE COMPONENTES
 import Layout from "./Components/Layout";
+
 import Home from "./Pages/Home";
+
 import ProductsPage from "./Pages/ProductsPage";
 import SalePage from "./Pages/SalePage";
 import OrdersPage from "./Pages/OrdersPage";
+
 import SummaryPage from "./Pages/SummaryPage";
 import SettingsPage from "./Pages/SettingsPage";
 
