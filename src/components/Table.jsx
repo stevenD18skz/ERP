@@ -9,11 +9,15 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import SearchBar from "./searchBar";
 
+import { getProducts } from "../services/portProducts";
+
 export default function Table({ deleteData, updateProduct, data_list }) {
   const [filteredData, setFilteredData] = useState(data_list);
   const [orderby, setOrderby] = useState("");
   const [isAscending, setIsAscending] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+
+  console.log(getProducts());
 
   // Filtrar datos según la barra de búsqueda
   useEffect(() => {
