@@ -148,19 +148,14 @@ const OrdersPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-blue-50 p-6 rounded-xl">
-      <div className="mt-6 border-l-4 border-solid border-l-purple-400 pl-4">
-        <h1 className="mb-4 text-2xl font-bold text-blue-700">
-          Registrar Orden
-        </h1>
+    <div className="min-h-screen bg-purple-50 p-6">
+      <div className="mt-6 border-l-4 border-purple-400 pl-4">
+        <h1 className="mb-4 text-2xl font-bold text-purple-700">Registrar Orden</h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mb-6 rounded bg-white p-6 shadow-md"
-        >
+        <form onSubmit={handleSubmit} className="mb-6 bg-white p-6 shadow-md rounded-lg">
           {currentOrder.map((product, index) => (
-            <div key={index} className="mb-4 flex items-center justify-evenly">
-              <label className="mb-2 block text-blue-700">
+            <div key={index} className="mb-4 flex items-center space-x-4">
+              <label className="flex-1 text-purple-700">
                 Producto:
                 <input
                   type="text"
@@ -170,17 +165,15 @@ const OrdersPage = () => {
                   onFocus={() => setFocusedIndex(index)}
                   onBlur={() => setFocusedIndex(null)}
                   required
-                  className="w-full rounded border border-blue-300 p-2"
+                  className="w-full rounded border border-purple-300 p-2"
                 />
                 {focusedIndex === index && suggestions.length > 0 && (
-                  <ul className="absolute z-10 border border-blue-300 bg-white">
+                  <ul className="absolute z-10 border border-purple-300 bg-white mt-1 rounded shadow-lg">
                     {suggestions.map((suggestion, idx) => (
                       <li
                         key={idx}
-                        onMouseDown={() =>
-                          handleSuggestionClick(index, suggestion)
-                        }
-                        className="cursor-pointer p-2 hover:bg-blue-100"
+                        onMouseDown={() => handleSuggestionClick(index, suggestion)}
+                        className="cursor-pointer p-2 hover:bg-purple-100"
                       >
                         {suggestion.nombre}
                       </li>
@@ -188,7 +181,7 @@ const OrdersPage = () => {
                   </ul>
                 )}
               </label>
-              <label className="mb-2 block text-blue-700">
+              <label className="flex-1 text-purple-700">
                 Cantidad:
                 <input
                   type="number"
@@ -196,24 +189,24 @@ const OrdersPage = () => {
                   value={product.quantity}
                   onChange={(e) => handleChange(index, e)}
                   required
-                  className="w-full rounded border border-blue-300 p-2"
+                  className="w-full rounded border border-purple-300 p-2"
                 />
               </label>
-              <label className="mb-2 block text-blue-700">
+              <label className="flex-1 text-purple-700">
                 Precio:
                 <input
                   type="number"
                   name="price"
                   value={product.price}
                   readOnly
-                  className="w-full rounded border border-blue-300 p-2"
+                  className="w-full rounded border border-purple-300 p-2"
                 />
               </label>
               {currentOrder.length > 1 && (
                 <button
                   type="button"
                   onClick={() => handleRemoveProductField(index)}
-                  className="ml-2 rounded bg-red-700 px-4 py-2 text-white hover:bg-red-800"
+                  className="ml-2 rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
                 >
                   Eliminar
                 </button>
@@ -223,21 +216,19 @@ const OrdersPage = () => {
           <button
             type="button"
             onClick={handleAddProductField}
-            className="mr-2 rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800"
+            className="mr-2 rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
           >
             Añadir Producto
           </button>
           <button
             type="submit"
-            className="rounded bg-blue-700 px-4 py-2 text-white hover:bg-blue-800"
+            className="rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
           >
             Registrar Orden
           </button>
         </form>
 
-        <h2 className="mb-4 text-xl font-bold text-blue-700">
-          Productos en la Orden Actual
-        </h2>
+        <h2 className="mb-4 text-xl font-bold text-purple-700">Productos en la Orden Actual</h2>
         <ul className="mb-6">
           {currentOrder.map((product, index) => (
             <li key={index} className="mb-2">
@@ -245,39 +236,29 @@ const OrdersPage = () => {
             </li>
           ))}
         </ul>
-        <h2 className="mb-4 text-xl font-bold text-blue-700">
-          Total: ${total.toFixed(2)}
-        </h2>
+        <h2 className="mb-4 text-xl font-bold text-purple-700">Total: ${total.toFixed(2)}</h2>
       </div>
 
-      <div className="mt-6 border-l-4 border-solid border-l-purple-500 pl-4">
-        <h2 className="mb-4 text-xl font-bold text-blue-700">
-          Historial de Órdenes
-        </h2>
-        <table className="min-w-full rounded bg-white shadow-md">
+      <div className="mt-6 border-l-4 border-purple-500 pl-4">
+        <h2 className="mb-4 text-xl font-bold text-purple-700">Historial de Órdenes</h2>
+        <table className="min-w-full bg-white shadow-md rounded-lg">
           <thead>
             <tr>
-              <th className="border-b border-blue-300 px-4 py-2 text-left text-blue-700">
-                Productos
-              </th>
-              <th className="border-b border-blue-300 px-4 py-2 text-left text-blue-700">
-                Total
-              </th>
+              <th className="border-b border-purple-300 px-4 py-2 text-left text-purple-700">Productos</th>
+              <th className="border-b border-purple-300 px-4 py-2 text-left text-purple-700">Total</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order, index) => (
-              <tr key={index} className="hover:bg-blue-50">
-                <td className="border-b border-blue-300 px-4 py-2">
+              <tr key={index} className="hover:bg-purple-50">
+                <td className="border-b border-purple-300 px-4 py-2">
                   {order.products.map((product, idx) => (
                     <div key={idx}>
                       {product.product} - {product.quantity} x ${product.price}
                     </div>
                   ))}
                 </td>
-                <td className="border-b border-blue-300 px-4 py-2">
-                  ${order.total.toFixed(2)}
-                </td>
+                <td className="border-b border-purple-300 px-4 py-2">${order.total.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
