@@ -58,9 +58,9 @@ export default function Table({ deleteData, updateProduct, data_list }) {
   const renderButton = () => (
     <button
       onClick={() => console.log("new income")}
-      className="w-3/12 rounded-xl border border-cyan-800 py-3 text-cyan-800 transition-all hover:border-dashed hover:bg-cyan-600 hover:text-white"
+      className="w-3/12 rounded-lg bg-green-500 px-4 py-2 text-white shadow-md hover:bg-green-600"
     >
-      New Income
+      <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Item
     </button>
   );
 
@@ -73,8 +73,8 @@ export default function Table({ deleteData, updateProduct, data_list }) {
 
   if (filteredData.length === 0) {
     return (
-      <div className="bg-slate-300 p-6">
-        <div className="relative overflow-x-auto bg-slate-100 p-5 shadow-md sm:rounded-lg">
+      <div className="p-6">
+        <div className="relative overflow-x-auto bg-white p-5 shadow-md sm:rounded-lg">
           <header className="flex items-center justify-between">
             <SearchBar
               characterSearch={searchQuery}
@@ -82,40 +82,43 @@ export default function Table({ deleteData, updateProduct, data_list }) {
             />
             {renderButton()}
           </header>
-          <p className="mt-4 text-center text-slate-800">No hay productos</p>
+          <p className="mt-4 text-center text-gray-700">No hay productos</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative overflow-x-auto bg-slate-100 p-5 shadow-md sm:rounded-lg">
-      <header className="flex items-center justify-between">
-        <div className="w-8/12">
+    <div className="relative overflow-x-auto rounded-lg bg-white p-6 shadow-lg">
+      <header className="mb-4 flex items-center justify-between">
+        {" "}
+        <div className="w-2/3">
           <SearchBar
             characterSearch={searchQuery}
             setCharacterSearch={setSearchQuery}
+            className="w-2/3"
           />
         </div>
         {renderButton()}
       </header>
 
-      <table className="w-full text-left text-sm text-gray-500 rtl:text-right">
-        <thead className="bg-slate-200 text-xs uppercase text-gray-700">
+      <table className="w-full table-auto border-collapse text-left text-sm text-gray-600">
+        <thead className="bg-gray-100 text-xs font-bold uppercase text-gray-700">
           <tr>
             {Object.keys(filteredData[0])
               .filter((key) => key !== "id")
               .map((key) => (
                 <th key={key} className="px-6 py-3">
                   <div className="flex items-center">
-                    {key}
+                    {key.replace(/_/g, " ")}
                     <button
                       onClick={() => handleOrderBy(key)}
                       aria-label={`Ordenar por ${key}`}
+                      className="ml-2"
                     >
                       <svg
-                        className={`ms-1.5 h-3 w-3 transition-all ${
-                          orderby === key ? "text-orange-600" : ""
+                        className={`h-4 w-4 transition-all ${
+                          orderby === key ? "text-green-500" : "text-gray-400"
                         }`}
                         aria-hidden="true"
                         xmlns="http://www.w3.org/2000/svg"
@@ -128,14 +131,14 @@ export default function Table({ deleteData, updateProduct, data_list }) {
                   </div>
                 </th>
               ))}
-            <th className="px-6 py-3">Acciones</th>
+            <th className="px-6 py-3">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((item) => (
+          {filteredData.map((item, index) => (
             <tr
-              key={item.id}
-              className="border-b bg-slate-100 transition-all hover:bg-slate-200"
+              key={index}
+              className="border-b transition-all hover:bg-gray-50"
             >
               {Object.entries(item).map(
                 ([key, value]) =>
@@ -149,19 +152,21 @@ export default function Table({ deleteData, updateProduct, data_list }) {
                     </td>
                   ),
               )}
-              <td className="flex gap-4 px-6 py-4">
-                <button onClick={() => deleteData(item.id)}>
-                  <FontAwesomeIcon
-                    icon={faDeleteLeft}
-                    className="text-red-500"
-                  />
-                </button>
-                <button onClick={() => updateProduct(item.id)}>
-                  <FontAwesomeIcon
-                    icon={faPenToSquare}
-                    className="text-yellow-500"
-                  />
-                </button>
+              <td className="px-6 py-4">
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => deleteData(item.id)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <FontAwesomeIcon icon={faDeleteLeft} />
+                  </button>
+                  <button
+                    onClick={() => updateProduct(item.id)}
+                    className="text-yellow-500 hover:text-yellow-700"
+                  >
+                    <FontAwesomeIcon icon={faPenToSquare} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

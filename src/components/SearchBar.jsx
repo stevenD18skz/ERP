@@ -24,12 +24,6 @@ export default function SearchBar({ characterSearch, setCharacterSearch }) {
             value={characterSearch || ""}
             onChange={(e) => setCharacterSearch(e.target.value)}
           />
-          <button
-            type="submit"
-            className="ml-2 rounded-md bg-blue-500 px-4 py-1 text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-500"
-          >
-            Search
-          </button>
         </form>
       </div>
     </div>
