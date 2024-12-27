@@ -124,19 +124,22 @@ const SalePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-green-50 p-6">
-      <div className="mt-6 border-l-4 border-green-400 pl-4">
-        <h1 className="mb-4 text-2xl font-bold text-green-700">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mt-6 border-l-4 border-green-500 pl-4">
+        <h1 className="mb-4 text-3xl font-bold text-green-800">
           Registrar Venta
         </h1>
 
         <form
           onSubmit={handleSubmit}
-          className="mb-6 rounded-lg bg-white p-6 shadow-md"
+          className="mb-6 rounded-lg bg-white p-6 shadow-lg"
         >
           {currentSale.map((product, index) => (
-            <div key={index} className="mb-4 flex items-center space-x-4">
-              <label className="flex-1 text-green-700">
+            <div
+              key={index}
+              className="mb-4 flex flex-wrap items-center space-x-4 rounded-lg bg-gray-50 p-4 shadow-sm"
+            >
+              <label className="flex-1 text-gray-700">
                 Producto:
                 <input
                   type="text"
@@ -147,10 +150,10 @@ const SalePage = () => {
                   onFocus={() => setFocusedIndex(index)}
                   onBlur={() => setFocusedIndex(null)}
                   required
-                  className="w-full rounded border border-green-300 p-2"
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-green-500"
                 />
                 {focusedIndex === index && suggestions.length > 0 && (
-                  <ul className="absolute z-10 mt-1 rounded border border-green-300 bg-white shadow-lg">
+                  <ul className="absolute z-10 mt-1 rounded-lg border border-gray-300 bg-white shadow-lg">
                     {suggestions.map((suggestion, idx) => (
                       <li
                         key={idx}
@@ -165,7 +168,7 @@ const SalePage = () => {
                   </ul>
                 )}
               </label>
-              <label className="flex-1 text-green-700">
+              <label className="flex-1 text-gray-700">
                 Cantidad:
                 <input
                   type="number"
@@ -174,24 +177,24 @@ const SalePage = () => {
                   onChange={(e) => handleChange(index, e)}
                   min="1"
                   required
-                  className="w-full rounded border border-green-300 p-2"
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-green-500"
                 />
               </label>
-              <label className="flex-1 text-green-700">
+              <label className="flex-1 text-gray-700">
                 Precio de venta:
                 <input
                   type="number"
                   name="sale_price"
                   value={product.sale_price || "0"}
                   readOnly
-                  className="w-full rounded border border-green-300 p-2"
+                  className="w-full rounded-lg border border-gray-300 bg-gray-100 p-2"
                 />
               </label>
               {currentSale.length > 1 && (
                 <button
                   type="button"
                   onClick={() => handleRemoveProductField(index)}
-                  className="ml-2 rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+                  className="ml-2 rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
                 >
                   Eliminar
                 </button>
@@ -201,47 +204,54 @@ const SalePage = () => {
           <button
             type="button"
             onClick={handleAddProductField}
-            className="mr-2 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+            className="mr-2 rounded-lg bg-green-600 px-4 py-2 text-white shadow-md transition hover:bg-green-700"
           >
             Añadir Producto
           </button>
           <button
             type="submit"
-            className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+            className="rounded-lg bg-green-600 px-4 py-2 text-white shadow-md transition hover:bg-green-700"
           >
             Registrar Venta
           </button>
         </form>
 
-        <h2 className="mb-4 text-xl font-bold text-green-700">
+        <h2 className="mb-4 text-2xl font-bold text-green-800">
           Productos en la Venta Actual
         </h2>
-        <ul className="mb-6">
+        <ul className="mb-6 rounded-lg bg-white p-4 shadow-md">
           {currentSale.map((product, index) => (
-            <li key={index} className="mb-2">
-              {product.product} - {product.quantity} x ${product.sale_price}
+            <li
+              key={index}
+              className="mb-2 flex justify-between border-b border-gray-200 pb-2"
+            >
+              <span>{product.product}</span>
+              <span>
+                {product.quantity} x ${product.sale_price}
+              </span>
             </li>
           ))}
         </ul>
-        <h2 className="mb-4 text-xl font-bold text-green-700">
-          Total: ${totalAmount.toFixed(2)}
+        <h2 className="mb-4 text-2xl font-bold text-green-800">
+          Total:{" "}
+          <span className="text-green-700">${totalAmount.toFixed(2)}</span>
         </h2>
       </div>
 
       <div className="mt-6 border-l-4 border-green-500 pl-4">
-        <h2 className="mb-4 text-xl font-bold text-green-700">
+        <h2 className="mb-4 text-2xl font-bold text-green-800">
           Historial de Ventas
         </h2>
         <table className="min-w-full rounded-lg bg-white shadow-md">
           <thead>
-            <tr>
-              <th className="border-b border-green-300 px-4 py-2 text-left text-green-700">
+            <tr className="bg-green-100">
+              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
                 Productos
               </th>
-              <th className="border-b border-green-300 px-4 py-2 text-left text-green-700">
+              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
                 Total
               </th>
-              <th className="border-b border-green-300 px-4 py-2 text-left text-green-700">
+              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
                 Fecha
               </th>
             </tr>
@@ -249,21 +259,18 @@ const SalePage = () => {
           <tbody>
             {sales.map((sale, index) => (
               <tr key={index} className="hover:bg-green-50">
-                <td className="border-b border-green-300 px-4 py-2">
+                <td className="border-b border-gray-300 px-4 py-2">
                   {sale.products.map((product, idx) => (
-                    <div key={idx}>
+                    <div key={idx} className="text-gray-700">
                       {product.product} - {product.quantity} x $
-                      {product.sale_price} (ID: {product.id})
+                      {product.sale_price}
                     </div>
                   ))}
                 </td>
-                <td className="border-b border-green-300 px-4 py-2">
-                  $
-                  {
-                    sale.total_amount //.toFixed(2)
-                  }
+                <td className="border-b border-gray-300 px-4 py-2 text-gray-800">
+                  ${sale.total_amount}
                 </td>
-                <td className="border-b border-green-300 px-4 py-2">
+                <td className="border-b border-gray-300 px-4 py-2 text-gray-600">
                   {new Date(sale.sale_date).toLocaleDateString("es-ES", {
                     year: "numeric",
                     month: "long",

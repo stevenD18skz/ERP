@@ -37,7 +37,7 @@ export const getSales = async () => {
   );
 
   // Sort sales by date, most recent first
-  //salesWithDetails.sort((a, b) => new Date(b.date) - new Date(a.date));
+  salesWithDetails.sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
 
   return salesWithDetails;
 };
