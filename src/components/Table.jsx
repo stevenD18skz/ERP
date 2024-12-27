@@ -10,16 +10,23 @@ import {
   faSortDown,
 } from "@fortawesome/free-solid-svg-icons";
 import SearchBar from "./searchBar";
+import ModalProduct from "./ModalProduct"; // Import ModalProduct
 
-import { getProducts, deleteProduct, updateProduct } from "../services/portProducts";
+import {
+  getProducts,
+  deleteProduct,
+  updateProduct,
+} from "../services/portProducts";
 
-export default function Table({ deleteData, updateProduct, data_list }) {
+export default function Table({ data_list }) {
   const [filteredData, setFilteredData] = useState(data_list);
   const [orderby, setOrderby] = useState("");
   const [isAscending, setIsAscending] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
-  console.log(getProducts());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5); // Elementos por página
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
+  const [selectedProduct, setSelectedProduct] = useState(null); // State to control selected product
 
   // Filtrar datos según la barra de búsqueda
   useEffect(() => {
@@ -27,7 +34,16 @@ export default function Table({ deleteData, updateProduct, data_list }) {
       item?.name?.toLowerCase().includes(searchQuery.toLowerCase()),
     );
     setFilteredData(filtered);
-  }, [searchQuery, data_list]);
+    setCurrentPage(1); // Resetear a la primera página cuando cambia el filtro
+  }, [searchQuery, data_list, isModalOpen]);
+
+  // Calcular datos visibles para la página actual
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Cambiar de página
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   // Ordenar datos por propiedad
   const handleOrderBy = (prop) => {
@@ -63,7 +79,10 @@ export default function Table({ deleteData, updateProduct, data_list }) {
 
   const renderButton = () => (
     <button
-      onClick={() => console.log("new income")}
+      onClick={() => {
+        setSelectedProduct(null);
+        setIsModalOpen(true);
+      }} // Open modal on button click
       className="w-3/12 rounded-lg bg-green-500 px-4 py-2 text-white shadow-md hover:bg-green-600"
     >
       <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Item
@@ -90,6 +109,16 @@ export default function Table({ deleteData, updateProduct, data_list }) {
           </header>
           <p className="mt-4 text-center text-gray-700">No hay productos</p>
         </div>
+        {isModalOpen && (
+          <ModalProduct
+            product={selectedProduct}
+            onSave={(product) => {
+              updateProduct(product);
+              setIsModalOpen(false);
+            }}
+            onClose={() => setIsModalOpen(false)}
+          />
+        )}
       </div>
     );
   }
@@ -97,19 +126,18 @@ export default function Table({ deleteData, updateProduct, data_list }) {
   return (
     <div className="relative overflow-x-auto rounded-lg bg-white p-6 shadow-lg">
       <header className="mb-4 flex items-center justify-between">
-        {" "}
-        <div className="w-2/3">
+        <div className="flex w-2/3">
           <SearchBar
             characterSearch={searchQuery}
             setCharacterSearch={setSearchQuery}
-            className="w-2/3"
+            className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
         {renderButton()}
       </header>
 
-      <table className="w-full table-auto border-collapse text-left text-sm text-gray-600">
-        <thead className="bg-gray-100 text-xs font-bold uppercase text-gray-700">
+      <table className="w-full table-auto border-collapse text-left text-sm text-gray-700">
+        <thead className="bg-gray-100 text-xs font-semibold uppercase text-gray-600">
           <tr>
             {Object.keys(filteredData[0])
               .filter((key) => key !== "id")
@@ -133,9 +161,7 @@ export default function Table({ deleteData, updateProduct, data_list }) {
                         <FontAwesomeIcon
                           icon={faSortDown}
                           className={`h-4 w-4 transition-all ${
-                            orderby === key
-                              ? "text-blue-300"
-                              : "text-gray-400"
+                            orderby === key ? "text-blue-300" : "text-gray-400"
                           }`}
                         />
                       )}
@@ -147,10 +173,12 @@ export default function Table({ deleteData, updateProduct, data_list }) {
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((item, index) => (
+          {currentItems.map((item, index) => (
             <tr
               key={index}
-              className="border-b transition-all hover:bg-gray-50"
+              className={`border-b transition-all hover:bg-gray-50 ${
+                index % 2 === 0 ? "bg-gray-50" : "bg-white"
+              }`}
             >
               {Object.entries(item).map(
                 ([key, value]) =>
@@ -168,13 +196,16 @@ export default function Table({ deleteData, updateProduct, data_list }) {
                 <div className="flex gap-4">
                   <button
                     onClick={() => deleteData(item.id)}
-                    className="text-red-500 hover:text-red-700"
+                    className="rounded-md bg-red-100 p-2 text-red-500 hover:bg-red-200"
                   >
                     <FontAwesomeIcon icon={faDeleteLeft} />
                   </button>
                   <button
-                    onClick={() => updateProduct(item.id)}
-                    className="text-yellow-500 hover:text-yellow-700"
+                    onClick={() => {
+                      setSelectedProduct(item);
+                      setIsModalOpen(true);
+                    }}
+                    className="rounded-md bg-yellow-100 p-2 text-yellow-500 hover:bg-yellow-200"
                   >
                     <FontAwesomeIcon icon={faPenToSquare} />
                   </button>
@@ -184,6 +215,64 @@ export default function Table({ deleteData, updateProduct, data_list }) {
           ))}
         </tbody>
       </table>
+
+      {/* Controles de Paginación */}
+      <div className="mt-4 flex items-center justify-between">
+        <button
+          onClick={() => paginate(currentPage - 1)}
+          disabled={currentPage === 1}
+          className={`rounded-md px-4 py-2 text-sm font-semibold ${
+            currentPage === 1
+              ? "bg-gray-200 text-gray-400"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          Previous
+        </button>
+        <div className="flex gap-2">
+          {Array.from(
+            { length: Math.ceil(filteredData.length / itemsPerPage) },
+            (_, index) => index + 1,
+          ).map((page) => (
+            <button
+              key={page}
+              onClick={() => paginate(page)}
+              className={`h-8 w-8 rounded-full ${
+                currentPage === page
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => paginate(currentPage + 1)}
+          disabled={
+            currentPage === Math.ceil(filteredData.length / itemsPerPage)
+          }
+          className={`rounded-md px-4 py-2 text-sm font-semibold ${
+            currentPage === Math.ceil(filteredData.length / itemsPerPage)
+              ? "bg-gray-200 text-gray-400"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          Next
+        </button>
+      </div>
+
+      {isModalOpen && (
+        <ModalProduct
+          product={selectedProduct}
+          onSave={(product) => {
+            console.log(product.id, product);
+            updateProduct(product.id, product);
+            setIsModalOpen(false);
+          }}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
