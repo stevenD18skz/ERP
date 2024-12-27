@@ -11,7 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import SearchBar from "./searchBar";
 
-import { getProducts } from "../services/portProducts";
+import { getProducts, deleteProduct, updateProduct } from "../services/portProducts";
 
 export default function Table({ deleteData, updateProduct, data_list }) {
   const [filteredData, setFilteredData] = useState(data_list);
