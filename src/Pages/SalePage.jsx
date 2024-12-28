@@ -11,6 +11,7 @@ const SalePage = () => {
     { id: "", product: "", quantity: "0", sale_price: "0" },
   ]);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [receivedAmount, setReceivedAmount] = useState(0); // Add state for received amount
   const [suggestions, setSuggestions] = useState([]);
   const [focusedIndex, setFocusedIndex] = useState(null);
 
@@ -109,6 +110,7 @@ const SalePage = () => {
     ]);
     setCurrentSale([{ id: "", name: "", quantity: "", sale_price: "" }]);
     setTotalAmount(0);
+    setReceivedAmount(0); // Reset received amount
 
     console.log("venta:", newSale, newTotal, newDate);
 
@@ -225,17 +227,36 @@ const SalePage = () => {
               key={index}
               className="mb-2 flex justify-between border-b border-gray-200 pb-2"
             >
-              <span>{product.product}</span>
+              <span>{product.product || "-----"}</span>
               <span>
                 {product.quantity} x ${product.sale_price}
               </span>
             </li>
           ))}
         </ul>
-        <h2 className="mb-4 text-2xl font-bold text-green-800">
-          Total:{" "}
-          <span className="text-green-700">${totalAmount.toFixed(2)}</span>
-        </h2>
+        <div className="mb-4 mt-4 flex justify-evenly space-x-4">
+          <h2 className="text-2xl font-bold text-green-800">
+            Total:{" "}
+            <span className="text-green-700">${totalAmount.toFixed(2)}</span>
+          </h2>
+          <label className="text-gray-700">
+            Monto Recibido:
+            <input
+              type="number"
+              placeholder="Inserta el monto recibido"
+              onChange={(e) => setReceivedAmount(parseFloat(e.target.value))}
+              className="ml-2 w-32 rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-green-500"
+              value={receivedAmount}
+              min={0}
+            />
+          </label>
+          <h2 className="text-2xl font-bold text-green-800">
+            De Vuelta:{" "}
+            <span className="text-green-700">
+              ${(receivedAmount - totalAmount).toFixed(2) || "0.00"}
+            </span>
+          </h2>
+        </div>
       </div>
 
       <div className="mt-6 border-l-4 border-green-500 pl-4">
