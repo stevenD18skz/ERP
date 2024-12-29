@@ -16,19 +16,39 @@ const SalePage = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [focusedIndex, setFocusedIndex] = useState(null);
   const suggestionBoxRef = useRef(null);
+  const newProductRef = useRef(null);
+  const [loadingSales, setLoadingSales] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  const formatCurrency = (amount) => {
+    return amount
+      ? new Intl.NumberFormat("es-CO", {
+          minimumFractionDigits: 0,
+        }).format(amount)
+      : "";
+  };
 
   /*
   use effect to fetch sales and products
   */
   useEffect(() => {
     const fecthSales = async () => {
-      const sales = await getSales();
-      const p = await getProducts();
-      setSales(sales);
-      setAllProducts(p);
+      setLoadingSales(true);
+      const fecthsales = await getSales();
+      setSales(fecthsales);
+      setLoadingSales(false);
     };
+
+    const fetchProducts = async () => {
+      setLoadingProducts(true);
+      const p = await getProducts();
+      setAllProducts(p);
+      setLoadingProducts(false);
+    };
+
     fecthSales();
-  }, [sales]); // Add sales to dependency array
+    fetchProducts();
+  }, []); // Remove sales from dependency array
 
   /*
   use effect to calculate total amount
@@ -54,8 +74,10 @@ const SalePage = () => {
     setCurrentSale(updatedSale);
 
     if (name === "product") {
-      const filteredSuggestions = allProducts.filter((producto) =>
-        producto.name.toLowerCase().includes(value.toLowerCase()),
+      const filteredSuggestions = allProducts.filter(
+        (producto) =>
+          producto.name.toLowerCase().includes(value.toLowerCase()) &&
+          !currentSale.some((saleItem) => saleItem.product === producto.name),
       );
       setSuggestions(filteredSuggestions);
       setFocusedIndex(index);
@@ -81,6 +103,11 @@ const SalePage = () => {
       ...currentSale,
       { id: "", product: "", quantity: "0", price: "0", sale_price: "0" },
     ]);
+    setTimeout(() => {
+      if (newProductRef.current) {
+        newProductRef.current.focus();
+      }
+    }, 100);
   };
 
   const handleRemoveProductField = (index) => {
@@ -100,6 +127,12 @@ const SalePage = () => {
       0,
     );
     return gain;
+  };
+
+  const handleClearSale = () => {
+    setCurrentSale([{ id: "", product: "", quantity: "0", price: "0", sale_price: "0" }]);
+    setTotalAmount(0);
+    setReceivedAmount(0);
   };
 
   const handleSubmit = (e) => {
@@ -139,6 +172,13 @@ const SalePage = () => {
     );
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddProductField();
+    }
+  };
+
   return (
     <div className="min-h-screen rounded-3xl bg-gray-100 p-6">
       <div className="border-rounded-lg mt-6 border-l-4 border-teal-500 pl-4">
@@ -148,6 +188,7 @@ const SalePage = () => {
 
         <form
           onSubmit={handleSubmit}
+          onKeyDown={handleKeyPress}
           className="mb-6 rounded-lg bg-white p-6 shadow-lg transition hover:shadow-xl"
         >
           {currentSale.map((product, index) => (
@@ -170,6 +211,7 @@ const SalePage = () => {
                   required
                   autoComplete="off"
                   className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-teal-500"
+                  ref={index === currentSale.length - 1 ? newProductRef : null}
                 />
                 {focusedIndex === index && suggestions.length > 0 && (
                   <ul
@@ -198,7 +240,8 @@ const SalePage = () => {
                 <input
                   type="number"
                   name="quantity"
-                  value={product.quantity || "0"}
+                  placeholder="0.00"
+                  value={parseInt(product.quantity, 10) || ""}
                   onChange={(e) => handleChange(index, e)}
                   min="1"
                   required
@@ -245,6 +288,13 @@ const SalePage = () => {
             >
               <i className="fas fa-save"></i> Registrar Venta
             </button>
+            <button
+              type="button"
+              onClick={handleClearSale}
+              className="rounded-lg bg-red-500 px-4 py-2 text-white shadow-md transition hover:bg-red-600"
+            >
+              <i className="fas fa-trash"></i> Limpiar Venta
+            </button>
           </div>
         </form>
 
@@ -269,39 +319,38 @@ const SalePage = () => {
         {/* Resumen */}
         <div className="mb-4 mt-4 flex flex-col space-y-4 md:flex-row md:justify-between md:space-y-0">
           <div className="flex items-center space-x-4">
-            <label className="text-gray-700">Monto Recibido:</label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-gray-500">$</span>
-              <input
-                type="text"
-                placeholder="0"
-                value={
-                  receivedAmount
-                    ? new Intl.NumberFormat("es-CO", {
-                        minimumFractionDigits: 0,
-                      }).format(receivedAmount) // Se elimina el símbolo de la derecha
-                    : ""
-                }
-                onChange={(e) => {
-                  const numericValue = parseFloat(
-                    e.target.value.replace(/[^\d]/g, "") || 0,
-                  );
-                  setReceivedAmount(numericValue);
-                }}
-                className="w-40 rounded-lg border border-gray-300 p-2 pl-8 text-right focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+            <label className="flex items-center text-2xl font-bold text-teal-800">
+              Monto Recibido:
+              <div className="relative flex items-center">
+                <span className="absolute left-3 text-gray-500">$</span>
+                <input
+                  type="text"
+                  placeholder="0"
+                  value={formatCurrency(receivedAmount)}
+                  onChange={(e) => {
+                    const numericValue = parseFloat(
+                      e.target.value.replace(/[^\d]/g, "") || 0,
+                    );
+                    setReceivedAmount(numericValue);
+                  }}
+                  className="w-40 rounded-lg border border-gray-300 p-2 pl-8 text-right text-xl text-teal-900 focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </label>
           </div>
 
           <h2 className="text-2xl font-bold text-teal-800">
             De Vuelta:{" "}
             <span className="text-teal-700">
-              ${(receivedAmount - totalAmount).toFixed(2) || "0.00"}
+              ${formatCurrency(receivedAmount - totalAmount)}
             </span>
           </h2>
+
           <h2 className="text-2xl font-bold text-teal-800">
             Total:{" "}
-            <span className="text-teal-700">${totalAmount.toFixed(2)}</span>
+            <span className="text-teal-700">
+              ${formatCurrency(totalAmount)}
+            </span>
           </h2>
         </div>
       </div>
@@ -310,53 +359,57 @@ const SalePage = () => {
         <h2 className="mb-4 text-3xl font-bold text-green-900">
           Historial de Ventas
         </h2>
-        <table className="min-w-full rounded-lg bg-white shadow-lg">
-          <thead>
-            <tr className="bg-green-100">
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
-                Productos
-              </th>
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
-                Total
-              </th>
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
-                Ganancia
-              </th>
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
-                Fecha
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.map((sale, index) => (
-              <tr key={index} className="hover:bg-green-50">
-                <td className="border-b border-gray-300 px-4 py-2">
-                  {sale.products.map((product, idx) => (
-                    <div key={idx} className="text-gray-700">
-                      {product.product} - {product.quantity} x $
-                      {product.sale_price}
-                    </div>
-                  ))}
-                </td>
-                <td className="border-b border-gray-300 px-4 py-2 text-gray-800">
-                  ${sale.total_amount}
-                </td>
-                <td className="border-b border-gray-300 px-4 py-2 text-gray-800">
-                  ${sale.gain}
-                </td>
-                <td className="border-b border-gray-300 px-4 py-2 text-gray-600">
-                  {new Date(sale.sale_date).toLocaleDateString("es-ES", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </td>
+        {loadingSales ? (
+          <div className="text-center text-green-800">Cargando ventas...</div>
+        ) : (
+          <table className="min-w-full rounded-lg bg-white shadow-lg">
+            <thead>
+              <tr className="bg-green-100">
+                <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
+                  Productos
+                </th>
+                <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
+                  Total
+                </th>
+                <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
+                  Ganancia
+                </th>
+                <th className="border-b border-gray-300 px-4 py-2 text-left text-green-800">
+                  Fecha
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sales.map((sale, index) => (
+                <tr key={index} className="hover:bg-green-50">
+                  <td className="border-b border-gray-300 px-4 py-2">
+                    {sale.products.map((product, idx) => (
+                      <div key={idx} className="text-gray-700">
+                        {product.product} - {product.quantity} x $
+                        {product.sale_price}
+                      </div>
+                    ))}
+                  </td>
+                  <td className="border-b border-gray-300 px-4 py-2 text-gray-800">
+                    ${sale.total_amount}
+                  </td>
+                  <td className="border-b border-gray-300 px-4 py-2 text-gray-800">
+                    ${sale.gain}
+                  </td>
+                  <td className="border-b border-gray-300 px-4 py-2 text-gray-600">
+                    {new Date(sale.sale_date).toLocaleDateString("es-ES", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
