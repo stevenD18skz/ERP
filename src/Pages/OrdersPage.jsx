@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "tailwindcss/tailwind.css";
 import { getOrders, createOrderWithDetails } from "../services/portOrders";
 import { getProducts } from "../services/portProducts";
@@ -12,6 +12,7 @@ const OrdersPage = () => {
   const [total, setTotal] = useState(0);
   const [suggestions, setSuggestions] = useState([]);
   const [focusedIndex, setFocusedIndex] = useState(null);
+  const suggestionBoxRef = useRef(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -110,7 +111,7 @@ const OrdersPage = () => {
 
         <form onSubmit={handleSubmit} className="mb-6 rounded-lg bg-white p-6 shadow-lg">
           {currentOrder.map((product, index) => (
-            <div key={index} className="mb-4 flex flex-wrap items-center space-x-4 rounded-lg bg-gray-50 p-4 shadow-sm">
+            <div key={index} className="mb-4 flex flex-wrap items-center space-x-4 rounded-lg bg-gray-50 p-4 shadow-sm relative">
               <label className="flex-1 text-purple-700">
                 Producto:
                 <input
@@ -125,7 +126,7 @@ const OrdersPage = () => {
                   className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-purple-500"
                 />
                 {focusedIndex === index && suggestions.length > 0 && (
-                  <ul className="absolute z-10 mt-1 rounded-lg border border-gray-300 bg-white shadow-lg">
+                  <ul ref={suggestionBoxRef} className="absolute z-10 mt-1 rounded-lg border border-gray-300 bg-white shadow-lg">
                     {suggestions.map((suggestion, idx) => (
                       <li
                         key={idx}
