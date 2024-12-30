@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 
+import Table from "../components/Table";
+
 import { getSales, createSaleWithDetails } from "../services/portSales";
 import { getProducts } from "../services/portProducts";
 
@@ -130,7 +132,9 @@ const SalePage = () => {
   };
 
   const handleClearSale = () => {
-    setCurrentSale([{ id: "", product: "", quantity: "0", price: "0", sale_price: "0" }]);
+    setCurrentSale([
+      { id: "", product: "", quantity: "0", price: "0", sale_price: "0" },
+    ]);
     setTotalAmount(0);
     setReceivedAmount(0);
   };
