@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import ReactTooltip from "react-tooltip";
 
 import { formatMoneySymbol, formatMoney } from "../utils/converts";
 
@@ -169,18 +168,10 @@ const SummaryPage = () => {
           <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-green-100 to-green-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
             <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
               Ingresos Totales
-              <span
-                data-tip="Suma total de los ingresos obtenidos por ventas en el período seleccionado."
-                className="cursor-pointer text-gray-400"
-                onMouseLeave={() => ReactTooltip.hide()}
-              >
-                <i className="fas fa-info-circle">(i)</i>
-              </span>
             </h3>
             <p className="text-4xl font-bold text-green-600">
               {fetchEarningFull() || "calculando..."}
             </p>
-            <ReactTooltip place="top" type="dark" effect="solid" />
           </div>
 
           {/* Tarjeta 2 */}
@@ -265,7 +256,7 @@ const SummaryPage = () => {
                 <div className="mt-2 text-lg text-gray-500">
                   <span className="font-bold text-blue-500">
                     {product.quantity}
-                  </span>
+                  </span>{" "}
                   vendidos
                 </div>
               </div>
