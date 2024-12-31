@@ -23,7 +23,7 @@ import {
   updateProduct,
 } from "../services/portProducts";
 
-export default function Table({ data_list }) {
+export default function Table({ data_list, onDataUpdate }) {
   const [filteredData, setFilteredData] = useState(data_list);
   const [orderby, setOrderby] = useState("");
   const [isAscending, setIsAscending] = useState(true);
@@ -32,6 +32,8 @@ export default function Table({ data_list }) {
   const [itemsPerPage, setItemsPerPage] = useState(10); // Elementos por página
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
   const [selectedProduct, setSelectedProduct] = useState(null); // State to control selected product
+  const [editProductId, setEditProductId] = useState(null); // State to control which product is being edited
+  const [editProductData, setEditProductData] = useState({}); // State to control the data of the product being edited
 
   // Filtrar datos según la barra de búsqueda
   useEffect(() => {
@@ -104,6 +106,25 @@ export default function Table({ data_list }) {
     // Guardar el archivo
     const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(blob, "products.xlsx");
+  };
+
+  const handleEditChange = (e, key) => {
+    const { value } = e.target;
+    setEditProductData((prevData) => ({
+      ...prevData,
+      [key]: value,
+    }));
+  };
+
+  const saveEdit = async (id) => {
+    await updateProduct(id, editProductData);
+    setEditProductId(null);
+    onDataUpdate(); // Notify parent component to update data
+  };
+
+  const deleteData = async (id) => {
+    await deleteProduct(id);
+    onDataUpdate(); // Notify parent component to update data
   };
 
   if (filteredData.length === 0) {
@@ -254,37 +275,55 @@ export default function Table({ data_list }) {
                 key={index}
                 className="border-b-2 bg-white transition-all hover:bg-slate-100"
               >
-                <td className="px-6 py-4 font-bold capitalize">{item.name}</td>
                 {Object.entries(item).map(
                   ([key, value]) =>
-                    key !== "id" &&
-                    key !== "name" && (
+                    key !== "id" && (
                       <td key={key} className="px-6 py-4">
-                        {typeof value === "boolean"
-                          ? renderIcon(value)
-                          : Array.isArray(value)
-                            ? value.join(", ")
-                            : value}
+                        {editProductId === item.id ? (
+                          <input
+                            type="text"
+                            value={editProductData[key] || value}
+                            onChange={(e) => handleEditChange(e, key)}
+                            className="w-full rounded-md border px-2 py-1"
+                          />
+                        ) : typeof value === "boolean" ? (
+                          renderIcon(value)
+                        ) : Array.isArray(value) ? (
+                          value.join(", ")
+                        ) : (
+                          value
+                        )}
                       </td>
                     ),
                 )}
                 <td className="px-6 py-4">
                   <div className="flex gap-4">
-                    <button
-                      onClick={() => deleteData(item.id)}
-                      className="rounded-md bg-red-100 p-2 text-red-500 hover:bg-red-200"
-                    >
-                      <FontAwesomeIcon icon={faDeleteLeft} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedProduct(item);
-                        setIsModalOpen(true);
-                      }}
-                      className="rounded-md bg-yellow-100 p-2 text-yellow-500 hover:bg-yellow-200"
-                    >
-                      <FontAwesomeIcon icon={faPenToSquare} />
-                    </button>
+                    {editProductId === item.id ? (
+                      <button
+                        onClick={() => saveEdit(item.id)}
+                        className="rounded-md bg-green-100 p-2 text-green-500 hover:bg-green-200"
+                      >
+                        <FontAwesomeIcon icon={faCheck} />
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => deleteData(item.id)}
+                          className="rounded-md bg-red-100 p-2 text-red-500 hover:bg-red-200"
+                        >
+                          <FontAwesomeIcon icon={faDeleteLeft} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditProductId(item.id);
+                            setEditProductData(item);
+                          }}
+                          className="rounded-md bg-yellow-100 p-2 text-yellow-500 hover:bg-yellow-200"
+                        >
+                          <FontAwesomeIcon icon={faPenToSquare} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

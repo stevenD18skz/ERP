@@ -6,18 +6,18 @@ const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const result = await getProducts();
-        setProducts(result);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchProducts = async () => {
+    try {
+      const result = await getProducts();
+      setProducts(result);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProducts();
   }, []);
 
@@ -27,7 +27,7 @@ const ProductsPage = () => {
 
   return (
     <div className="min-h-dvh bg-slate-200">
-      <Table data_list={products} />
+      <Table data_list={products} onDataUpdate={fetchProducts} />
     </div>
   );
 };
