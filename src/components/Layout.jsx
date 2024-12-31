@@ -14,9 +14,11 @@ const Layout = () => {
       {/* Sidebar */}
       <SideBar isExpanded={isSidebarExpanded} onToggle={handleSidebarToggle} />
 
-      <div className={`flex flex-1 flex-col transition-margin duration-300 ${isSidebarExpanded ? "ml-64" : "ml-16"}`}>
+      <div
+        className={`transition-margin flex flex-1 flex-col duration-300 ${isSidebarExpanded ? "ml-64" : "ml-16"}`}
+      >
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-500   dark:bg-gray-800 md:p-6">
+        <main className="h-full flex-1 overflow-y-auto bg-gray-500 dark:bg-gray-800">
           <Outlet />
         </main>
 

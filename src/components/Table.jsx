@@ -10,6 +10,9 @@ import {
   faSortDown,
   faFileExport,
   faFilter,
+  faInbox,
+  faChevronRight,
+  faChevronLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import SearchBar from "./searchBar";
 import ModalProduct from "./ModalProduct"; // Import ModalProduct
@@ -26,7 +29,7 @@ export default function Table({ data_list }) {
   const [isAscending, setIsAscending] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Elementos por página
+  const [itemsPerPage, setItemsPerPage] = useState(10); // Elementos por página
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
   const [selectedProduct, setSelectedProduct] = useState(null); // State to control selected product
 
@@ -79,18 +82,6 @@ export default function Table({ data_list }) {
     setFilteredData(sorted);
   };
 
-  const renderButton = () => (
-    <button
-      onClick={() => {
-        setSelectedProduct(null);
-        setIsModalOpen(true);
-      }}
-      className="rounded-xl bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-    >
-      <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Item
-    </button>
-  );
-
   const renderIcon = (condition) =>
     condition ? (
       <FontAwesomeIcon icon={faCheck} style={{ color: "green" }} />
@@ -98,24 +89,50 @@ export default function Table({ data_list }) {
       <FontAwesomeIcon icon={faTimes} style={{ color: "red" }} />
     );
 
+  const exportToExcel = () => {
+    // Convertir los datos a formato Excel
+    const worksheet = XLSX.utils.json_to_sheet(products);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+
+    // Generar un archivo Excel
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    // Guardar el archivo
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, "products.xlsx");
+  };
+
   if (filteredData.length === 0) {
     return (
-      <div className="p-6">
-        <div className="relative overflow-x-auto bg-white p-5 shadow-md sm:rounded-lg">
-          <header className="flex items-center justify-between">
-            <SearchBar
-              characterSearch={searchQuery}
-              setCharacterSearch={setSearchQuery}
-            />
-            {renderButton()}
-          </header>
-          <p className="mt-4 text-center text-gray-700">No hay productos</p>
+      <div className="bg-slate-200 p-4">
+        <SearchBar
+          characterSearch={searchQuery}
+          setCharacterSearch={setSearchQuery}
+        />{" "}
+        <div className="flex flex-col items-center justify-center gap-4 p-10 text-center">
+          <FontAwesomeIcon icon={faInbox} className="text-6xl text-gray-300" />
+          <p className="text-lg text-gray-500">
+            No products found. Try adjusting your search or add a new product.
+          </p>
+          <button
+            onClick={() => {
+              setSelectedProduct(null);
+              setIsModalOpen(true);
+            }}
+            className="rounded-lg bg-blue-500 px-6 py-2 text-sm text-white transition-all duration-300 hover:bg-blue-700"
+          >
+            Add New Product
+          </button>
         </div>
         {isModalOpen && (
           <ModalProduct
             product={selectedProduct}
             onSave={(product) => {
-              updateProduct(product);
+              updateProduct(product.id, product);
               setIsModalOpen(false);
             }}
             onClose={() => setIsModalOpen(false)}
@@ -130,12 +147,11 @@ export default function Table({ data_list }) {
       <SearchBar
         characterSearch={searchQuery}
         setCharacterSearch={setSearchQuery}
-        className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
       />
 
       <header className="mb-4 flex flex-wrap items-center justify-between gap-4">
         {/* Título */}
-        <h2 className="text-3xl font-bold">Product</h2>
+        <h2 className="text-5xl font-bold">Product</h2>
 
         {/* Contenedor de acciones */}
         <div className="flex w-full flex-wrap justify-end gap-4 sm:w-auto sm:gap-2">
@@ -168,6 +184,7 @@ export default function Table({ data_list }) {
           <button
             className="flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-2 text-sm text-gray-600 transition-all duration-300 hover:bg-slate-400 hover:text-white"
             aria-label="Export products"
+            onClick={exportToExcel}
           >
             <FontAwesomeIcon icon={faFileExport} />
             <span>Export</span>
@@ -189,9 +206,9 @@ export default function Table({ data_list }) {
       </header>
 
       <div className="overflow-hidden rounded-3xl border">
-        <table className="w-full table-auto text-left text-sm text-gray-700">
+        <table className="w-full table-auto text-left text-xl text-gray-700">
           <thead className="border-b-2 bg-white text-xs font-semibold uppercase text-gray-600">
-            <tr className="">
+            <tr>
               {Object.keys(filteredData[0])
                 .filter((key) => key !== "id")
                 .map((key) => (
@@ -226,7 +243,8 @@ export default function Table({ data_list }) {
                     </div>
                   </th>
                 ))}
-              <th className="px-6 py-3">Actions</th>
+              {/* Columna de acciones */}
+              <th className="w-24 px-6 py-3 text-center">Actions</th>
             </tr>
           </thead>
 
@@ -236,9 +254,11 @@ export default function Table({ data_list }) {
                 key={index}
                 className="border-b-2 bg-white transition-all hover:bg-slate-100"
               >
+                <td className="px-6 py-4 font-bold capitalize">{item.name}</td>
                 {Object.entries(item).map(
                   ([key, value]) =>
-                    key !== "id" && (
+                    key !== "id" &&
+                    key !== "name" && (
                       <td key={key} className="px-6 py-4">
                         {typeof value === "boolean"
                           ? renderIcon(value)
@@ -275,17 +295,21 @@ export default function Table({ data_list }) {
 
       {/* Controles de Paginación */}
       <div className="mt-4 flex items-center justify-between">
+        {/* Botón de "Previous" */}
         <button
           onClick={() => paginate(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`rounded-md px-4 py-2 text-sm font-semibold ${
+          className={`flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
             currentPage === 1
-              ? "bg-gray-200 text-gray-400"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              ? "cursor-not-allowed bg-blue-200 text-blue-400"
+              : "bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-800"
           }`}
         >
-          Previous
+          <FontAwesomeIcon icon={faChevronLeft} className="h-4 w-4" />
+          <span className="ml-2">Previous</span>
         </button>
+
+        {/* Páginas numeradas */}
         <div className="flex gap-2">
           {Array.from(
             { length: Math.ceil(filteredData.length / itemsPerPage) },
@@ -294,28 +318,31 @@ export default function Table({ data_list }) {
             <button
               key={page}
               onClick={() => paginate(page)}
-              className={`h-8 w-8 rounded-full ${
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 ${
                 currentPage === page
                   ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-800"
               }`}
             >
               {page}
             </button>
           ))}
         </div>
+
+        {/* Botón de "Next" */}
         <button
           onClick={() => paginate(currentPage + 1)}
           disabled={
             currentPage === Math.ceil(filteredData.length / itemsPerPage)
           }
-          className={`rounded-md px-4 py-2 text-sm font-semibold ${
+          className={`flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
             currentPage === Math.ceil(filteredData.length / itemsPerPage)
-              ? "bg-gray-200 text-gray-400"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              ? "cursor-not-allowed bg-blue-200 text-blue-400"
+              : "bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-800"
           }`}
         >
-          Next
+          <span className="mr-2">Next</span>
+          <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4" />
         </button>
       </div>
 

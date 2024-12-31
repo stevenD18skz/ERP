@@ -25,7 +25,11 @@ const ProductsPage = () => {
     return <div className="mt-10 text-center">Cargando...</div>;
   }
 
-  return <Table data_list={products} />;
+  return (
+    <div className="min-h-dvh bg-slate-200">
+      <Table data_list={products} />
+    </div>
+  );
 };
 
 export default ProductsPage;

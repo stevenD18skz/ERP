@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTimes, faSave } from "@fortawesome/free-solid-svg-icons";
 
 const ModalProduct = ({ product, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -35,41 +37,27 @@ const ModalProduct = ({ product, onSave, onClose }) => {
       aria-labelledby="modal-title"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-2xl scale-95 transform-gpu overflow-hidden rounded-xl bg-white shadow-xl transition-transform">
+      <div className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl transition-transform">
         {/* Botón de cierre */}
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full p-2 text-gray-500 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+          className="absolute right-4 top-4 rounded-full text-gray-500 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
           aria-label="Close"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <FontAwesomeIcon icon={faTimes} className="h-5 w-5" />
         </button>
 
         {/* Encabezado del modal */}
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h2
-            id="modal-title"
-            className="text-lg font-medium leading-6 text-gray-900"
-          >
+        <div className="border-b border-gray-200 pb-4">
+          <h2 id="modal-title" className="text-lg font-bold text-gray-800">
             {product ? "Edit Product" : "Create Product"}
           </h2>
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-4 p-6" noValidate>
-          {/* Campo ID (Independiente en la parte superior) */}
-          <div className="mb-4">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          {/* Campo ID */}
+          <div>
             <label className="block text-sm font-medium text-gray-600">
               ID:
             </label>
@@ -78,13 +66,12 @@ const ModalProduct = ({ product, onSave, onClose }) => {
               name="id"
               value={formData.id}
               readOnly
-              className="mt-1 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700 shadow-sm focus:outline-none"
+              className="mt-1 w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm shadow-sm"
             />
           </div>
 
-          {/* Contenedor de 2 columnas */}
+          {/* Campos en dos columnas */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Campo Name */}
             <div>
               <label className="block text-sm font-medium text-gray-600">
                 Name:
@@ -95,11 +82,9 @@ const ModalProduct = ({ product, onSave, onClose }) => {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
-
-            {/* Campo Price */}
             <div>
               <label className="block text-sm font-medium text-gray-600">
                 Price:
@@ -110,11 +95,9 @@ const ModalProduct = ({ product, onSave, onClose }) => {
                 value={formData.price}
                 onChange={handleChange}
                 required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
-
-            {/* Campo Stock */}
             <div>
               <label className="block text-sm font-medium text-gray-600">
                 Stock:
@@ -125,11 +108,9 @@ const ModalProduct = ({ product, onSave, onClose }) => {
                 value={formData.stock}
                 onChange={handleChange}
                 required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
-
-            {/* Campo Sale Price */}
             <div>
               <label className="block text-sm font-medium text-gray-600">
                 Sale Price:
@@ -140,7 +121,7 @@ const ModalProduct = ({ product, onSave, onClose }) => {
                 value={formData.sale_price}
                 onChange={handleChange}
                 required
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -148,8 +129,9 @@ const ModalProduct = ({ product, onSave, onClose }) => {
           {/* Botón de guardar */}
           <button
             type="submit"
-            className="w-full rounded-md bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
+            <FontAwesomeIcon icon={faSave} />
             Save
           </button>
         </form>

@@ -8,6 +8,8 @@ import {
   faClipboardList,
   faChartBar,
   faCog,
+  faChevronLeft,
+  faChevronRight,
 } from "@fortawesome/free-solid-svg-icons";
 
 const menuItems = [
@@ -24,22 +26,29 @@ const SideBar = ({ isExpanded, onToggle }) => {
 
   return (
     <aside
-      className={`fixed h-full ${isExpanded ? "w-64" : "w-16"} transition-width bg-gray-900 text-white shadow-lg duration-300`}
+      className={`fixed h-full bg-gray-900 text-white shadow-lg transition-all duration-300 ${
+        isExpanded ? "w-64" : "w-16"
+      }`}
     >
       {/* Header del menú */}
       <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 p-4">
-        <h2
-          className={`flex items-center text-xl font-bold ${isExpanded ? "block" : "hidden"}`}
-        >
+        <div className="flex items-center">
           <img
             src="/logo.png"
             alt="Imagen del logo"
-            className="max-w-20 rounded-full"
+            className={`rounded-full transition-all duration-300 ${
+              isExpanded ? "h-8 w-8" : "h-6 w-6"
+            }`}
           />
-          ERP Supermarket
-        </h2>
-        <button onClick={onToggle} className="text-white focus:outline-none">
-          {isExpanded ? "<" : ">"}
+          {isExpanded && (
+            <h2 className="ml-4 text-xl font-bold">ERP Supermarket</h2>
+          )}
+        </div>
+        <button
+          onClick={onToggle}
+          className="text-gray-300 hover:text-white focus:outline-none"
+        >
+          <FontAwesomeIcon icon={isExpanded ? faChevronLeft : faChevronRight} />
         </button>
       </div>
 
@@ -50,11 +59,20 @@ const SideBar = ({ isExpanded, onToggle }) => {
             <li key={item.path}>
               <button
                 onClick={() => navigate(item.path)}
-                className="block w-full items-center rounded-lg p-4 text-left transition hover:bg-gray-700 focus:bg-gray-700 focus:outline-none"
+                className={`mx-4 flex w-10/12 items-center rounded-lg p-3 text-left transition-all duration-300 ${
+                  isExpanded ? "justify-start" : "justify-center"
+                } hover:bg-gray-700 focus:bg-gray-700 focus:outline-none`}
                 aria-label={item.label}
               >
-                <FontAwesomeIcon icon={item.icon} className="mr-2" />
-                {isExpanded && item.label}
+                <FontAwesomeIcon
+                  icon={item.icon}
+                  className="h-5 w-5 text-gray-300"
+                />
+                {isExpanded && (
+                  <span className="ml-4 text-sm text-gray-200">
+                    {item.label}
+                  </span>
+                )}
               </button>
             </li>
           ))}
