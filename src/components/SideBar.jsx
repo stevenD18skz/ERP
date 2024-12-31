@@ -28,8 +28,15 @@ const SideBar = ({ isExpanded, onToggle }) => {
     >
       {/* Header del menú */}
       <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 p-4">
-        <h2 className={`text-xl font-bold ${isExpanded ? "block" : "hidden"}`}>
-          Menú
+        <h2
+          className={`flex items-center text-xl font-bold ${isExpanded ? "block" : "hidden"}`}
+        >
+          <img
+            src="/logo.png"
+            alt="Imagen del logo"
+            className="max-w-20 rounded-full"
+          />
+          ERP Supermarket
         </h2>
         <button onClick={onToggle} className="text-white focus:outline-none">
           {isExpanded ? "<" : ">"}

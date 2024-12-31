@@ -8,6 +8,8 @@ import {
   faCheck,
   faSortUp,
   faSortDown,
+  faFileExport,
+  faFilter,
 } from "@fortawesome/free-solid-svg-icons";
 import SearchBar from "./searchBar";
 import ModalProduct from "./ModalProduct"; // Import ModalProduct
@@ -24,7 +26,7 @@ export default function Table({ data_list }) {
   const [isAscending, setIsAscending] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5); // Elementos por página
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Elementos por página
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
   const [selectedProduct, setSelectedProduct] = useState(null); // State to control selected product
 
@@ -82,8 +84,8 @@ export default function Table({ data_list }) {
       onClick={() => {
         setSelectedProduct(null);
         setIsModalOpen(true);
-      }} // Open modal on button click
-      className="w-3/12 rounded-lg bg-green-500 px-4 py-2 text-white shadow-md hover:bg-green-600"
+      }}
+      className="rounded-xl bg-green-500 px-4 py-2 text-white hover:bg-green-600"
     >
       <FontAwesomeIcon icon={faPlus} className="mr-2" /> Add Item
     </button>
@@ -124,97 +126,152 @@ export default function Table({ data_list }) {
   }
 
   return (
-    <div className="relative overflow-x-auto rounded-lg bg-white p-6 shadow-lg">
-      <header className="mb-4 flex items-center justify-between">
-        <div className="flex w-2/3">
-          <SearchBar
-            characterSearch={searchQuery}
-            setCharacterSearch={setSearchQuery}
-            className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
+    <div className="bg-slate-200 p-4">
+      <SearchBar
+        characterSearch={searchQuery}
+        setCharacterSearch={setSearchQuery}
+        className="w-full rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+      />
+
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        {/* Título */}
+        <h2 className="text-3xl font-bold">Product</h2>
+
+        {/* Contenedor de acciones */}
+        <div className="flex w-full flex-wrap justify-end gap-4 sm:w-auto sm:gap-2">
+          {/* Selector de número de elementos */}
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-700">Showing</p>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="rounded-md border px-2 py-1 text-sm text-gray-600 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              {[5, 10, 15, 20, 25].map((number) => (
+                <option key={number} value={number}>
+                  {number}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Botón de filtro */}
+          <button
+            className="flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-2 text-sm text-gray-600 transition-all duration-300 hover:bg-slate-400 hover:text-white"
+            aria-label="Filter products"
+          >
+            <FontAwesomeIcon icon={faFilter} />
+            <span>Filter</span>
+          </button>
+
+          {/* Botón de exportar */}
+          <button
+            className="flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-2 text-sm text-gray-600 transition-all duration-300 hover:bg-slate-400 hover:text-white"
+            aria-label="Export products"
+          >
+            <FontAwesomeIcon icon={faFileExport} />
+            <span>Export</span>
+          </button>
+
+          {/* Botón de agregar producto */}
+          <button
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-6 py-2 text-sm text-white transition-all duration-300 hover:bg-blue-700"
+            onClick={() => {
+              setSelectedProduct(null);
+              setIsModalOpen(true);
+            }}
+            aria-label="Add new product"
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            <span>Add New Product</span>
+          </button>
         </div>
-        {renderButton()}
       </header>
 
-      <table className="w-full table-auto border-collapse text-left text-sm text-gray-700">
-        <thead className="bg-gray-100 text-xs font-semibold uppercase text-gray-600">
-          <tr>
-            {Object.keys(filteredData[0])
-              .filter((key) => key !== "id")
-              .map((key) => (
-                <th key={key} className="px-6 py-3">
-                  <div className="flex items-center">
-                    {key.replace(/_/g, " ")}
+      <div className="overflow-hidden rounded-3xl border">
+        <table className="w-full table-auto text-left text-sm text-gray-700">
+          <thead className="border-b-2 bg-white text-xs font-semibold uppercase text-gray-600">
+            <tr className="">
+              {Object.keys(filteredData[0])
+                .filter((key) => key !== "id")
+                .map((key) => (
+                  <th key={key} className="px-6 py-3">
+                    <div className="flex items-center">
+                      {key.replace(/_/g, " ")}
+                      <button
+                        onClick={() => handleOrderBy(key)}
+                        aria-label={`Ordenar por ${key}`}
+                        className="ml-2"
+                      >
+                        {orderby === key && isAscending ? (
+                          <FontAwesomeIcon
+                            icon={faSortUp}
+                            className={`h-4 w-4 transition-all ${
+                              orderby === key
+                                ? "text-green-500"
+                                : "text-gray-400"
+                            }`}
+                          />
+                        ) : (
+                          <FontAwesomeIcon
+                            icon={faSortDown}
+                            className={`h-4 w-4 transition-all ${
+                              orderby === key
+                                ? "text-blue-300"
+                                : "text-gray-400"
+                            }`}
+                          />
+                        )}
+                      </button>
+                    </div>
+                  </th>
+                ))}
+              <th className="px-6 py-3">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {currentItems.map((item, index) => (
+              <tr
+                key={index}
+                className="border-b-2 bg-white transition-all hover:bg-slate-100"
+              >
+                {Object.entries(item).map(
+                  ([key, value]) =>
+                    key !== "id" && (
+                      <td key={key} className="px-6 py-4">
+                        {typeof value === "boolean"
+                          ? renderIcon(value)
+                          : Array.isArray(value)
+                            ? value.join(", ")
+                            : value}
+                      </td>
+                    ),
+                )}
+                <td className="px-6 py-4">
+                  <div className="flex gap-4">
                     <button
-                      onClick={() => handleOrderBy(key)}
-                      aria-label={`Ordenar por ${key}`}
-                      className="ml-2"
+                      onClick={() => deleteData(item.id)}
+                      className="rounded-md bg-red-100 p-2 text-red-500 hover:bg-red-200"
                     >
-                      {orderby === key && isAscending ? (
-                        <FontAwesomeIcon
-                          icon={faSortUp}
-                          className={`h-4 w-4 transition-all ${
-                            orderby === key ? "text-green-500" : "text-gray-400"
-                          }`}
-                        />
-                      ) : (
-                        <FontAwesomeIcon
-                          icon={faSortDown}
-                          className={`h-4 w-4 transition-all ${
-                            orderby === key ? "text-blue-300" : "text-gray-400"
-                          }`}
-                        />
-                      )}
+                      <FontAwesomeIcon icon={faDeleteLeft} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(item);
+                        setIsModalOpen(true);
+                      }}
+                      className="rounded-md bg-yellow-100 p-2 text-yellow-500 hover:bg-yellow-200"
+                    >
+                      <FontAwesomeIcon icon={faPenToSquare} />
                     </button>
                   </div>
-                </th>
-              ))}
-            <th className="px-6 py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentItems.map((item, index) => (
-            <tr
-              key={index}
-              className={`border-b transition-all hover:bg-gray-50 ${
-                index % 2 === 0 ? "bg-gray-50" : "bg-white"
-              }`}
-            >
-              {Object.entries(item).map(
-                ([key, value]) =>
-                  key !== "id" && (
-                    <td key={key} className="px-6 py-4">
-                      {typeof value === "boolean"
-                        ? renderIcon(value)
-                        : Array.isArray(value)
-                          ? value.join(", ")
-                          : value}
-                    </td>
-                  ),
-              )}
-              <td className="px-6 py-4">
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => deleteData(item.id)}
-                    className="rounded-md bg-red-100 p-2 text-red-500 hover:bg-red-200"
-                  >
-                    <FontAwesomeIcon icon={faDeleteLeft} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedProduct(item);
-                      setIsModalOpen(true);
-                    }}
-                    className="rounded-md bg-yellow-100 p-2 text-yellow-500 hover:bg-yellow-200"
-                  >
-                    <FontAwesomeIcon icon={faPenToSquare} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* Controles de Paginación */}
       <div className="mt-4 flex items-center justify-between">

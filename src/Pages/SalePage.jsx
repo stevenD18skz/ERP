@@ -214,7 +214,7 @@ const SalePage = () => {
                   onBlur={() => setFocusedIndex(null)}
                   required
                   autoComplete="off"
-                  className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-teal-500"
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:border-teal-500 focus:outline-none"
                   ref={index === currentSale.length - 1 ? newProductRef : null}
                 />
                 {focusedIndex === index && suggestions.length > 0 && (
@@ -249,7 +249,7 @@ const SalePage = () => {
                   onChange={(e) => handleChange(index, e)}
                   min="1"
                   required
-                  className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-teal-500"
+                  className="w-full rounded-lg border border-gray-300 p-2 focus:border-teal-500 focus:outline-none"
                 />
               </label>
 
@@ -262,7 +262,7 @@ const SalePage = () => {
                   name="sale_price"
                   value={product.sale_price || "0"}
                   readOnly
-                  className="w-full rounded-lg border border-gray-300 bg-gray-100 p-2"
+                  className="w-full rounded-lg bg-gray-200 p-2"
                 />
               </label>
 
@@ -337,7 +337,7 @@ const SalePage = () => {
                     );
                     setReceivedAmount(numericValue);
                   }}
-                  className="w-40 rounded-lg border border-gray-300 p-2 pl-8 text-right text-xl text-teal-900 focus:ring-2 focus:ring-green-500"
+                  className="w-40 rounded-lg border border-gray-300 p-2 pl-8 text-right text-xl text-teal-900 focus:border-teal-500 focus:outline-none"
                 />
               </div>
             </label>
