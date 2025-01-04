@@ -29,7 +29,6 @@ ChartJS.register(
 );
 
 import { getSales } from "../services/portSales";
-import Tooltip from "@material-ui/core/Tooltip"; // Import Tooltip component from Material-UI
 
 const SummaryPage = () => {
   const [allsales, setAllSales] = useState([]);
@@ -167,91 +166,66 @@ const SummaryPage = () => {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Tarjeta 1 */}
-          <Tooltip
-            title="Ingresos totales generados por todas las ventas"
-            placement="top"
-          >
-            <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-green-100 to-green-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
-              <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
-                Ingresos Totales
-                <span className="text-sm text-gray-400">(i)</span>
-              </h3>
-              <p className="text-4xl font-bold text-green-600">
-                {fetchEarningFull() || "calculando..."}
-              </p>
-            </div>
-          </Tooltip>
+          <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-green-100 to-green-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
+            <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
+              Ingresos Totales
+              <span className="text-sm text-gray-400">(i)</span>
+            </h3>
+            <p className="text-4xl font-bold text-green-600">
+              {fetchEarningFull() || "calculando..."}
+            </p>
+          </div>
 
           {/* Tarjeta 2 */}
-          <Tooltip
-            title="Costos totales incurridos en todas las ventas"
-            placement="top"
-          >
-            <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-red-100 to-red-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
-              <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
-                Costos Totales
-                <span className="text-sm text-gray-400">(i)</span>
-              </h3>
-              <p className="text-4xl font-bold text-red-600">
-                {fetchTotalCost() || "calculando..."}
-              </p>
-            </div>
-          </Tooltip>
+          <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-red-100 to-red-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
+            <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
+              Costos Totales
+              <span className="text-sm text-gray-400">(i)</span>
+            </h3>
+            <p className="text-4xl font-bold text-red-600">
+              {fetchTotalCost() || "calculando..."}
+            </p>
+          </div>
 
           {/* Tarjeta 3 */}
-          <Tooltip
-            title="Ganancia bruta obtenida de todas las ventas"
-            placement="top"
-          >
-            <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
-              <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
-                Ganancia Bruta
-                <span className="text-sm text-gray-400">(i)</span>
-              </h3>
-              <p className="text-4xl font-bold text-blue-600">
-                {fetchGrossProfit() || "calculando..."}
-              </p>
-            </div>
-          </Tooltip>
+          <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-blue-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
+            <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
+              Ganancia Bruta
+              <span className="text-sm text-gray-400">(i)</span>
+            </h3>
+            <p className="text-4xl font-bold text-blue-600">
+              {fetchGrossProfit() || "calculando..."}
+            </p>
+          </div>
           {/* Tarjeta 4 */}
 
-          <Tooltip
-            title="Porcentaje de ganancia sobre los ingresos totales"
-            placement="top"
-          >
-            <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
-              <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
-                Margen de Ganancia
-                <span className="text-sm text-gray-400">(i)</span>
-              </h3>
-              <p className="text-4xl font-bold text-yellow-600">
-                {fetchProfitMargin() || "calculando..."}%
-              </p>
-            </div>
-          </Tooltip>
+          <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
+            <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
+              Margen de Ganancia
+              <span className="text-sm text-gray-400">(i)</span>
+            </h3>
+            <p className="text-4xl font-bold text-yellow-600">
+              {fetchProfitMargin() || "calculando..."}%
+            </p>
+          </div>
 
-          <Tooltip
-            title="Porcentaje de ganancia sobre los ingresos totales"
-            placement="top"
-          >
-            <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
-              <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
-                Margen de Ganancia
-                <span className="text-sm text-gray-400">(i)</span>
-              </h3>
-              <div className="h-24 w-24 text-4xl font-bold text-yellow-600">
-                <CircularProgressbar
-                  value={fetchProfitMargin() || 0}
-                  text={`${fetchProfitMargin() || 0}%`}
-                  strokeWidth={10}
-                  styles={{
-                    path: { stroke: "#F59E0B" }, // Amarillo
-                    text: { fill: "#F59E0B", fontSize: "20px" },
-                  }}
-                />
-              </div>
+          <div className="group flex flex-col items-center justify-center rounded-lg bg-gradient-to-br from-yellow-100 to-yellow-50 p-6 shadow-md transition-shadow duration-300 hover:shadow-lg">
+            <h3 className="mb-2 flex items-center gap-2 text-xl font-medium text-gray-600">
+              Margen de Ganancia
+              <span className="text-sm text-gray-400">(i)</span>
+            </h3>
+            <div className="h-24 w-24 text-4xl font-bold text-yellow-600">
+              <CircularProgressbar
+                value={fetchProfitMargin() || 0}
+                text={`${fetchProfitMargin() || 0}%`}
+                strokeWidth={10}
+                styles={{
+                  path: { stroke: "#F59E0B" }, // Amarillo
+                  text: { fill: "#F59E0B", fontSize: "20px" },
+                }}
+              />
             </div>
-          </Tooltip>
+          </div>
         </div>
       </div>
 
