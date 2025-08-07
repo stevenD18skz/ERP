@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Table from "../Components/Table";
+import Table from "../components/Table";
 import { getProducts } from "../services/portProducts";
 
 const ProductsPage = () => {
