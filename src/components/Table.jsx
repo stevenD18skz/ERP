@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPenToSquare,
@@ -17,11 +19,9 @@ import {
 import SearchBar from "./searchBar";
 import ModalProduct from "./ModalProduct"; // Import ModalProduct
 
-import {
-  getProducts,
-  deleteProduct,
-  updateProduct,
-} from "../services/portProducts";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { deleteProduct, updateProduct } from "../services/portProducts";
 
 export default function Table({ data_list, onDataUpdate }) {
   const [filteredData, setFilteredData] = useState(data_list);
@@ -84,16 +84,16 @@ export default function Table({ data_list, onDataUpdate }) {
     setFilteredData(sorted);
   };
 
-  const renderIcon = (condition) =>
-    condition ? (
+  const renderIcon = (condition) => {
+    return condition ? (
       <FontAwesomeIcon icon={faCheck} style={{ color: "green" }} />
     ) : (
       <FontAwesomeIcon icon={faTimes} style={{ color: "red" }} />
     );
+  };
 
   const exportToExcel = () => {
-    // Convertir los datos a formato Excel
-    const worksheet = XLSX.utils.json_to_sheet(products);
+    const worksheet = XLSX.utils.json_to_sheet(filteredData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
 
@@ -399,3 +399,8 @@ export default function Table({ data_list, onDataUpdate }) {
     </div>
   );
 }
+
+Table.propTypes = {
+  data_list: PropTypes.array.isRequired,
+  onDataUpdate: PropTypes.func.isRequired,
+};

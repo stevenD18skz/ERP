@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import PropTypes from "prop-types";
 import { faTimes, faSave } from "@fortawesome/free-solid-svg-icons";
 
 const ModalProduct = ({ product, onSave, onClose }) => {
@@ -138,6 +139,12 @@ const ModalProduct = ({ product, onSave, onClose }) => {
       </div>
     </div>
   );
+};
+
+ModalProduct.propTypes = {
+  product: PropTypes.object,
+  onSave: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
 
 export default ModalProduct;

@@ -1,5 +1,6 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -80,6 +81,11 @@ const SideBar = ({ isExpanded, onToggle }) => {
       </nav>
     </aside>
   );
+};
+
+SideBar.propTypes = {
+  isExpanded: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
 };
 
 export default SideBar;

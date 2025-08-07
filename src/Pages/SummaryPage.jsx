@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
-import { formatMoneySymbol, formatMoney } from "../utils/converts";
+import { formatMoneySymbol } from "../utils/converts";
 
 import { CircularProgressbar } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";

@@ -1,5 +1,5 @@
-import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import PropTypes from "prop-types";
 import { faSearch, faTimes } from "@fortawesome/free-solid-svg-icons";
 
 export default function SearchBar({ characterSearch, setCharacterSearch }) {
@@ -10,7 +10,7 @@ export default function SearchBar({ characterSearch, setCharacterSearch }) {
   return (
     <div className="mx-auto my-4 w-full px-4 dark:bg-gray-900">
       <form
-        className="relative mx-auto w-full max-w-lg flex items-center"
+        className="relative mx-auto flex w-full max-w-lg items-center"
         onSubmit={handleSubmit}
       >
         {/* Icono de búsqueda */}
@@ -42,3 +42,8 @@ export default function SearchBar({ characterSearch, setCharacterSearch }) {
     </div>
   );
 }
+
+SearchBar.propTypes = {
+  characterSearch: PropTypes.string.isRequired,
+  setCharacterSearch: PropTypes.func.isRequired,
+};

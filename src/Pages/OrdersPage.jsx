@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import "tailwindcss/tailwind.css";
 import { getOrders, createOrderWithDetails } from "../services/portOrders";
 import { getProducts } from "../services/portProducts";
@@ -27,8 +27,9 @@ const OrdersPage = () => {
   useEffect(() => {
     const newTotal = currentOrder.reduce(
       (acc, product) =>
-        acc + (parseFloat(product.price) || 0) * (parseInt(product.quantity) || 0),
-      0
+        acc +
+        (parseFloat(product.price) || 0) * (parseInt(product.quantity) || 0),
+      0,
     );
     setTotal(newTotal);
   }, [currentOrder]);
@@ -59,7 +60,10 @@ const OrdersPage = () => {
   };
 
   const handleAddProductField = () => {
-    setCurrentOrder([...currentOrder, { id: "", product: "", quantity: "0", price: "0" }]);
+    setCurrentOrder([
+      ...currentOrder,
+      { id: "", product: "", quantity: "0", price: "0" },
+    ]);
   };
 
   const handleRemoveProductField = (index) => {
@@ -107,11 +111,19 @@ const OrdersPage = () => {
   return (
     <div className="min-h-screen bg-purple-50 p-6">
       <div className="mt-6 border-l-4 border-purple-400 pl-4">
-        <h1 className="mb-4 text-3xl font-bold text-purple-800">Registrar Orden</h1>
+        <h1 className="mb-4 text-3xl font-bold text-purple-800">
+          Registrar Orden
+        </h1>
 
-        <form onSubmit={handleSubmit} className="mb-6 rounded-lg bg-white p-6 shadow-lg">
+        <form
+          onSubmit={handleSubmit}
+          className="mb-6 rounded-lg bg-white p-6 shadow-lg"
+        >
           {currentOrder.map((product, index) => (
-            <div key={index} className="mb-4 flex flex-wrap items-center space-x-4 rounded-lg bg-gray-50 p-4 shadow-sm relative">
+            <div
+              key={index}
+              className="relative mb-4 flex flex-wrap items-center space-x-4 rounded-lg bg-gray-50 p-4 shadow-sm"
+            >
               <label className="flex-1 text-purple-700">
                 Producto:
                 <input
@@ -126,11 +138,16 @@ const OrdersPage = () => {
                   className="w-full rounded-lg border border-gray-300 p-2 focus:ring-2 focus:ring-purple-500"
                 />
                 {focusedIndex === index && suggestions.length > 0 && (
-                  <ul ref={suggestionBoxRef} className="absolute z-10 mt-1 rounded-lg border border-gray-300 bg-white shadow-lg">
+                  <ul
+                    ref={suggestionBoxRef}
+                    className="absolute z-10 mt-1 rounded-lg border border-gray-300 bg-white shadow-lg"
+                  >
                     {suggestions.map((suggestion, idx) => (
                       <li
                         key={idx}
-                        onMouseDown={() => handleSuggestionClick(index, suggestion)}
+                        onMouseDown={() =>
+                          handleSuggestionClick(index, suggestion)
+                        }
                         className="cursor-pointer p-2 hover:bg-purple-100"
                       >
                         {suggestion.name}
@@ -187,12 +204,19 @@ const OrdersPage = () => {
           </button>
         </form>
 
-        <h2 className="mb-4 text-2xl font-bold text-purple-800">Productos en la Orden Actual</h2>
+        <h2 className="mb-4 text-2xl font-bold text-purple-800">
+          Productos en la Orden Actual
+        </h2>
         <ul className="mb-6 rounded-lg bg-white p-4 shadow-md">
           {currentOrder.map((product, index) => (
-            <li key={index} className="mb-2 flex justify-between border-b border-gray-200 pb-2">
+            <li
+              key={index}
+              className="mb-2 flex justify-between border-b border-gray-200 pb-2"
+            >
               <span>{product.product}</span>
-              <span>{product.quantity} x ${product.price}</span>
+              <span>
+                {product.quantity} x ${product.price}
+              </span>
             </li>
           ))}
         </ul>
@@ -202,13 +226,21 @@ const OrdersPage = () => {
       </div>
 
       <div className="mt-6 border-l-4 border-purple-500 pl-4">
-        <h2 className="mb-4 text-2xl font-bold text-purple-800">Historial de Órdenes</h2>
+        <h2 className="mb-4 text-2xl font-bold text-purple-800">
+          Historial de Órdenes
+        </h2>
         <table className="min-w-full rounded-lg bg-white shadow-md">
           <thead>
             <tr className="bg-purple-100">
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-purple-800">Productos</th>
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-purple-800">Total</th>
-              <th className="border-b border-gray-300 px-4 py-2 text-left text-purple-800">Fecha</th>
+              <th className="border-b border-gray-300 px-4 py-2 text-left text-purple-800">
+                Productos
+              </th>
+              <th className="border-b border-gray-300 px-4 py-2 text-left text-purple-800">
+                Total
+              </th>
+              <th className="border-b border-gray-300 px-4 py-2 text-left text-purple-800">
+                Fecha
+              </th>
             </tr>
           </thead>
           <tbody>
