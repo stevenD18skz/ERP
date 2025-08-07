@@ -1,5 +1,9 @@
+//Importacion de librerias
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { deleteProduct, updateProduct } from "../services/products.service";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,12 +20,10 @@ import {
   faChevronRight,
   faChevronLeft,
 } from "@fortawesome/free-solid-svg-icons";
-import SearchBar from "./searchBar";
-import ModalProduct from "./ModalProduct"; // Import ModalProduct
 
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
-import { deleteProduct, updateProduct } from "../services/portProducts";
+// Importacion de componentes
+import SearchBar from "./SearchBar";
+import ModalProduct from "./ModalProduct"; // Import ModalProducts
 
 export default function Table({ data_list, onDataUpdate }) {
   const [filteredData, setFilteredData] = useState(data_list);

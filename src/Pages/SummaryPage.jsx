@@ -28,7 +28,7 @@ ChartJS.register(
   Legend,
 );
 
-import { getSales } from "../services/portSales";
+import { getSales } from "../services/sales.service";
 
 const SummaryPage = () => {
   const [allsales, setAllSales] = useState([]);

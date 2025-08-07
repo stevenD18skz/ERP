@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Table from "../components/Table";
-import { getProducts } from "../services/portProducts";
+import { getProducts } from "../services/products.service";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);

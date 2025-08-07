@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import "tailwindcss/tailwind.css";
 
-import { getSales, createSaleWithDetails } from "../services/portSales";
-import { getProducts } from "../services/portProducts";
+import { getSales, createSaleWithDetails } from "../services/sales.service";
+import { getProducts } from "../services/products.service";
 
 const SalePage = () => {
   const [allProducts, setAllProducts] = useState([]);

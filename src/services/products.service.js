@@ -1,4 +1,4 @@
-import supabase from "../API/conection";
+import supabase from "./api";
 
 export const getProducts = async () => {
   const { data, error } = await supabase.from("products").select("*");
