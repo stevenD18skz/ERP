@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import PropTypes from "prop-types";
+
 import {
   PlusCircle,
   Edit3,
@@ -327,7 +329,7 @@ export default function ProductsPage({ services }) {
       "Descripción",
     ];
     const html = `
-      <html><head><meta charset=\"utf-8\"><title>Productos</title>
+      <html><head><meta charset="utf-8"><title>Productos</title>
       <style>body{font-family:system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial;} table{width:100%;border-collapse:collapse;} th,td{padding:8px;border:1px solid #ddd;text-align:left;} th{background:#f7f7f7}</style>
       </head><body>
       <h2>Listado de productos — ${new Date().toLocaleString()}</h2>
@@ -594,7 +596,7 @@ export default function ProductsPage({ services }) {
                           categoryFilter.includes(c) ||
                           (c === "All" && categoryFilter.length === 0)
                         }
-                        onChange={(e) => {
+                        onChange={() => {
                           if (c === "All") return setCategoryFilter([]);
                           setCategoryFilter((prev) => {
                             const next = new Set(prev);
@@ -881,6 +883,15 @@ export default function ProductsPage({ services }) {
   );
 }
 
+ProductsPage.propTypes = {
+  services: PropTypes.shape({
+    getProducts: PropTypes.func,
+    createProduct: PropTypes.func,
+    updateProduct: PropTypes.func,
+    deleteProduct: PropTypes.func,
+  }),
+};
+
 function InlineStockEditor({ value, onSave }) {
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value);
@@ -925,6 +936,10 @@ function InlineStockEditor({ value, onSave }) {
     </div>
   );
 }
+InlineStockEditor.propTypes = {
+  value: PropTypes.number.isRequired,
+  onSave: PropTypes.func.isRequired,
+};
 
 function ProductForm({ initial = null, onClose, onSave }) {
   const [form, setForm] = useState(() => ({
@@ -1058,6 +1073,19 @@ function ProductForm({ initial = null, onClose, onSave }) {
   );
 }
 
+ProductForm.propTypes = {
+  initial: PropTypes.shape({
+    name: PropTypes.string,
+    sku: PropTypes.string,
+    price: PropTypes.number,
+    stock: PropTypes.number,
+    category: PropTypes.string,
+    description: PropTypes.string,
+  }),
+  onClose: PropTypes.func.isRequired,
+  onSave: PropTypes.func.isRequired,
+};
+
 function ConfirmDialog({
   title = "Confirmar",
   description = "¿Estás seguro?",
@@ -1088,3 +1116,10 @@ function ConfirmDialog({
     </div>
   );
 }
+
+ConfirmDialog.propTypes = {
+  title: PropTypes.string,
+  description: PropTypes.string,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+};

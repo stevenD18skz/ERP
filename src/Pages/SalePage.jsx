@@ -1,9 +1,11 @@
 // SalePageEnhanced.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import { motion } from "framer-motion";
+import PropTypes from "prop-types";
+
 import {
   ShoppingCart,
   Plus,
@@ -11,11 +13,8 @@ import {
   Check,
   DollarSign,
   Search,
-  User,
   CreditCard,
-  Clock,
   Tag,
-  Bell,
 } from "lucide-react";
 
 /*
@@ -24,6 +23,14 @@ import {
   - Usa servicios: getSales(), createSaleWithDetails(), getProducts() (los tuyos)
   - Si quieres puedo adaptarlo a un "services" prop como en ProductsPage
 */
+
+SalePageEnhanced.propTypes = {
+  services: PropTypes.shape({
+    getSales: PropTypes.func.isRequired,
+    createSaleWithDetails: PropTypes.func.isRequired,
+    getProducts: PropTypes.func.isRequired,
+  }),
+};
 
 export default function SalePageEnhanced({
   // si quieres pasar servicios como props, se respeta:

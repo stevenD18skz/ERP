@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import PropTypes from "prop-types";
 
 // Mock data (copied + enhanced from your dataset)
 const products = [
@@ -185,7 +186,7 @@ function sparklinePath(values, width = 120, height = 36) {
 }
 
 // Small, clean components
-const Header = ({ onSignIn }) => (
+const HeaderHome = ({ onSignIn }) => (
   <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-6 md:px-0">
     <div className="flex items-center gap-3">
       <img src="/vite.svg" alt="logo" className="h-10 w-10" />
@@ -212,6 +213,10 @@ const Header = ({ onSignIn }) => (
     </nav>
   </header>
 );
+
+HeaderHome.propTypes = {
+  onSignIn: PropTypes.func.isRequired,
+};
 
 const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
   <section className="mx-auto mt-6 w-full max-w-6xl overflow-hidden rounded-2xl shadow-lg">
@@ -293,6 +298,12 @@ const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
     </div>
   </section>
 );
+Hero.propTypes = {
+  topProduct: PropTypes.string.isRequired,
+  totalSales: PropTypes.number.isRequired,
+  dailyAvg: PropTypes.number.isRequired,
+  onSignIn: PropTypes.func.isRequired,
+};
 
 const StatCard = ({ label, value, hint, children }) => (
   <motion.div
@@ -307,6 +318,13 @@ const StatCard = ({ label, value, hint, children }) => (
     {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
   </motion.div>
 );
+
+StatCard.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  hint: PropTypes.string.isRequired,
+  children: PropTypes.node,
+};
 
 const TopProducts = ({ items }) => (
   <div className="rounded-lg bg-white p-4 shadow-sm">
@@ -328,6 +346,10 @@ const TopProducts = ({ items }) => (
     </ul>
   </div>
 );
+
+TopProducts.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.object).isRequired,
+};
 
 const RecentSalesTable = ({ items }) => (
   <div className="overflow-auto rounded-lg bg-white p-4 shadow-sm">
@@ -359,6 +381,10 @@ const RecentSalesTable = ({ items }) => (
   </div>
 );
 
+RecentSalesTable.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.object).isRequired,
+};
+
 const InventoryAlerts = ({ items, threshold = 10 }) => {
   const low = items.filter((p) => p.stock <= threshold);
   if (low.length === 0) return null;
@@ -376,6 +402,11 @@ const InventoryAlerts = ({ items, threshold = 10 }) => {
       </ul>
     </div>
   );
+};
+
+InventoryAlerts.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  threshold: PropTypes.number,
 };
 
 export default function Home() {
@@ -414,7 +445,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
-      <Header onSignIn={() => setShowLogin(true)} />
+      <HeaderHome onSignIn={() => setShowLogin(true)} />
 
       <main className="px-4 md:px-8">
         <Hero

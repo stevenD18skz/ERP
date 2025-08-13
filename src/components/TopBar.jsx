@@ -1,5 +1,5 @@
 // TopBar.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -12,12 +12,7 @@ import {
   faSignOutAlt,
 } from "@fortawesome/free-solid-svg-icons";
 
-const TopBar = ({
-  onToggleSidebar,
-  isSidebarExpanded,
-  onSearch,
-  onQuickCreate,
-}) => {
+const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
@@ -149,7 +144,6 @@ const TopBar = ({
 
 TopBar.propTypes = {
   onToggleSidebar: PropTypes.func.isRequired,
-  isSidebarExpanded: PropTypes.bool,
   onSearch: PropTypes.func,
   onQuickCreate: PropTypes.func,
 };
