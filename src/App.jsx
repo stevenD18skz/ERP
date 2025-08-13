@@ -13,7 +13,6 @@ import OrdersPage from "./Pages/OrdersPage";
 
 // USER
 import SummaryPage from "./Pages/SummaryPage";
-import SettingsPage from "./Pages/SettingsPage";
 
 function App() {
   return (
@@ -25,7 +24,6 @@ function App() {
           <Route path="Sales" element={<SalePage />} />
           <Route path="Orders" element={<OrdersPage />} />
           <Route path="summary" element={<SummaryPage />} />
-          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
