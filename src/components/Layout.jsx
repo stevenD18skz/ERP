@@ -1,31 +1,32 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import SideBar from "./SideBar";
+import Footer from "./Footer";
+import TopBar from "./TopBar";
 
 const Layout = () => {
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-
-  const handleSidebarToggle = () => {
-    setIsSidebarExpanded(!isSidebarExpanded);
-  };
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen">
       {/* Sidebar */}
-      <SideBar isExpanded={isSidebarExpanded} onToggle={handleSidebarToggle} />
+
+      <SideBar
+        isExpanded={sidebarOpen}
+        onToggle={() => setSidebarOpen((s) => !s)}
+      />
 
       <div
-        className={`transition-margin flex flex-1 flex-col duration-300 ${isSidebarExpanded ? "ml-64" : "ml-16"}`}
+        className={`flex-1 transition-all duration-300 ${sidebarOpen ? "pl-64" : "pl-16"}`}
       >
-        {/* Main Content */}
-        <main className="h-full flex-1 overflow-y-auto bg-gray-500 dark:bg-gray-800">
+        <TopBar
+          onToggleSidebar={() => setSidebarOpen((s) => !s)}
+          isSidebarExpanded={sidebarOpen}
+        />
+        <main className="p-4 md:p-8">
           <Outlet />
         </main>
-
-        {/* Footer */}
-        {/* <footer className="bg-gray-800 p-4 text-center text-white">
-          <p>© 2024 Mi Aplicación</p>
-        </footer> */}
+        <Footer />
       </div>
     </div>
   );

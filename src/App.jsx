@@ -3,14 +3,16 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 //IMPORTACION DE COMPONENTES
 import Layout from "./components/Layout";
 
+// PAGES IMPORTATION
 import Home from "./Pages/Home";
 
+//CRUDS
 import ProductsPage from "./Pages/ProductsPage";
 import SalePage from "./Pages/SalePage";
 import OrdersPage from "./Pages/OrdersPage";
 
+// USER
 import SummaryPage from "./Pages/SummaryPage";
-import SettingsPage from "./Pages/SettingsPage";
 
 function App() {
   return (
@@ -22,7 +24,6 @@ function App() {
           <Route path="Sales" element={<SalePage />} />
           <Route path="Orders" element={<OrdersPage />} />
           <Route path="summary" element={<SummaryPage />} />
-          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
