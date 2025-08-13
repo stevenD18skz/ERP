@@ -1,6 +1,7 @@
-import { useNavigate } from "react-router-dom";
+// SidebarEnhanced.jsx
+import React from "react";
 import PropTypes from "prop-types";
-
+import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -14,7 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 const menuItems = [
-  { path: "", label: "Inicio", icon: faHome },
+  { path: "/", label: "Inicio", icon: faHome },
   { path: "/products", label: "Productos", icon: faBox },
   { path: "/sales", label: "Ventas", icon: faShoppingCart },
   { path: "/orders", label: "Pedidos", icon: faClipboardList },
@@ -22,70 +23,90 @@ const menuItems = [
   { path: "/settings", label: "Configuración", icon: faCog },
 ];
 
-const SideBar = ({ isExpanded, onToggle }) => {
+const SidebarEnhanced = ({ isExpanded, onToggle }) => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   return (
     <aside
-      className={`fixed h-full bg-gray-900 text-white shadow-lg transition-all duration-300 ${
+      className={`fixed left-0 top-0 z-40 h-full bg-gray-900 text-white shadow-lg transition-all duration-300 ${
         isExpanded ? "w-64" : "w-16"
       }`}
+      aria-label="Barra lateral principal"
     >
-      {/* Header del menú */}
-      <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 p-4">
-        <div className="flex items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-800 bg-gray-800 px-3 py-3">
+        <div className="flex items-center gap-3">
           <img
             src="/logo.png"
-            alt="Imagen del logo"
-            className={`rounded-full transition-all duration-300 ${
-              isExpanded ? "h-8 w-8" : "h-6 w-6"
-            }`}
+            alt="Logo"
+            className={`rounded-full object-cover transition-all duration-300 ${isExpanded ? "h-10 w-10" : "h-8 w-8"}`}
           />
           {isExpanded && (
-            <h2 className="ml-4 text-xl font-bold">ERP Supermarket</h2>
+            <span className="text-lg font-semibold">ERP Supermarket</span>
           )}
         </div>
+
         <button
           onClick={onToggle}
-          className="text-gray-300 hover:text-white focus:outline-none"
+          aria-label={isExpanded ? "Colapsar menú" : "Expandir menú"}
+          className="rounded p-1 hover:bg-gray-700/60 focus:outline-none"
         >
           <FontAwesomeIcon icon={isExpanded ? faChevronLeft : faChevronRight} />
         </button>
       </div>
 
-      {/* Lista de enlaces */}
-      <nav className="mt-4">
-        <ul className="space-y-2">
-          {menuItems.map((item) => (
-            <li key={item.path}>
-              <button
-                onClick={() => navigate(item.path)}
-                className={`mx-4 flex w-10/12 items-center rounded-lg p-3 text-left transition-all duration-300 ${
-                  isExpanded ? "justify-start" : "justify-center"
-                } hover:bg-gray-700 focus:bg-gray-700 focus:outline-none`}
-                aria-label={item.label}
-              >
-                <FontAwesomeIcon
-                  icon={item.icon}
-                  className="h-5 w-5 text-gray-300"
-                />
-                {isExpanded && (
-                  <span className="ml-4 text-sm text-gray-200">
-                    {item.label}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
+      {/* Menu */}
+      <nav className="mt-4" aria-label="Navegación principal">
+        <ul className="space-y-1">
+          {menuItems.map((it) => {
+            const active =
+              pathname === it.path ||
+              (it.path !== "/" && pathname.startsWith(it.path));
+            return (
+              <li key={it.path}>
+                <button
+                  onClick={() => navigate(it.path)}
+                  title={!isExpanded ? it.label : undefined} // tooltip when collapsed
+                  className={`mx-3 mb-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors duration-150 ${active ? "bg-blue-600 text-white" : "text-gray-200 hover:bg-gray-800/80"} ${isExpanded ? "justify-start" : "justify-center"}`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <FontAwesomeIcon
+                    icon={it.icon}
+                    className={`h-5 w-5 ${active ? "text-white" : "text-gray-300"}`}
+                  />
+                  {isExpanded && (
+                    <span className="text-sm font-medium">{it.label}</span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
+
+      {/* Footer pequeño en sidebar (version) */}
+      <div className="absolute bottom-4 w-full px-3">
+        <div className="flex items-center justify-between text-xs text-gray-400">
+          {isExpanded ? (
+            <>
+              <span>v1.0 • ERP</span>
+              <span className="hidden md:inline">
+                Soporte: soporte@erp.local
+              </span>
+            </>
+          ) : (
+            <span className="mx-auto text-center">v1.0</span>
+          )}
+        </div>
+      </div>
     </aside>
   );
 };
 
-SideBar.propTypes = {
+SidebarEnhanced.propTypes = {
   isExpanded: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
 };
 
-export default SideBar;
+export default SidebarEnhanced;
