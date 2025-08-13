@@ -3,12 +3,15 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 //IMPORTACION DE COMPONENTES
 import Layout from "./components/Layout";
 
+// PAGES IMPORTATION
 import Home from "./Pages/Home";
 
+//CRUDS
 import ProductsPage from "./Pages/ProductsPage";
 import SalePage from "./Pages/SalePage";
 import OrdersPage from "./Pages/OrdersPage";
 
+// USER
 import SummaryPage from "./Pages/SummaryPage";
 import SettingsPage from "./Pages/SettingsPage";
 
