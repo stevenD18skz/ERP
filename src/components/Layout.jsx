@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import SideBar from "./SideBar";
-import Footer from "./Footer";
-import TopBar from "./TopBar";
+import SideBar from "./ui/SideBar";
+import Footer from "./ui/Footer";
+import TopBar from "./ui/TopBar";
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -20,7 +20,7 @@ const Layout = () => {
           onToggleSidebar={() => setSidebarOpen((s) => !s)}
           isSidebarExpanded={sidebarOpen}
         />
-        <main className="p-4 md:p-8">
+        <main className="">
           <Outlet />
         </main>
         <Footer />

@@ -1,6 +1,6 @@
 const Footer = () => {
   return (
-    <footer className="mt-8 border-t bg-white">
+    <footer className=" border-t bg-white">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 md:grid-cols-3">
         <div>
           <img src="/logo.png" alt="Logo" className="h-10 w-10 rounded-full" />

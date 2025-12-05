@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 
 // PAGES IMPORTATION
-import Home from "./Pages/Home";
+import Home from "./Pages/Home/Home";
 import SettingsPage from "./Pages/SettingsPage";
 
 //CRUDS

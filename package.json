@@ -30,7 +30,7 @@
     "react-router-dom": "^7.1.0",
     "react-tooltip": "^4.2.21",
     "recharts": "^2.15.0",
-    "sweetalert2": "^11.22.3",
+    "sweetalert2": "^11.26.3",
     "uuid": "^9.0.1",
     "xlsx": "^0.18.5"
   },
