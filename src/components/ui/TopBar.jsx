@@ -11,6 +11,7 @@ import {
   faUserCircle,
   faSignOutAlt,
 } from "@fortawesome/free-solid-svg-icons";
+import Swal from 'sweetalert2';
 
 const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
   const navigate = useNavigate();
@@ -22,6 +23,19 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
     e.preventDefault();
     if (onSearch) onSearch(q);
   };
+
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.onmouseenter = Swal.stopTimer;
+      toast.onmouseleave = Swal.resumeTimer;
+    }
+  });
+
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/90 backdrop-blur-sm">
@@ -82,7 +96,10 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
           </button>
 
           <button
-            onClick={() => alert("Notificaciones (placeholder)")}
+            onClick={() => Toast.fire({
+              icon: "success",
+              title: "Notificaciones"
+            })}
             className="relative rounded-md p-2 hover:bg-gray-100 focus:outline-none"
             aria-label="Notificaciones"
           >
@@ -127,7 +144,10 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
                 <button
                   onClick={() => {
                     setUserOpen(false);
-                    alert("Cerrar sesión placeholder");
+                    Toast.fire({
+                      icon: "success",
+                      title: "Sesion cerrada exitosamente"
+                    });
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
                 >
