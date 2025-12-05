@@ -102,7 +102,7 @@ export default function ReportsPage({
     };
     load();
     return () => (mounted = false);
-  }, [services]);
+  }, []);
 
   // Helpers
   const currency = (n) =>

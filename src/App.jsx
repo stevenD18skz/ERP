@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 
 // PAGES IMPORTATION
 import Home from "./Pages/Home";
+import SettingsPage from "./Pages/SettingsPage";
 
 //CRUDS
 import ProductsPage from "./Pages/ProductsPage";
@@ -24,6 +25,7 @@ function App() {
           <Route path="Sales" element={<SalePage />} />
           <Route path="Orders" element={<OrdersPage />} />
           <Route path="summary" element={<SummaryPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -104,7 +104,7 @@ export default function OrdersPageEnhanced({
     };
     fetchData();
     return () => (mounted = false);
-  }, [services]);
+  }, []);
 
   // totals: total_cost of order
   const totals = useMemo(() => {

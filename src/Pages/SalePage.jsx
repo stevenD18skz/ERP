@@ -108,7 +108,8 @@ export default function SalePageEnhanced({
     };
     fetchData();
     return () => (mounted = false);
-  }, [services]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Derived totals
   const totals = useMemo(() => {
