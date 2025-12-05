@@ -14,6 +14,7 @@ const StatCard = ({ label, value, hint, children }) => (
     {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
   </motion.div>
 );
+
 StatCard.propTypes = {
   label: PropTypes.string.isRequired,
   value: PropTypes.string.isRequired,

@@ -5,7 +5,7 @@ import Footer from "./ui/Footer";
 import TopBar from "./ui/TopBar";
 
 const Layout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen">
