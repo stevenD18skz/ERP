@@ -9,16 +9,16 @@ const Layout = () => {
 
   return (
     <div className="flex min-h-screen">
-      <SideBar
-        isExpanded={sidebarOpen}
-        onToggle={() => setSidebarOpen((s) => !s)}
-      />
       <div
         className={`flex-1 transition-all duration-300 ${sidebarOpen ? "pl-64" : "pl-16"}`}
       >
         <TopBar
           onToggleSidebar={() => setSidebarOpen((s) => !s)}
           isSidebarExpanded={sidebarOpen}
+        />
+        <SideBar
+          isExpanded={sidebarOpen}
+          onToggle={() => setSidebarOpen((s) => !s)}
         />
         <main className="">
           <Outlet />

@@ -8,9 +8,9 @@ import Home from "./Pages/Home/Home";
 import SettingsPage from "./Pages/SettingsPage";
 
 //CRUDS
-import ProductsPage from "./Pages/ProductsPage";
-import SalePage from "./Pages/SalePage";
-import OrdersPage from "./Pages/OrdersPage";
+import ProductsPage from "./Pages/Products/ProductsPage";
+import SalePage from "./Pages/Sales/SalePage";
+import OrdersPage from "./Pages/Orders/OrdersPage";
 
 // USER
 import SummaryPage from "./Pages/SummaryPage";

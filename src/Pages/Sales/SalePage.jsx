@@ -1,4 +1,4 @@
-// OrdersPageEnhanced.jsx
+// SalePageEnhanced.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
@@ -7,65 +7,57 @@ import { motion } from "framer-motion";
 import PropTypes from "prop-types";
 
 import {
-  Truck,
+  ShoppingCart,
   Plus,
   Trash2,
   Check,
+  DollarSign,
   Search,
-  Calendar,
-  FileText,
+  CreditCard,
   Tag,
 } from "lucide-react";
 
-/*
- OrdersPageEnhanced
- - UI/UX: flujo guiado como SalesPage, adaptado a órdenes de compra
- - Colores: indigo (distinto a Sales teal)
- - Servicios esperados (pueden pasarse como props):
-    services = { getOrders, createOrderWithDetails, getProducts }
- - Si no pasas servicios, el componente intenta leer de window.* para demo
-*/
 
-OrdersPageEnhanced.propTypes = {
+SalePageEnhanced.propTypes = {
   services: PropTypes.shape({
-    getOrders: PropTypes.func.isRequired,
-    createOrderWithDetails: PropTypes.func.isRequired,
+    getSales: PropTypes.func.isRequired,
+    createSaleWithDetails: PropTypes.func.isRequired,
     getProducts: PropTypes.func.isRequired,
   }),
 };
 
-export default function OrdersPageEnhanced({
+export default function SalePageEnhanced({
+  // si quieres pasar servicios como props, se respeta:
   services = {
-    getOrders: window.getOrders,
-    createOrderWithDetails: window.createOrderWithDetails,
+    getSales: window.getSales, // intenta usar global si existen
+    createSaleWithDetails: window.createSaleWithDetails,
     getProducts: window.getProducts,
   },
 }) {
   // data
   const [allProducts, setAllProducts] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [sales, setSales] = useState([]);
+  const [loadingSales, setLoadingSales] = useState(true);
 
-  // order in progress
+  // venta en curso
   const emptyLine = {
     id: "",
     product: "",
     sku: "",
     quantity: 1,
-    unit_cost: 0,
+    price: 0,
+    sale_price: 0,
     stock: 0,
   };
   const [lines, setLines] = useState([{ ...emptyLine }]);
-  const [supplier, setSupplier] = useState("");
-  const [expectedDelivery, setExpectedDelivery] = useState("");
-  const [notes, setNotes] = useState("");
+  const [receivedAmount, setReceivedAmount] = useState(0);
 
   // suggestions + UI
   const [suggestions, setSuggestions] = useState([]);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [focusedLineIndex, setFocusedLineIndex] = useState(null);
 
-  // local toasts
+  // small toasts (local)
   const [toasts, setToasts] = useState([]);
   const pushToast = (text, type = "info") => {
     const id = Math.random().toString(36).slice(2, 9);
@@ -74,6 +66,12 @@ export default function OrdersPageEnhanced({
   };
 
   const productInputRefs = useRef([]);
+
+  // Formatted helpers
+  const fmt = (n) =>
+    typeof n === "number"
+      ? n.toLocaleString("es-CO", { minimumFractionDigits: 0 })
+      : n;
 
   const currency = (n) =>
     typeof n === "number"
@@ -84,39 +82,45 @@ export default function OrdersPageEnhanced({
         })
       : "-";
 
-  // Fetch initial data
+  // FETCH initial data
   useEffect(() => {
     let mounted = true;
     const fetchData = async () => {
-      setLoadingOrders(true);
+      setLoadingSales(true);
       try {
         const p = services.getProducts ? await services.getProducts() : [];
-        const ord = services.getOrders ? await services.getOrders() : [];
+        const s = services.getSales ? await services.getSales() : [];
         if (!mounted) return;
         setAllProducts(Array.isArray(p) ? p : []);
-        setOrders(Array.isArray(ord) ? ord : []);
+        setSales(Array.isArray(s) ? s : []);
       } catch (err) {
-        console.error("Error fetching orders/products:", err);
+        console.error("Error fetching sales/products:", err);
         pushToast("No se pudo cargar datos. Revisa conexión.", "error");
       } finally {
-        setLoadingOrders(false);
+        setLoadingSales(false);
       }
     };
     fetchData();
     return () => (mounted = false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // totals: total_cost of order
+  // Derived totals
   const totals = useMemo(() => {
-    const totalCost = lines.reduce(
-      (acc, l) => acc + (Number(l.unit_cost) || 0) * (Number(l.quantity) || 0),
+    const total = lines.reduce(
+      (acc, l) => acc + (Number(l.sale_price) || 0) * (Number(l.quantity) || 0),
       0,
     );
-    const items = lines.reduce((acc, l) => acc + (Number(l.quantity) || 0), 0);
-    return { totalCost, items };
-  }, [lines]);
+    const cost = lines.reduce(
+      (acc, l) => acc + (Number(l.price) || 0) * (Number(l.quantity) || 0),
+      0,
+    );
+    const gain = total - cost;
+    const change = Number(receivedAmount || 0) - total;
+    return { total, gain, cost, change };
+  }, [lines, receivedAmount]);
 
-  // suggestions logic (same as sales)
+  // suggestions logic
   const updateSuggestions = (text, lineIndex) => {
     if (!text || !allProducts.length) {
       setSuggestions([]);
@@ -130,6 +134,7 @@ export default function OrdersPageEnhanced({
           p.name.toLowerCase().includes(q) ||
           (p.sku || "").toLowerCase().includes(q),
       )
+      // exclude products already on the sale unless it's the same line
       .filter(
         (p) =>
           !lines.some(
@@ -140,6 +145,7 @@ export default function OrdersPageEnhanced({
     setActiveSuggestionIndex(0);
   };
 
+  // keyboard navigation for suggestions
   const onKeyDownProduct = (e, lineIndex) => {
     if (!suggestions.length) return;
     if (e.key === "ArrowDown") {
@@ -167,7 +173,8 @@ export default function OrdersPageEnhanced({
               id: product.id,
               product: product.name,
               sku: product.sku || "",
-              unit_cost: Number(product.cost_price ?? product.price ?? 0),
+              sale_price: Number(product.sale_price ?? product.price ?? 0),
+              price: Number(product.price ?? 0),
               stock: Number(product.stock ?? 0),
             }
           : l,
@@ -175,12 +182,14 @@ export default function OrdersPageEnhanced({
     );
     setSuggestions([]);
     setActiveSuggestionIndex(-1);
+    // focus quantity next
     setTimeout(() => {
       const nextQty = productInputRefs.current?.[lineIndex]?.qty;
       if (nextQty) nextQty.focus();
     }, 40);
   };
 
+  // Add / remove lines
   const addLine = (atIndex = null) => {
     setLines((prev) => {
       const next = [...prev];
@@ -196,18 +205,21 @@ export default function OrdersPageEnhanced({
 
   const removeLine = (index) => {
     if (lines.length === 1) {
+      // clear instead of removing last
       setLines([{ ...emptyLine }]);
       return;
     }
     setLines((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // update a field
   const updateLine = (index, changes) => {
     setLines((prev) =>
       prev.map((l, idx) => (idx === index ? { ...l, ...changes } : l)),
     );
   };
 
+  // Quick increment/decrement for quantity
   const incQty = (index, delta) => {
     setLines((prev) =>
       prev.map((l, i) =>
@@ -218,151 +230,167 @@ export default function OrdersPageEnhanced({
     );
   };
 
-  // validate order
-  const validateOrder = () => {
-    if (!supplier) return "Ingresa el proveedor de la orden.";
+  // Validate before submit
+  const validateSale = () => {
     if (!lines.length) return "Agrega al menos 1 producto.";
     for (const [i, l] of lines.entries()) {
       if (!l.product) return `Falta producto en la línea ${i + 1}.`;
       if (!Number(l.quantity) || Number(l.quantity) <= 0)
         return `Cantidad inválida en línea ${i + 1}.`;
-      if (!Number(l.unit_cost) || Number(l.unit_cost) < 0)
-        return `Costo inválido en línea ${i + 1}.`;
+      if (!Number(l.sale_price) || Number(l.sale_price) < 0)
+        return `Precio inválido en línea ${i + 1}.`;
+      if (l.stock && Number(l.quantity) > Number(l.stock))
+        return `Stock insuficiente para ${l.product} (línea ${i + 1}).`;
     }
     return null;
   };
 
-  // submit order
-  const submitOrder = async () => {
-    const error = validateOrder();
+  // Submit sale (with confirmation)
+  const submitSale = async () => {
+    const error = validateSale();
     if (error) {
       pushToast(error, "error");
       return;
     }
 
+    const total = totals.total;
+    // if received is less than total, warn
+    if (Number(receivedAmount || 0) < total) {
+      const { isConfirmed } = await Swal.fire({
+        title: "Pago insuficiente",
+        text: `El monto recibido (${currency(receivedAmount)}) es menor al total (${currency(total)}). ¿Deseas continuar?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Continuar",
+        cancelButtonText: "Cancelar",
+      });
+      if (!isConfirmed) return;
+    }
+
+    // confirm final
     const confirm = await Swal.fire({
-      title: "Confirmar orden",
-      html: `<strong>Proveedor:</strong> ${supplier || "-"}<br/><strong>Total:</strong> ${currency(totals.totalCost || 0)}<br/><strong>Items:</strong> ${totals.items}`,
+      title: "Confirmar venta",
+      html: `<strong>Total:</strong> ${currency(total)}<br/><strong>Recibido:</strong> ${currency(receivedAmount)}<br/><strong>Vuelto:</strong> ${currency(totals.change)}`,
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Registrar orden",
+      confirmButtonText: "Registrar venta",
       cancelButtonText: "Cancelar",
     });
 
     if (!confirm.isConfirmed) return;
 
-    const orderPayload = {
-      total_amount: Number(totals.totalCost || 0),
-      order_date: new Date().toISOString(),
-      supplier: supplier,
-      expected_delivery: expectedDelivery || null,
-      notes: notes || "",
+    // prepare payload
+    const salePayload = {
+      total_amount: Number(total),
+      sale_date: new Date().toISOString(),
+      gain: Number(totals.gain),
     };
-
     const productsFormat = lines.map((l) => ({
       product_id: Number(l.id) || null,
       quantity: Number(l.quantity) || 0,
-      unit_cost: Number(l.unit_cost) || 0,
+      sale_price: Number(l.sale_price) || 0,
     }));
 
     try {
-      pushToast("Registrando orden...", "info");
-      if (services.createOrderWithDetails) {
-        await services.createOrderWithDetails(orderPayload, productsFormat);
+      // optimistic feedback
+      pushToast("Registrando venta...", "info");
+      if (services.createSaleWithDetails) {
+        await services.createSaleWithDetails(salePayload, productsFormat);
       } else {
-        // fallback: local list push
-        setOrders((o) => [
+        // fallback: push to local list for demo
+        setSales((s) => [
           {
             products: lines.map((l) => ({
               product: l.product,
               quantity: l.quantity,
-              unit_cost: l.unit_cost,
+              sale_price: l.sale_price,
             })),
-            total_amount: totals.totalCost,
-            order_date: new Date().toISOString(),
-            supplier,
+            total_amount: totals.total,
+            gain: totals.gain,
+            sale_date: new Date().toISOString(),
           },
-          ...o,
+          ...s,
         ]);
       }
 
+      // success UI
       Swal.fire({
         icon: "success",
-        title: "Orden registrada",
-        html: `Total: ${currency(totals.totalCost)}`,
-        timer: 2000,
+        title: "Venta registrada",
+        html: `Total: ${currency(total)}<br/>Vuelto: ${currency(totals.change)}`,
+        timer: 2200,
         showConfirmButton: false,
       });
 
-      // reset form
-      setSupplier("");
-      setExpectedDelivery("");
-      setNotes("");
+      // reset
       setLines([{ ...emptyLine }]);
+      setReceivedAmount(0);
     } catch (err) {
-      console.error("Error creating order:", err);
-      pushToast("Error registrando orden. Intenta de nuevo.", "error");
+      console.error("Error creating sale:", err);
+      pushToast("Error registrando venta. Intenta de nuevo.", "error");
     }
   };
 
+  // suggestion watcher (when product input changes)
   useEffect(() => {
+    // maintain keyboard selection visibility
     setActiveSuggestionIndex((i) =>
       i >= suggestions.length ? suggestions.length - 1 : i,
     );
   }, [suggestions]);
 
+  // friendly helpers
   const totalItems = lines.reduce(
     (acc, l) => acc + (Number(l.quantity) || 0),
     0,
   );
 
-  const RecentOrders = () => (
+  // small UI render helpers for product list preview
+  const RecentSales = () => (
     <div>
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-800">
-          Órdenes recientes
+          Historial de ventas
         </h3>
         <div className="text-sm text-slate-500">
-          {loadingOrders ? "Cargando..." : `${orders.length} registros`}
+          {loadingSales ? "Cargando..." : `${sales.length} registros`}
         </div>
       </div>
 
       <div className="space-y-3">
-        {loadingOrders ? (
+        {loadingSales ? (
           <div className="py-12 text-center text-slate-500">
-            Cargando órdenes...
+            Cargando ventas...
           </div>
-        ) : orders.length === 0 ? (
-          <div className="py-6 text-slate-500">No hay órdenes registradas.</div>
+        ) : sales.length === 0 ? (
+          <div className="py-6 text-slate-500">No hay ventas registradas.</div>
         ) : (
           <div className="divide-y rounded-lg bg-white shadow-sm">
-            {orders.slice(0, 8).map((o, idx) => (
+            {sales.slice(0, 8).map((s, idx) => (
               <div
                 key={idx}
                 className="flex items-start justify-between p-3 hover:bg-slate-50"
               >
                 <div className="flex-1">
                   <div className="text-sm font-medium text-slate-800">
-                    {o.supplier || "Proveedor desconocido"}
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {o.products
+                    {s.products
                       .map((p) => `${p.product} (${p.quantity})`)
                       .join(", ")}
                   </div>
-                  <div className="mt-1 text-xs text-slate-400">
-                    {o.expected_delivery
-                      ? `Entrega: ${new Date(o.expected_delivery).toLocaleDateString()}`
-                      : ""}
+                  <div className="mt-1 text-xs text-slate-500">
+                    {new Date(s.sale_date).toLocaleString("es-ES", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </div>
                 </div>
 
                 <div className="ml-3 text-right">
                   <div className="text-sm font-bold text-slate-800">
-                    {currency(o.total_amount)}
+                    {currency(s.total_amount)}
                   </div>
                   <div className="text-xs text-slate-500">
-                    {new Date(o.order_date).toLocaleString()}
+                    Ganancia {currency(s.gain)}
                   </div>
                 </div>
               </div>
@@ -373,24 +401,24 @@ export default function OrdersPageEnhanced({
     </div>
   );
 
-  // UI render
+  // Render
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* LEFT: Order form */}
+        {/* LEFT: Formulario de venta */}
         <div className="lg:col-span-2">
           <div className="rounded-xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="rounded-md bg-indigo-600 p-2 text-white">
-                  <Truck className="h-5 w-5" />
+                <div className="rounded-md bg-teal-600 p-2 text-white">
+                  <ShoppingCart className="h-5 w-5" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-800">
-                    Registrar orden
+                    Registrar venta
                   </h2>
                   <div className="text-xs text-slate-500">
-                    Flujo guiado: proveedor → productos → confirmar.
+                    Flujo guiado: añade productos, cantidad y confirma.
                   </div>
                 </div>
               </div>
@@ -400,9 +428,7 @@ export default function OrdersPageEnhanced({
                   title="Limpiar"
                   onClick={() => {
                     setLines([{ ...emptyLine }]);
-                    setSupplier("");
-                    setExpectedDelivery("");
-                    setNotes("");
+                    setReceivedAmount(0);
                   }}
                   className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                 >
@@ -410,46 +436,17 @@ export default function OrdersPageEnhanced({
                 </button>
                 <button
                   onClick={() => addLine()}
-                  className="flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm text-white"
+                  className="flex items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm text-white"
                 >
                   <Plus className="h-4 w-4" /> Añadir línea
                 </button>
               </div>
             </div>
 
-            {/* supplier + meta */}
-            <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <label className="md:col-span-2">
-                <div className="text-xs font-semibold text-slate-600">
-                  Proveedor
-                </div>
-                <input
-                  value={supplier}
-                  onChange={(e) => setSupplier(e.target.value)}
-                  placeholder="Nombre del proveedor"
-                  className="mt-1 w-full rounded-md border px-3 py-2"
-                />
-              </label>
-
-              <label>
-                <div className="text-xs font-semibold text-slate-600">
-                  Fecha entrega
-                </div>
-                <div className="mt-1">
-                  <input
-                    type="date"
-                    value={expectedDelivery}
-                    onChange={(e) => setExpectedDelivery(e.target.value)}
-                    className="w-full rounded-md border px-3 py-2"
-                  />
-                </div>
-              </label>
-            </div>
-
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                submitOrder();
+                submitSale();
               }}
               className="space-y-4"
             >
@@ -467,12 +464,12 @@ export default function OrdersPageEnhanced({
                     </div>
 
                     <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-12">
-                      {/* Product */}
+                      {/* Producto input (col 1-6) */}
                       <div className="sm:col-span-6">
-                        <div className="text-xs font-semibold text-slate-600">
+                        <label className="text-xs font-semibold text-slate-600">
                           Producto
-                        </div>
-                        <div className="relative mt-1">
+                        </label>
+                        <div className="relative">
                           <div className="flex items-center gap-2 rounded-md border bg-white px-2 py-1">
                             <Search className="h-4 w-4 text-slate-300" />
                             <input
@@ -485,14 +482,15 @@ export default function OrdersPageEnhanced({
                               }}
                               type="text"
                               className="w-full px-2 py-2 text-sm outline-none"
-                              placeholder="Nombre o SKU..."
+                              placeholder="Escribe nombre o SKU..."
                               value={line.product}
                               onChange={(e) => {
                                 updateLine(idx, {
                                   product: e.target.value,
                                   id: "",
                                   sku: "",
-                                  unit_cost: 0,
+                                  sale_price: 0,
+                                  price: 0,
                                   stock: 0,
                                 });
                                 updateSuggestions(e.target.value, idx);
@@ -516,7 +514,7 @@ export default function OrdersPageEnhanced({
                             </div>
                           </div>
 
-                          {/* suggestions */}
+                          {/* suggestions dropdown */}
                           {focusedLineIndex === idx &&
                             suggestions.length > 0 && (
                               <div className="absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-auto rounded-md border bg-white shadow-lg">
@@ -527,7 +525,7 @@ export default function OrdersPageEnhanced({
                                       ev.preventDefault();
                                       pickSuggestion(idx, s);
                                     }}
-                                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-indigo-50 ${sidx === activeSuggestionIndex ? "bg-indigo-50" : ""}`}
+                                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-teal-50 ${sidx === activeSuggestionIndex ? "bg-teal-50" : ""}`}
                                   >
                                     <div>
                                       <div className="font-medium text-slate-800">
@@ -539,12 +537,7 @@ export default function OrdersPageEnhanced({
                                     </div>
                                     <div className="text-right text-sm text-slate-600">
                                       <div>
-                                        {currency(
-                                          s.cost_price ??
-                                            s.unit_cost ??
-                                            s.price ??
-                                            0,
-                                        )}
+                                        {currency(s.sale_price ?? s.price ?? 0)}
                                       </div>
                                       <div
                                         className={`text-xs ${s.stock <= 5 ? "text-red-600" : "text-slate-500"}`}
@@ -559,12 +552,12 @@ export default function OrdersPageEnhanced({
                         </div>
                       </div>
 
-                      {/* Quantity */}
+                      {/* Cantidad (col 7-8) */}
                       <div className="sm:col-span-2">
-                        <div className="text-xs font-semibold text-slate-600">
+                        <label className="text-xs font-semibold text-slate-600">
                           Cantidad
-                        </div>
-                        <div className="mt-1 flex items-center gap-2">
+                        </label>
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => incQty(idx, -1)}
@@ -602,29 +595,29 @@ export default function OrdersPageEnhanced({
                         </div>
                       </div>
 
-                      {/* Unit cost */}
+                      {/* Precio Venta (col 9) */}
                       <div className="sm:col-span-2">
-                        <div className="text-xs font-semibold text-slate-600">
-                          Costo unitario
-                        </div>
-                        <div className="mt-1">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Precio
+                        </label>
+                        <div className="flex items-center gap-2">
                           <input
                             type="number"
                             className="w-full rounded-md border px-2 py-1 text-right"
-                            value={line.unit_cost}
+                            value={line.sale_price}
                             onChange={(e) =>
                               updateLine(idx, {
-                                unit_cost: Number(e.target.value),
+                                sale_price: Number(e.target.value),
                               })
                             }
                           />
                         </div>
                         <div className="mt-1 text-xs text-slate-400">
-                          Costo estimado
+                          Costo: {line.price ? currency(line.price) : "-"}
                         </div>
                       </div>
 
-                      {/* actions */}
+                      {/* acciones (col 12) */}
                       <div className="mt-2 flex justify-end sm:col-span-12">
                         <div className="flex items-center gap-2">
                           <button
@@ -650,33 +643,22 @@ export default function OrdersPageEnhanced({
                 </motion.div>
               ))}
 
-              {/* notes + actions */}
-              <div>
-                <label className="text-xs font-semibold text-slate-600">
-                  Notas
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Observaciones de la orden (opcional)"
-                  className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-                  rows={2}
-                />
-              </div>
-
+              {/* resumen y acciones */}
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-4">
                   <div className="rounded-md bg-slate-100 p-3">
-                    <div className="text-xs text-slate-500">Artículos</div>
+                    <div className="text-xs text-slate-500">Items</div>
                     <div className="text-lg font-bold text-slate-800">
                       {totalItems}
                     </div>
                   </div>
 
                   <div className="rounded-md bg-slate-100 p-3">
-                    <div className="text-xs text-slate-500">Costo estimado</div>
+                    <div className="text-xs text-slate-500">
+                      Ganancia estimada
+                    </div>
                     <div className="text-lg font-bold text-slate-800">
-                      {currency(totals.totalCost)}
+                      {currency(totals.gain)}
                     </div>
                   </div>
                 </div>
@@ -684,25 +666,25 @@ export default function OrdersPageEnhanced({
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-xs text-slate-500">Total</div>
-                    <div className="text-2xl font-extrabold text-indigo-700">
-                      {currency(totals.totalCost)}
+                    <div className="text-2xl font-extrabold text-teal-700">
+                      {currency(totals.total)}
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row">
                     <button
                       type="button"
-                      onClick={() => submitOrder()}
-                      className="flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white"
+                      onClick={() => submitSale()}
+                      className="flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 font-semibold text-white"
                     >
-                      <Check className="h-4 w-4" /> Registrar orden
+                      <Check className="h-4 w-4" /> Registrar venta
                     </button>
                     <button
                       type="button"
                       onClick={() => {
                         Swal.fire({
-                          title: "Imprimir orden",
-                          text: "Se abrirá una vista de impresión con los detalles de la orden.",
+                          title: "Imprimir recibo",
+                          text: "Se abrirá una vista de impresión con los detalles de la venta actual.",
                           icon: "info",
                           showCancelButton: true,
                           confirmButtonText: "Imprimir",
@@ -713,7 +695,7 @@ export default function OrdersPageEnhanced({
                       }}
                       className="flex items-center gap-2 rounded-md border px-4 py-2"
                     >
-                      <FileText className="h-4 w-4" /> Imprimir
+                      <CreditCard className="h-4 w-4" /> Recibo
                     </button>
                   </div>
                 </div>
@@ -721,32 +703,45 @@ export default function OrdersPageEnhanced({
             </form>
           </div>
 
-          {/* small meta panel */}
+          {/* Recibo rápido / recibido */}
           <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="rounded-md bg-slate-100 p-2">
-                <Calendar className="h-5 w-5 text-indigo-700" />
+                <DollarSign className="h-5 w-5 text-teal-700" />
               </div>
               <div>
-                <div className="text-xs text-slate-500">Fecha esperada</div>
-                <div className="text-sm text-slate-800">
-                  {expectedDelivery
-                    ? new Date(expectedDelivery).toLocaleDateString()
-                    : "-"}
+                <div className="text-xs text-slate-500">Monto recibido</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600">$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={receivedAmount ? fmt(receivedAmount) : ""}
+                    onChange={(e) => {
+                      const numeric =
+                        Number(String(e.target.value).replace(/[^\d]/g, "")) ||
+                        0;
+                      setReceivedAmount(numeric);
+                    }}
+                    className="w-40 rounded-md border px-3 py-2 text-right font-semibold text-teal-800"
+                    placeholder="0"
+                  />
                 </div>
               </div>
             </div>
 
             <div className="text-right">
-              <div className="text-xs text-slate-500">Proveedor</div>
-              <div className="text-sm font-medium text-slate-800">
-                {supplier || "-"}
+              <div className="text-xs text-slate-500">Vuelto estimado</div>
+              <div
+                className={`text-lg font-bold ${totals.change < 0 ? "text-red-600" : "text-teal-700"}`}
+              >
+                {currency(totals.change)}
               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: Side panel */}
+        {/* RIGHT: Side panel - resumen + historial */}
         <aside>
           <div className="sticky top-6 rounded-xl bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
@@ -757,7 +752,7 @@ export default function OrdersPageEnhanced({
                 <div>
                   <div className="text-xs text-slate-500">Resumen rápido</div>
                   <div className="text-lg font-bold text-slate-800">
-                    {currency(totals.totalCost)}
+                    {currency(totals.total)}
                   </div>
                 </div>
               </div>
@@ -771,9 +766,16 @@ export default function OrdersPageEnhanced({
               </div>
 
               <div className="flex items-center justify-between text-sm text-slate-600">
-                <div>Proveedores</div>
+                <div>Ganancia</div>
+                <div className="font-medium text-teal-700">
+                  {currency(totals.gain)}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-slate-600">
+                <div>Costo estimado</div>
                 <div className="font-medium text-slate-800">
-                  {/* could be dynamic */}—
+                  {currency(totals.cost)}
                 </div>
               </div>
 
@@ -781,20 +783,18 @@ export default function OrdersPageEnhanced({
                 <button
                   onClick={() => {
                     setLines([{ ...emptyLine }]);
-                    setSupplier("");
-                    setExpectedDelivery("");
-                    setNotes("");
-                    pushToast("Formulario limpiado", "info");
+                    setReceivedAmount(0);
+                    pushToast("Venta limpiada", "info");
                   }}
                   className="w-full rounded-md border px-3 py-2 text-sm"
                 >
-                  Limpiar orden
+                  Limpiar venta
                 </button>
               </div>
             </div>
 
             <div className="mt-4">
-              <RecentOrders />
+              <RecentSales />
             </div>
           </div>
         </aside>

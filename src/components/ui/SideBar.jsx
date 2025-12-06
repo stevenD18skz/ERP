@@ -11,6 +11,7 @@ import {
   faCog,
   faChevronLeft,
   faChevronRight,
+  faBars,
 } from "@fortawesome/free-solid-svg-icons";
 
 const menuItems = [
@@ -28,30 +29,21 @@ const SidebarEnhanced = ({ isExpanded, onToggle }) => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 h-full bg-gray-900 text-white shadow-lg transition-all duration-300 ${
+      className={`fixed left-0 top-0 z-20 h-full   text-black shadow-lg transition-all duration-300 ${
         isExpanded ? "w-64" : "w-16"
       }`}
       aria-label="Barra lateral principal"
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 bg-gray-800 px-3 py-3">
-        <div className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt="Logo"
-            className={`rounded-full object-cover transition-all duration-300 ${isExpanded ? "h-10 w-10" : "h-8 w-8"}`}
-          />
-          {isExpanded && (
-            <span className="text-lg font-semibold">ERP Supermarket</span>
-          )}
-        </div>
+      <div className="flex items-center justify-between border-b border-white bg-white px-3 py-3">
+        
 
         <button
           onClick={onToggle}
           aria-label={isExpanded ? "Colapsar menú" : "Expandir menú"}
-          className="rounded p-1 hover:bg-gray-700/60 focus:outline-none"
+            className="rounded-md p-2 hover:bg-gray-100 focus:outline-none"
         >
-          <FontAwesomeIcon icon={isExpanded ? faChevronLeft : faChevronRight} />
+           <FontAwesomeIcon icon={faBars} />
         </button>
       </div>
 

@@ -3,14 +3,15 @@ import { motion } from "framer-motion";
 import { currency } from "../../../utils/helpers";
 
 const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
-  <section className="mx-auto mt-6 w-full max-w-6xl overflow-hidden rounded-2xl shadow-lg">
-    <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-6 md:p-10">
+  <section className="overflow-hidden rounded-b-2xl shadow-lg ">
+    <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-6 md:p-10 min-h-[500px]">
       <img
-        src="https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=placeholder"
+        src="https://theacsi.org/wp-content/uploads/2022/01/acsi-supermarket-industry-scaled.jpg"
         alt="hero"
         className="absolute inset-0 h-full w-full object-cover opacity-10"
       />
-      <div className="relative z-10 grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+      
+      <div className="relative z-10 grid grid-cols-1 items-center  gap-6 md:grid-cols-3">
         <div className="md:col-span-2">
           <motion.h2
             initial={{ y: 8, opacity: 0 }}
@@ -51,7 +52,7 @@ const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
             <div>
               <div className="text-lg font-bold text-white">{topProduct}</div>
               <div className="mt-1 text-xs text-white/80">
-                Promedio ventas diarias: {dailyAvg}
+                Promedio ventas diarias: {currency(dailyAvg)}
               </div>
             </div>
             <div className="ml-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
@@ -82,6 +83,7 @@ const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
     </div>
   </section>
 );
+
 Hero.propTypes = {
   topProduct: PropTypes.string.isRequired,
   totalSales: PropTypes.number.isRequired,

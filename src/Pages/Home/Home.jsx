@@ -3,8 +3,7 @@ import { motion } from "framer-motion";
 import { currency, sparklinePath } from "../../utils/helpers";
 import { products, orders, sales } from "../../lib/mock";
 
-// Components
-import HeaderHome from "./components/HeaderHome";
+// Components 
 import Hero from "./components/Hero";
 import StatCard from "./components/StatCard";
 import RecentSalesTable from "./components/RecentSalesTable";
@@ -14,7 +13,6 @@ import InventoryAlerts from "./components/InventoryAlerts";
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false);
 
-  // Derived stats
   const totalSales = useMemo(
     () => sales.reduce((s, x) => s + x.total_amount, 0),
     [],
@@ -50,14 +48,13 @@ export default function Home() {
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen">
-      <HeaderHome onSignIn={() => setShowLogin(true)} />
+    <div className="min-h-screen "> 
 
-      <main className="px-4 md:px-8">
+      <main className="">
         <Hero
           topProduct={mostSold}
           totalSales={totalSales}
-          dailyAvg={currency(dailyAvg)}
+          dailyAvg={dailyAvg}
           onSignIn={() => setShowLogin(true)}
         />
 

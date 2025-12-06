@@ -19,6 +19,7 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
   const [userOpen, setUserOpen] = useState(false);
   const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
 
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (onSearch) onSearch(q);
@@ -38,16 +39,10 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
 
 
   return (
-    <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+    <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
+      <div className="mx-auto flex  items-center justify-between gap-4 px-4 py-3">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onToggleSidebar}
-            aria-label="Alternar menú"
-            className="rounded-md p-2 hover:bg-gray-100 focus:outline-none"
-          >
-            <FontAwesomeIcon icon={faBars} />
-          </button>
+          
 
           <div className="hidden sm:block">
             <h1 className="text-lg font-semibold text-slate-800">
@@ -85,16 +80,6 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() =>
-              onQuickCreate ? onQuickCreate() : navigate("/products/new")
-            }
-            className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white shadow-sm"
-            title="Crear nuevo"
-          >
-            <FontAwesomeIcon icon={faPlus} /> Nuevo
-          </button>
-
           <button
             onClick={() => Toast.fire({
               icon: "success",
