@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { currency } from "../../../utils/helpers";
+import { currency } from "@/utils/helpers";
 
 const TopProducts = ({ items }) => (
   <div className="rounded-lg bg-white p-4 shadow-sm">

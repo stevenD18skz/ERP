@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { currency, sparklinePath } from "../../utils/helpers";
-import { products, orders, sales } from "../../lib/mock";
+import { currency, sparklinePath } from "@/utils/helpers";
+import { products, orders, sales } from "@/lib/mock";
 
 // Components 
 import Hero from "./components/Hero";
