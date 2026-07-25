@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body{margin:0;background:#f8fafc;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  @keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+  a{color:#2563eb}
+  a:hover{color:#1d4ed8}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#f8fafc">
+
+<!-- App context bar -->
+<div style="height:56px;background:#ffffff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:28px;padding:0 20px;position:sticky;top:0;z-index:30">
+  <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#0f172a;font-size:15px;white-space:nowrap">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg>
+    Mi Tienda
+  </div>
+  <div style="display:flex;gap:4px;overflow-x:auto">
+    <div style="padding:8px 12px;font-size:14px;color:#64748b;font-weight:600;white-space:nowrap">Inicio</div>
+    <div style="padding:8px 12px;font-size:14px;color:#64748b;font-weight:600;white-space:nowrap">Ventas</div>
+    <div style="padding:8px 12px;font-size:14px;color:#2563eb;font-weight:700;white-space:nowrap;border-bottom:2px solid #2563eb">Productos</div>
+    <div style="padding:8px 12px;font-size:14px;color:#64748b;font-weight:600;white-space:nowrap">Pedidos</div>
+    <div style="padding:8px 12px;font-size:14px;color:#64748b;font-weight:600;white-space:nowrap">Reportes</div>
+  </div>
+</div>
+
+<div style="max-width:1280px;margin:0 auto;padding:24px 20px 80px">
+
+  <!-- Header -->
+  <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <h1 style="margin:0;font-size:26px;font-weight:800;color:#0f172a">Productos</h1>
+      <p style="margin:4px 0 0;font-size:15px;color:#64748b">{{ headerSubtitle }}</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onClick="{{ onRefresh }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;color:#334155;cursor:pointer" style-hover="background:#f8fafc" style-focus="outline:2px solid #2563eb;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.36L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-15.5 6.36L3 16"></path><path d="M8 16H3v5"></path></svg>
+        Actualizar
+      </button>
+      <button onClick="{{ onOpenImport }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;color:#334155;cursor:pointer" style-hover="background:#f8fafc" style-focus="outline:2px solid #2563eb;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        Importar
+      </button>
+      <button onClick="{{ onExportCsv }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;color:#334155;cursor:pointer" style-hover="background:#f8fafc" style-focus="outline:2px solid #2563eb;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Exportar
+      </button>
+      <button onClick="{{ onPrint }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;color:#334155;cursor:pointer" style-hover="background:#f8fafc" style-focus="outline:2px solid #2563eb;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Imprimir
+      </button>
+      <button onClick="{{ onNewProduct }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 18px;background:#2563eb;border:none;border-radius:10px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)" style-hover="background:#1d4ed8" style-focus="outline:2px solid #1d4ed8;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Nuevo producto
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick alerts -->
+  <sc-if value="{{ showAlertsRow }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <sc-if value="{{ lowStockCount }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ onLowStockAlert }}" style="flex:1;min-width:250px;display:flex;align-items:center;gap:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;cursor:pointer;text-align:left" style-hover="background:#fef3c7">
+          <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;color:#92400e">{{ lowStockLabel }}</div>
+            <div style="font-size:13px;color:#b45309">Toca para ver la lista</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </sc-if>
+      <sc-if value="{{ vencerCount }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ onVencerAlert }}" style="flex:1;min-width:250px;display:flex;align-items:center;gap:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;cursor:pointer;text-align:left" style-hover="background:#fef3c7">
+          <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;color:#92400e">{{ vencerLabel }}</div>
+            <div style="font-size:13px;color:#b45309">Toca para ver la lista</div>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- Toolbar -->
+  <div style="background:#fff;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid #f1f5f9;padding:14px;margin-bottom:14px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="flex:1 1 260px;position:relative;min-width:220px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:13px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" value="{{ search }}" onChange="{{ onSearchChange }}" placeholder="Buscar por nombre o SKU..." style="width:100%;height:44px;padding:0 14px 0 42px;border-radius:10px;border:1px solid #e2e8f0;font-size:15px;color:#0f172a" style-focus="outline:2px solid #2563eb;outline-offset:-1px;border-color:#2563eb" />
+      </div>
+      <button onClick="{{ onOpenScanSearch }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;color:#334155;cursor:pointer;white-space:nowrap" style-hover="background:#f8fafc" style-focus="outline:2px solid #2563eb;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+        Escanear código
+      </button>
+      <button onClick="{{ onToggleFilters }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;color:#334155;cursor:pointer;white-space:nowrap;position:relative" style-hover="background:#f8fafc" style-focus="outline:2px solid #2563eb;outline-offset:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="4" x2="14" y2="4"></line><line x1="10" y1="4" x2="3" y2="4"></line><line x1="21" y1="12" x2="12" y2="12"></line><line x1="8" y1="12" x2="3" y2="12"></line><line x1="21" y1="20" x2="16" y2="20"></line><line x1="12" y1="20" x2="3" y2="20"></line><line x1="14" y1="2" x2="14" y2="6"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="16" y1="18" x2="16" y2="22"></line></svg>
+        Filtros
+        <sc-if value="{{ filterCount }}" hint-placeholder-val="{{ false }}">
+          <span style="min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#2563eb;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ filterCount }}</span>
+        </sc-if>
+      </button>
+    </div>
+
+    <sc-if value="{{ hasActiveFilters }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9">
+        <sc-for list="{{ activeChips }}" as="chip" hint-placeholder-count="0">
+          <span style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:#eff6ff;color:#1d4ed8;border-radius:999px;font-size:13px;font-weight:600">
+            {{ chip.label }}
+            <button onClick="{{ chip.onRemove }}" aria-label="Quitar filtro" style="display:flex;background:none;border:none;padding:2px;cursor:pointer;color:#1d4ed8">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </span>
+        </sc-for>
+        <button onClick="{{ onClearAllFilters }}" style="background:none;border:none;color:#64748b;font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer;padding:6px 4px">Limpiar todo</button>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- Bulk action bar -->
+  <sc-if value="{{ bulkBarVisible }}" hint-placeholder-val="{{ false }}">
+    <div style="position:sticky;top:64px;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#1d4ed8;color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:15px;font-weight:700">{{ selectedCount }} seleccionados</div>
+      <div style="display:flex;gap:10px">
+        <button onClick="{{ onCancelSelection }}" style="height:40px;padding:0 14px;background:rgba(255,255,255,.15);border:none;border-radius:8px;color:#fff;font-weight:600;font-size:14px;cursor:pointer" style-hover="background:rgba(255,255,255,.25)">Cancelar</button>
+        <button onClick="{{ onBulkDelete }}" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;background:#dc2626;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" style-hover="background:#b91c1c">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+          Eliminar seleccionados
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Loading skeleton -->
+  <sc-if value="{{ loadingVisible }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border-radius:12px;border:1px solid #f1f5f9;padding:16px;display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ skeletonRows }}" as="sk" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:14px;padding:8px 0">
+          <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);background-size:400px 100%;animation:shimmer 1.4s infinite"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+            <div style="width:40%;height:12px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);background-size:400px 100%;animation:shimmer 1.4s infinite"></div>
+            <div style="width:22%;height:10px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);background-size:400px 100%;animation:shimmer 1.4s infinite"></div>
+          </div>
+          <div style="width:70px;height:12px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);background-size:400px 100%;animation:shimmer 1.4s infinite"></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- Empty state -->
+  <sc-if value="{{ emptyVisible }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border-radius:12px;border:1px solid #f1f5f9;padding:64px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px">
+      <div style="width:64px;height:64px;border-radius:16px;background:#f1f5f9;display:flex;align-items:center;justify-content:center">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="M3.3 7 12 12l8.7-5"></path><path d="M12 22V12"></path></svg>
+      </div>
+      <div style="font-size:18px;font-weight:700;color:#0f172a">No encontramos productos</div>
+      <div style="font-size:14px;color:#64748b;max-width:340px">Prueba con otra palabra de búsqueda o quita algunos filtros para ver más resultados.</div>
+      <button onClick="{{ onClearAllFilters }}" style="height:44px;padding:0 18px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" style-hover="background:#1d4ed8">Limpiar filtros</button>
+    </div>
+  </sc-if>
+
+  <!-- Desktop table -->
+  <sc-if value="{{ showDesktopTable }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#fff;border-radius:12px;border:1px solid #f1f5f9;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead>
+          <tr style="border-bottom:1px solid #e2e8f0">
+            <th style="width:44px;padding:12px 8px 12px 16px;text-align:left">
+              <button onClick="{{ onToggleSelectAll }}" aria-label="Seleccionar todos" style="width:22px;height:22px;border-radius:6px;border:1.5px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0">
+                <sc-if value="{{ allChecked }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+                <sc-if value="{{ someChecked }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg></sc-if>
+              </button>
+            </th>
+            <th style="width:60px;padding:12px 8px;text-align:left;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em">Foto</th>
+            <th style="padding:12px 8px;text-align:left">
+              <button onClick="{{ onSortNombre }}" style="display:flex;align-items:center;gap:4px;background:none;border:none;padding:0;cursor:pointer;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em">Producto
+                <sc-if value="{{ sortNombreAsc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></sc-if>
+                <sc-if value="{{ sortNombreDesc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></sc-if>
+              </button>
+            </th>
+            <th style="padding:12px 8px;text-align:left;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em">Categoría</th>
+            <th style="padding:12px 8px;text-align:right">
+              <button onClick="{{ onSortCosto }}" style="display:flex;align-items:center;gap:4px;background:none;border:none;padding:0;cursor:pointer;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-left:auto">Costo
+                <sc-if value="{{ sortCostoAsc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></sc-if>
+                <sc-if value="{{ sortCostoDesc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></sc-if>
+              </button>
+            </th>
+            <th style="padding:12px 8px;text-align:right">
+              <button onClick="{{ onSortPrecio }}" style="display:flex;align-items:center;gap:4px;background:none;border:none;padding:0;cursor:pointer;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-left:auto">Precio
+                <sc-if value="{{ sortPrecioAsc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></sc-if>
+                <sc-if value="{{ sortPrecioDesc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></sc-if>
+              </button>
+            </th>
+            <th style="padding:12px 8px;text-align:right">
+              <button onClick="{{ onSortMargen }}" style="display:flex;align-items:center;gap:4px;background:none;border:none;padding:0;cursor:pointer;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em;margin-left:auto">Margen
+                <sc-if value="{{ sortMargenAsc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></sc-if>
+                <sc-if value="{{ sortMargenDesc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></sc-if>
+              </button>
+            </th>
+            <th style="padding:12px 8px;text-align:left">
+              <button onClick="{{ onSortStock }}" style="display:flex;align-items:center;gap:4px;background:none;border:none;padding:0;cursor:pointer;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em">Stock
+                <sc-if value="{{ sortStockAsc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg></sc-if>
+                <sc-if value="{{ sortStockDesc }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg></sc-if>
+              </button>
+            </th>
+            <th style="padding:12px 16px 12px 8px;text-align:left;color:#64748b;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.03em">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+            <tr style="border-bottom:1px solid #f1f5f9">
+              <td style="padding:10px 8px 10px 16px">
+                <button onClick="{{ row.onToggleSelect }}" aria-label="Seleccionar producto" style="width:22px;height:22px;border-radius:6px;border:1.5px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0">
+                  <sc-if value="{{ row.isSelected }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+                </button>
+              </td>
+              <td style="padding:10px 8px">
+                <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc">
+                  <image-slot id="{{ row.photoId }}" shape="rounded" radius="10" placeholder="Foto"></image-slot>
+                </div>
+              </td>
+              <td style="padding:10px 8px">
+                <div style="font-weight:700;color:#0f172a">{{ row.nombre }}</div>
+                <div style="color:#94a3b8;font-size:12.5px;margin-top:2px">SKU {{ row.sku }}</div>
+                <sc-if value="{{ row.showVenceBadge }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11.5px;font-weight:700">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    {{ row.venceBadgeLabel }}
+                  </div>
+                </sc-if>
+              </td>
+              <td style="padding:10px 8px">
+                <span style="padding:4px 10px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12.5px;font-weight:600;white-space:nowrap">{{ row.categoria }}</span>
+              </td>
+              <td style="padding:10px 8px;text-align:right;color:#334155;font-variant-numeric:tabular-nums">{{ row.costoFmt }}</td>
+              <td style="padding:10px 8px;text-align:right;color:#0f172a;font-weight:700;font-variant-numeric:tabular-nums">{{ row.precioFmt }}</td>
+              <td style="padding:10px 8px;text-align:right">
+                <div style="color:#059669;font-weight:700;font-variant-numeric:tabular-nums">{{ row.margenFmt }}</div>
+                <div style="color:#94a3b8;font-size:11.5px">{{ row.margenPct }}</div>
+              </td>
+              <td style="padding:10px 8px">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <button onClick="{{ row.onStockStepDown }}" aria-label="Restar una unidad" style="width:28px;height:28px;flex:none;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center" style-hover="background:#f1f5f9">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  </button>
+                  <input type="number" value="{{ row.stockValue }}" onChange="{{ row.onStockInputChange }}" onBlur="{{ row.onStockInputBlur }}" aria-label="Cantidad en stock" style="width:50px;height:28px;text-align:center;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums" style-focus="outline:2px solid #2563eb;border-color:#2563eb" />
+                  <button onClick="{{ row.onStockStepUp }}" aria-label="Sumar una unidad" style="width:28px;height:28px;flex:none;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center" style-hover="background:#f1f5f9">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  </button>
+                </div>
+                <sc-if value="{{ row.showStockBadge }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    {{ row.stockBadgeLabel }}
+                  </span>
+                </sc-if>
+              </td>
+              <td style="padding:10px 16px 10px 8px">
+                <div style="display:flex;gap:6px">
+                  <button onClick="{{ row.onEdit }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;color:#334155;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#f8fafc">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>
+                    Editar
+                  </button>
+                  <button onClick="{{ row.onDelete }}" style="display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;color:#b91c1c;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:#fee2e2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </sc-if>
+
+  <!-- Mobile cards -->
+  <sc-if value="{{ showMobileCards }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+        <div style="background:#fff;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:14px">
+          <div style="display:flex;gap:12px">
+            <button onClick="{{ row.onToggleSelect }}" aria-label="Seleccionar producto" style="width:24px;height:24px;flex:none;border-radius:7px;border:1.5px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;align-self:flex-start;margin-top:4px">
+              <sc-if value="{{ row.isSelected }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+            </button>
+            <div style="width:56px;height:56px;flex:none;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc">
+              <image-slot id="{{ row.photoId }}" shape="rounded" radius="12" placeholder="Foto"></image-slot>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;color:#0f172a;font-size:16px">{{ row.nombre }}</div>
+              <div style="color:#94a3b8;font-size:12.5px;margin-top:2px">SKU {{ row.sku }}</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+                <span style="padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:600">{{ row.categoria }}</span>
+                <sc-if value="{{ row.showVenceBadge }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    {{ row.venceBadgeLabel }}
+                  </span>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;padding:10px;background:#f8fafc;border-radius:10px">
+            <div>
+              <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em">Costo</div>
+              <div style="font-size:15px;color:#334155;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px">{{ row.costoFmt }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em">Precio</div>
+              <div style="font-size:15px;color:#0f172a;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px">{{ row.precioFmt }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.02em">Margen</div>
+              <div style="font-size:15px;color:#059669;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px">{{ row.margenFmt }}</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <button onClick="{{ row.onStockStepDown }}" aria-label="Restar una unidad" style="width:36px;height:36px;flex:none;border-radius:9px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <input type="number" value="{{ row.stockValue }}" onChange="{{ row.onStockInputChange }}" onBlur="{{ row.onStockInputBlur }}" aria-label="Cantidad en stock" style="width:56px;height:36px;text-align:center;border:1px solid #e2e8f0;border-radius:9px;font-size:15px;font-weight:700;color:#0f172a;font-variant-numeric:tabular-nums" style-focus="outline:2px solid #2563eb;border-color:#2563eb" />
+                <button onClick="{{ row.onStockStepUp }}" aria-label="Sumar una unidad" style="width:36px;height:36px;flex:none;border-radius:9px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+              </div>
+              <sc-if value="{{ row.showStockBadge }}" hint-placeholder-val="{{ false }}">
+                <span style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:11.5px;font-weight:700">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                  {{ row.stockBadgeLabel }}
+                </span>
+              </sc-if>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onClick="{{ row.onEdit }}" aria-label="Editar" style="display:flex;align-items:center;gap:6px;height:40px;padding:0 12px;background:#fff;border:1px solid #e2e8f0;border-radius:9px;color:#334155;font-size:13px;font-weight:600;cursor:pointer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>
+                Editar
+              </button>
+              <button onClick="{{ row.onDelete }}" aria-label="Eliminar" style="display:flex;align-items:center;gap:6px;height:40px;padding:0 12px;background:#fef2f2;border:1px solid #fee2e2;border-radius:9px;color:#b91c1c;font-size:13px;font-weight:600;cursor:pointer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- Pagination -->
+  <sc-if value="{{ showPagination }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:16px;padding:14px 16px;background:#fff;border:1px solid #f1f5f9;border-radius:12px">
+      <div style="font-size:13.5px;color:#64748b">Mostrando {{ pageRangeStart }}–{{ pageRangeEnd }} de {{ totalCount }}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <button onClick="{{ onPrevPage }}" disabled="{{ isFirstPage }}" aria-label="Página anterior" style="width:40px;height:40px;flex:none;border-radius:9px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center;opacity:{{ prevOpacity }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <sc-for list="{{ pageNumbers }}" as="pn" hint-placeholder-count="2">
+          <button onClick="{{ pn.onClick }}" aria-label="{{ pn.ariaLabel }}" style="min-width:40px;height:40px;padding:0 10px;border-radius:9px;border:1px solid {{ pn.borderColor }};background:{{ pn.bg }};color:{{ pn.color }};font-weight:700;font-size:14px;cursor:pointer;font-variant-numeric:tabular-nums">{{ pn.label }}</button>
+        </sc-for>
+        <button onClick="{{ onNextPage }}" disabled="{{ isLastPage }}" aria-label="Página siguiente" style="width:40px;height:40px;flex:none;border-radius:9px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center;opacity:{{ nextOpacity }}">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+<!-- Filters drawer -->
+<sc-if value="{{ filtersOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ onCloseFilters }}" style="position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:40"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);background:#fff;z-index:41;box-shadow:-8px 0 24px rgba(0,0,0,.1);display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #f1f5f9">
+      <div style="font-size:17px;font-weight:800;color:#0f172a">Filtros</div>
+      <button onClick="{{ onCloseFilters }}" aria-label="Cerrar" style="width:36px;height:36px;border-radius:9px;border:none;background:#f1f5f9;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:22px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px">Rango de precio</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="number" value="{{ draftPriceMin }}" onChange="{{ onChangePriceMin }}" placeholder="Mínimo" style="flex:1;height:44px;padding:0 12px;border-radius:9px;border:1px solid #e2e8f0;font-size:14px" style-focus="outline:2px solid #2563eb;border-color:#2563eb" />
+          <span style="color:#94a3b8">—</span>
+          <input type="number" value="{{ draftPriceMax }}" onChange="{{ onChangePriceMax }}" placeholder="Máximo" style="flex:1;height:44px;padding:0 12px;border-radius:9px;border:1px solid #e2e8f0;font-size:14px" style-focus="outline:2px solid #2563eb;border-color:#2563eb" />
+        </div>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px">Nivel de stock</div>
+        <select value="{{ draftStockCmp }}" onChange="{{ onChangeStockCmp }}" style="width:100%;height:44px;padding:0 12px;border-radius:9px;border:1px solid #e2e8f0;font-size:14px;margin-bottom:8px;background:#fff" style-focus="outline:2px solid #2563eb">
+          <option value="any">Cualquier cantidad</option>
+          <option value="lte">Menor o igual a</option>
+          <option value="gte">Mayor o igual a</option>
+        </select>
+        <sc-if value="{{ stockValVisible }}" hint-placeholder-val="{{ false }}">
+          <input type="number" value="{{ draftStockVal }}" onChange="{{ onChangeStockVal }}" placeholder="Cantidad" style="width:100%;height:44px;padding:0 12px;border-radius:9px;border:1px solid #e2e8f0;font-size:14px" style-focus="outline:2px solid #2563eb;border-color:#2563eb" />
+        </sc-if>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px">Categorías</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ categoryOptions }}" as="cat" hint-placeholder-count="5">
+            <button onClick="{{ cat.onToggle }}" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:6px 0;cursor:pointer;text-align:left">
+              <span style="width:22px;height:22px;flex:none;border-radius:6px;border:1.5px solid #cbd5e1;display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{ cat.checked }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+              </span>
+              <span style="font-size:14.5px;color:#334155">{{ cat.name }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <button onClick="{{ onToggleDraftPorVencer }}" style="display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;cursor:pointer;width:100%;text-align:left">
+          <span style="width:22px;height:22px;flex:none;border-radius:6px;border:1.5px solid #d97706;background:#fff;display:flex;align-items:center;justify-content:center">
+            <sc-if value="{{ draftPorVencer }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+          </span>
+          <span style="font-size:14.5px;color:#92400e;font-weight:600">Solo productos por vencer</span>
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;padding:16px 20px;border-top:1px solid #f1f5f9">
+      <button onClick="{{ onClearFiltersPanel }}" style="flex:1;height:46px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;color:#334155;font-weight:700;font-size:14px;cursor:pointer">Limpiar</button>
+      <button onClick="{{ onApplyFilters }}" style="flex:2;height:46px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer" style-hover="background:#1d4ed8">Aplicar filtros</button>
+    </div>
+  </div>
+</sc-if>
+
+<!-- Create/Edit form modal -->
+<sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px">
+    <div style="background:#fff;border-radius:16px;width:min(560px,100%);box-shadow:0 20px 50px rgba(0,0,0,.2);margin-bottom:32px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:18px;font-weight:800;color:#0f172a">{{ formTitle }}</div>
+        <button onClick="{{ onCloseForm }}" aria-label="Cerrar" style="width:36px;height:36px;border-radius:9px;border:none;background:#f1f5f9;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div style="padding:22px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="width:96px;height:96px;flex:none;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc">
+            <image-slot id="{{ formPhotoId }}" shape="rounded" radius="14" placeholder="Foto del producto"></image-slot>
+          </div>
+          <div style="font-size:13px;color:#64748b;padding-top:6px">Arrastra una foto o haz clic en el recuadro. Ayuda a reconocer el producto rápido en la lista y en Ventas.</div>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Nombre <span style="color:#dc2626">*</span></label>
+          <input type="text" value="{{ formData.nombre }}" onChange="{{ onChangeNombre }}" placeholder="Ej. Leche entera 1L" style="width:100%;height:46px;padding:0 14px;border-radius:10px;border:1px solid {{ nombreBorderColor }};font-size:15px" style-focus="outline:2px solid #2563eb" />
+          <sc-if value="{{ formErrors.nombre }}" hint-placeholder-val="{{ false }}"><div style="color:#dc2626;font-size:12.5px;margin-top:5px;font-weight:600">{{ formErrors.nombre }}</div></sc-if>
+        </div>
+
+        <div style="display:flex;gap:14px">
+          <div style="flex:1">
+            <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">SKU <span style="color:#dc2626">*</span></label>
+            <input type="text" value="{{ formData.sku }}" onChange="{{ onChangeSku }}" placeholder="Ej. LAC-0012" style="width:100%;height:46px;padding:0 14px;border-radius:10px;border:1px solid {{ skuBorderColor }};font-size:15px" style-focus="outline:2px solid #2563eb" />
+            <sc-if value="{{ formErrors.sku }}" hint-placeholder-val="{{ false }}"><div style="color:#dc2626;font-size:12.5px;margin-top:5px;font-weight:600">{{ formErrors.sku }}</div></sc-if>
+          </div>
+          <div style="flex:1">
+            <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Código de barras</label>
+            <div style="display:flex;gap:8px">
+              <input type="text" value="{{ formData.barcode }}" onChange="{{ onChangeBarcode }}" placeholder="Opcional" style="flex:1;height:46px;padding:0 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:15px" style-focus="outline:2px solid #2563eb;border-color:#2563eb" />
+              <button onClick="{{ onOpenScanForm }}" aria-label="Escanear código" style="width:46px;height:46px;flex:none;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;color:#334155;display:flex;align-items:center;justify-content:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Categoría</label>
+          <select value="{{ formData.categoria }}" onChange="{{ onChangeCategoria }}" style="width:100%;height:46px;padding:0 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:15px;background:#fff" style-focus="outline:2px solid #2563eb">
+            <sc-for list="{{ categoryPlainList }}" as="c" hint-placeholder-count="5"><option value="{{ c }}">{{ c }}</option></sc-for>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:14px">
+          <div style="flex:1">
+            <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Costo <span style="color:#dc2626">*</span></label>
+            <input type="number" value="{{ formData.costo }}" onChange="{{ onChangeCosto }}" placeholder="0.00" style="width:100%;height:46px;padding:0 14px;border-radius:10px;border:1px solid {{ costoBorderColor }};font-size:15px;font-variant-numeric:tabular-nums" style-focus="outline:2px solid #2563eb" />
+            <sc-if value="{{ formErrors.costo }}" hint-placeholder-val="{{ false }}"><div style="color:#dc2626;font-size:12.5px;margin-top:5px;font-weight:600">{{ formErrors.costo }}</div></sc-if>
+          </div>
+          <div style="flex:1">
+            <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Precio de venta <span style="color:#dc2626">*</span></label>
+            <input type="number" value="{{ formData.precio }}" onChange="{{ onChangePrecio }}" placeholder="0.00" style="width:100%;height:46px;padding:0 14px;border-radius:10px;border:1px solid {{ precioBorderColor }};font-size:15px;font-variant-numeric:tabular-nums" style-focus="outline:2px solid #2563eb" />
+            <sc-if value="{{ formErrors.precio }}" hint-placeholder-val="{{ false }}"><div style="color:#dc2626;font-size:12.5px;margin-top:5px;font-weight:600">{{ formErrors.precio }}</div></sc-if>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;background:#ecfdf5;border-radius:10px;padding:10px 14px;color:#065f46;font-size:13.5px;font-weight:600">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          {{ margenPreview }}
+        </div>
+
+        <div>
+          <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Stock inicial <span style="color:#dc2626">*</span></label>
+          <input type="number" value="{{ formData.stock }}" onChange="{{ onChangeStock }}" placeholder="0" style="width:160px;height:46px;padding:0 14px;border-radius:10px;border:1px solid {{ stockBorderColor }};font-size:15px;font-variant-numeric:tabular-nums" style-focus="outline:2px solid #2563eb" />
+          <sc-if value="{{ formErrors.stock }}" hint-placeholder-val="{{ false }}"><div style="color:#dc2626;font-size:12.5px;margin-top:5px;font-weight:600">{{ formErrors.stock }}</div></sc-if>
+        </div>
+
+        <div style="border-top:1px solid #f1f5f9;padding-top:16px">
+          <button onClick="{{ onTogglePerecedero }}" style="display:flex;align-items:center;gap:10px;background:none;border:none;padding:0;cursor:pointer">
+            <span style="width:22px;height:22px;border-radius:6px;border:1.5px solid #cbd5e1;display:flex;align-items:center;justify-content:center">
+              <sc-if value="{{ formData.perecedero }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if>
+            </span>
+            <span style="font-size:14.5px;color:#334155;font-weight:600">Es un producto perecedero</span>
+          </button>
+          <sc-if value="{{ showVenceField }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:12px">
+              <label style="display:block;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px">Fecha de vencimiento <span style="color:#dc2626">*</span></label>
+              <input type="date" value="{{ formData.vence }}" onChange="{{ onChangeVence }}" style="width:220px;height:46px;padding:0 14px;border-radius:10px;border:1px solid {{ venceBorderColor }};font-size:15px" style-focus="outline:2px solid #2563eb" />
+              <sc-if value="{{ formErrors.vence }}" hint-placeholder-val="{{ false }}"><div style="color:#dc2626;font-size:12.5px;margin-top:5px;font-weight:600">{{ formErrors.vence }}</div></sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;padding:18px 22px;border-top:1px solid #f1f5f9">
+        <button onClick="{{ onCloseForm }}" style="flex:1;height:48px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;color:#334155;font-weight:700;font-size:14.5px;cursor:pointer">Cancelar</button>
+        <button onClick="{{ onSubmitForm }}" disabled="{{ formSaving }}" style="flex:2;height:48px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;opacity:{{ submitOpacity }}" style-hover="background:#1d4ed8">
+          <sc-if value="{{ formSaving }}" hint-placeholder-val="{{ false }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg></sc-if>
+          {{ submitLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- Import modal -->
+<sc-if value="{{ importOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#fff;border-radius:16px;width:min(520px,100%);box-shadow:0 20px 50px rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:18px;font-weight:800;color:#0f172a">Importar productos</div>
+        <button onClick="{{ onCloseImport }}" aria-label="Cerrar" style="width:36px;height:36px;border-radius:9px;border:none;background:#f1f5f9;cursor:pointer;color:#64748b;display:flex;align-items:center;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:16px 22px 0">
+        <div style="flex:1;height:5px;border-radius:3px;background:{{ step1BarColor }}"></div>
+        <div style="flex:1;height:5px;border-radius:3px;background:{{ step2BarColor }}"></div>
+        <div style="flex:1;height:5px;border-radius:3px;background:{{ step3BarColor }}"></div>
+      </div>
+
+      <sc-if value="{{ importStep1 }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:22px;display:flex;flex-direction:column;gap:16px;align-items:center;text-align:center">
+          <div style="width:100%;border:2px dashed #cbd5e1;border-radius:14px;padding:36px 16px;display:flex;flex-direction:column;align-items:center;gap:10px">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <div style="font-size:15px;font-weight:700;color:#0f172a">Arrastra tu archivo aquí</div>
+            <div style="font-size:13.5px;color:#64748b">Formato Excel o CSV</div>
+            <button onClick="{{ onImportSimulateUpload }}" style="margin-top:6px;height:44px;padding:0 18px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Seleccionar archivo</button>
+          </div>
+          <a href="#" onClick="{{ onDownloadTemplate }}" style="font-size:13.5px;font-weight:600;text-decoration:underline">Descargar plantilla de ejemplo</a>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;background:#ecfdf5;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:#059669;font-variant-numeric:tabular-nums">{{ importValidCount }}</div>
+              <div style="font-size:12.5px;color:#065f46;font-weight:600">Listos para importar</div>
+            </div>
+            <div style="flex:1;background:#fef2f2;border-radius:10px;padding:14px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:#dc2626;font-variant-numeric:tabular-nums">{{ importErrorCount }}</div>
+              <div style="font-size:12.5px;color:#b91c1c;font-weight:600">Con errores</div>
+            </div>
+          </div>
+          <div style="border:1px solid #f1f5f9;border-radius:10px;overflow:hidden">
+            <sc-for list="{{ importErrorRows }}" as="er" hint-placeholder-count="2">
+              <div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:13.5px">
+                <span style="font-weight:700;color:#0f172a;white-space:nowrap">Fila {{ er.fila }}</span>
+                <span style="color:#b91c1c">{{ er.motivo }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:13px;color:#64748b">Las filas con errores no se importarán. Puedes corregir el archivo y volver a intentarlo.</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ importStep3 }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:36px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+          <div style="width:56px;height:56px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div style="font-size:17px;font-weight:800;color:#0f172a">{{ importValidCount }} productos importados</div>
+          <div style="font-size:14px;color:#64748b">Ya puedes verlos en tu lista de productos.</div>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;gap:10px;padding:18px 22px;border-top:1px solid #f1f5f9">
+        <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ onCloseImport }}" style="flex:1;height:48px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;color:#334155;font-weight:700;font-size:14.5px;cursor:pointer">Cancelar</button>
+        </sc-if>
+        <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ onImportConfirm }}" disabled="{{ importSaving }}" style="flex:2;height:48px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            <sc-if value="{{ importSaving }}" hint-placeholder-val="{{ false }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg></sc-if>
+            {{ importConfirmLabel }}
+          </button>
+        </sc-if>
+        <sc-if value="{{ importStep3 }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ onImportFinish }}" style="flex:1;height:48px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14.5px;cursor:pointer">Ver productos</button>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- Barcode scan modal -->
+<sc-if value="{{ scanOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#0f172a;border-radius:16px;width:min(420px,100%);padding:26px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
+      <div style="font-size:16px;font-weight:700;color:#fff">{{ scanTitle }}</div>
+      <div style="width:100%;aspect-ratio:4/3;border:3px dashed #475569;border-radius:14px;display:flex;align-items:center;justify-content:center;position:relative">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+      </div>
+      <div style="font-size:13.5px;color:#94a3b8">Apunta la cámara al código de barras del producto</div>
+      <sc-if value="{{ scanFeedback }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:13.5px;color:#a7f3d0;font-weight:700;font-variant-numeric:tabular-nums">Código detectado: {{ scanFeedback }}</div>
+      </sc-if>
+      <div style="display:flex;gap:10px;width:100%">
+        <button onClick="{{ onCloseScan }}" style="flex:1;height:46px;background:rgba(255,255,255,.1);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Cancelar</button>
+        <button onClick="{{ onSimulateScan }}" style="flex:1;height:46px;background:#2563eb;border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Simular escaneo</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- Toast -->
+<sc-if value="{{ toastVisible }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:70;animation:toastIn .25s ease-out;display:flex;align-items:center;gap:14px;background:#0f172a;color:#fff;padding:14px 16px 14px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:min(92vw,420px)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    <span style="font-size:14px;font-weight:600;flex:1">{{ toastMessage }}</span>
+    <sc-if value="{{ toastHasUndo }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ onToastUndo }}" style="background:none;border:none;color:#93c5fd;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">Deshacer</button>
+    </sc-if>
+    <button onClick="{{ onToastClose }}" aria-label="Cerrar" style="background:none;border:none;color:#64748b;cursor:pointer;display:flex;flex:none">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  </div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const TODAY = new Date('2026-07-25T00:00:00');
+const CATEGORY_LIST = ['Abarrotes', 'Bebidas', 'Lácteos', 'Panadería', 'Limpieza'];
+const LOW_STOCK_THRESHOLD = 5;
+const EXPIRY_WARNING_DAYS = 5;
+const PAGE_SIZE = 10;
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  return Math.round((d - TODAY) / 86400000);
+}
+
+const INITIAL_PRODUCTS = [
+  { id: 1, nombre: 'Leche entera 1L', sku: 'LAC-0012', barcode: '7501234567890', categoria: 'Lácteos', costo: 14.5, precio: 18.0, stock: 42, perecedero: true, vence: '2026-07-29' },
+  { id: 2, nombre: 'Pan de molde blanco', sku: 'PAN-0045', barcode: '7501234567891', categoria: 'Panadería', costo: 22.0, precio: 29.9, stock: 8, perecedero: true, vence: '2026-07-27' },
+  { id: 3, nombre: 'Arroz superextra 1kg', sku: 'ABR-0003', barcode: '7501234567892', categoria: 'Abarrotes', costo: 16.8, precio: 21.5, stock: 120, perecedero: false, vence: null },
+  { id: 4, nombre: 'Refresco de cola 2L', sku: 'BEB-0021', barcode: '7501234567893', categoria: 'Bebidas', costo: 19.0, precio: 26.0, stock: 3, perecedero: false, vence: null },
+  { id: 5, nombre: 'Detergente en polvo 900g', sku: 'LIM-0010', barcode: '7501234567894', categoria: 'Limpieza', costo: 32.0, precio: 42.5, stock: 65, perecedero: false, vence: null },
+  { id: 6, nombre: 'Yogur natural 200g', sku: 'LAC-0019', barcode: '7501234567895', categoria: 'Lácteos', costo: 6.2, precio: 9.0, stock: 0, perecedero: true, vence: '2026-07-26' },
+  { id: 7, nombre: 'Aceite vegetal 1L', sku: 'ABR-0031', barcode: '7501234567896', categoria: 'Abarrotes', costo: 28.0, precio: 35.9, stock: 54, perecedero: false, vence: null },
+  { id: 8, nombre: 'Jabón de tocador 3pz', sku: 'LIM-0022', barcode: '7501234567897', categoria: 'Limpieza', costo: 11.0, precio: 15.9, stock: 15, perecedero: false, vence: null },
+  { id: 9, nombre: 'Galletas integrales 200g', sku: 'ABR-0042', barcode: '7501234567898', categoria: 'Abarrotes', costo: 8.5, precio: 12.9, stock: 30, perecedero: false, vence: null },
+  { id: 10, nombre: 'Agua purificada 1L', sku: 'BEB-0033', barcode: '7501234567899', categoria: 'Bebidas', costo: 5.0, precio: 8.0, stock: 18, perecedero: false, vence: null },
+  { id: 11, nombre: 'Cloro desinfectante 1L', sku: 'LIM-0018', barcode: '7501234567900', categoria: 'Limpieza', costo: 14.0, precio: 19.5, stock: 22, perecedero: false, vence: null },
+  { id: 12, nombre: 'Queso fresco 400g', sku: 'LAC-0027', barcode: '7501234567901', categoria: 'Lácteos', costo: 18.0, precio: 25.0, stock: 4, perecedero: true, vence: '2026-07-28' },
+];
+
+const EMPTY_FILTERS = { priceMin: '', priceMax: '', stockCmp: 'any', stockVal: '', categories: [], porVencer: false };
+
+class Component extends DCLogic {
+  state = {
+    isMobile: typeof window !== 'undefined' && window.innerWidth < 860,
+    previewState: 'loading',
+    products: INITIAL_PRODUCTS.map(p => ({ ...p })),
+    search: '',
+    filtersOpen: false,
+    filters: { ...EMPTY_FILTERS },
+    appliedFilters: { ...EMPTY_FILTERS },
+    sortField: null,
+    sortDir: 'asc',
+    selected: [],
+    stockDrafts: {},
+    currentPage: 1,
+    toast: null,
+    formOpen: false,
+    formMode: 'create',
+    formData: {},
+    formErrors: {},
+    formSaving: false,
+    importOpen: false,
+    importStep: 1,
+    importSaving: false,
+    scanOpen: false,
+    scanContext: null,
+    scanFeedback: null,
+  };
+
+  componentDidMount() {
+    this._resize = () => this.setState({ isMobile: window.innerWidth < 860 });
+    window.addEventListener('resize', this._resize);
+    this._loadTimer = setTimeout(() => this.setState({ previewState: 'ready' }), 900);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._resize);
+    clearTimeout(this._loadTimer);
+    clearTimeout(this._toastTimer);
+  }
+
+  showToast(message, undoFn) {
+    clearTimeout(this._toastTimer);
+    this.setState({ toast: { message, undo: undoFn || null } });
+    this._toastTimer = setTimeout(() => this.setState({ toast: null }), 5000);
+  }
+  closeToast() { clearTimeout(this._toastTimer); this.setState({ toast: null }); }
+
+  refresh() {
+    this.setState({ previewState: 'loading' });
+    clearTimeout(this._loadTimer);
+    this._loadTimer = setTimeout(() => this.setState({ previewState: 'ready' }), 900);
+  }
+
+  setSearch(e) { this.setState({ search: e.target.value, currentPage: 1 }); }
+  toggleSort(field) {
+    this.setState(s => {
+      if (s.sortField !== field) return { sortField: field, sortDir: 'asc' };
+      if (s.sortDir === 'asc') return { sortDir: 'desc' };
+      return { sortField: null, sortDir: 'asc' };
+    });
+  }
+
+  toggleSelect(id) {
+    this.setState(s => ({ selected: s.selected.includes(id) ? s.selected.filter(x => x !== id) : [...s.selected, id] }));
+  }
+  toggleSelectAll(ids) {
+    this.setState(s => {
+      const all = ids.length > 0 && ids.every(id => s.selected.includes(id));
+      return { selected: all ? [] : ids };
+    });
+  }
+  clearSelection() { this.setState({ selected: [] }); }
+
+  deleteProduct(id) {
+    const product = this.state.products.find(p => p.id === id);
+    this.setState(s => ({ products: s.products.filter(p => p.id !== id), selected: s.selected.filter(x => x !== id) }));
+    this.showToast('Producto eliminado', () => this.setState(s => ({ products: [...s.products, product] })));
+  }
+  bulkDelete() {
+    const ids = this.state.selected;
+    const removed = this.state.products.filter(p => ids.includes(p.id));
+    this.setState(s => ({ products: s.products.filter(p => !ids.includes(p.id)), selected: [] }));
+    this.showToast(ids.length + ' productos eliminados', () => this.setState(s => ({ products: [...s.products, ...removed] })));
+  }
+
+  stepStock(id, delta) {
+    this.setState(s => {
+      const current = s.stockDrafts[id] !== undefined ? parseInt(s.stockDrafts[id], 10) : s.products.find(p => p.id === id).stock;
+      const next = Math.max(0, (isNaN(current) ? 0 : current) + delta);
+      const drafts = { ...s.stockDrafts }; delete drafts[id];
+      return { products: s.products.map(p => p.id === id ? { ...p, stock: next } : p), stockDrafts: drafts };
+    });
+  }
+  onStockInputChange(id, e) {
+    this.setState(s => ({ stockDrafts: { ...s.stockDrafts, [id]: e.target.value } }));
+  }
+  onStockInputBlur(id) {
+    this.setState(s => {
+      const raw = s.stockDrafts[id];
+      const drafts = { ...s.stockDrafts }; delete drafts[id];
+      if (raw === undefined) return { stockDrafts: drafts };
+      const val = parseInt(raw, 10);
+      if (isNaN(val) || val < 0) return { stockDrafts: drafts };
+      return { products: s.products.map(p => p.id === id ? { ...p, stock: val } : p), stockDrafts: drafts };
+    });
+  }
+
+  goToPage(p) { this.setState({ currentPage: Math.max(1, p) }); }
+
+  openFilters() { this.setState(s => ({ filtersOpen: true, filters: { ...s.appliedFilters, categories: [...s.appliedFilters.categories] } })); }
+  closeFilters() { this.setState({ filtersOpen: false }); }
+  updateFilter(field, value) { this.setState(s => ({ filters: { ...s.filters, [field]: value } })); }
+  toggleFilterCategory(cat) {
+    this.setState(s => {
+      const has = s.filters.categories.includes(cat);
+      return { filters: { ...s.filters, categories: has ? s.filters.categories.filter(c => c !== cat) : [...s.filters.categories, cat] } };
+    });
+  }
+  applyFilters() { this.setState(s => ({ appliedFilters: { ...s.filters, categories: [...s.filters.categories] }, filtersOpen: false, currentPage: 1 })); }
+  clearFiltersPanel() { this.setState({ filters: { ...EMPTY_FILTERS } }); }
+  clearAllFilters() { this.setState({ filters: { ...EMPTY_FILTERS }, appliedFilters: { ...EMPTY_FILTERS }, search: '', currentPage: 1 }); }
+  removeChip(key, val) {
+    this.setState(s => {
+      const af = { ...s.appliedFilters };
+      if (key === 'priceMin') af.priceMin = '';
+      else if (key === 'priceMax') af.priceMax = '';
+      else if (key === 'stock') { af.stockCmp = 'any'; af.stockVal = ''; }
+      else if (key === 'porVencer') af.porVencer = false;
+      else if (key === 'categoria') af.categories = af.categories.filter(c => c !== val);
+      return { appliedFilters: af, filters: af, currentPage: 1 };
+    });
+  }
+
+  applyLowStockAlert() {
+    const f = { ...EMPTY_FILTERS, stockCmp: 'lte', stockVal: String(LOW_STOCK_THRESHOLD) };
+    this.setState({ appliedFilters: f, filters: { ...f, categories: [] }, currentPage: 1, filtersOpen: false });
+  }
+  applyVencerAlert() {
+    const f = { ...EMPTY_FILTERS, porVencer: true };
+    this.setState({ appliedFilters: f, filters: { ...f, categories: [] }, currentPage: 1, filtersOpen: false });
+  }
+
+  openCreateForm() {
+    this.setState({
+      formOpen: true, formMode: 'create',
+      formData: { nombre: '', sku: '', barcode: '', categoria: CATEGORY_LIST[0], costo: '', precio: '', stock: '', perecedero: false, vence: '' },
+      formErrors: {},
+    });
+  }
+  openEditForm(product) {
+    this.setState({
+      formOpen: true, formMode: 'edit', _editId: product.id,
+      formData: { ...product, costo: String(product.costo), precio: String(product.precio), stock: String(product.stock), vence: product.vence || '', barcode: product.barcode || '' },
+      formErrors: {},
+    });
+  }
+  closeForm() { this.setState({ formOpen: false }); }
+  updateFormField(field, value) { this.setState(s => ({ formData: { ...s.formData, [field]: value }, formErrors: { ...s.formErrors, [field]: undefined } })); }
+  validateForm(data) {
+    const errors = {};
+    if (!data.nombre || !data.nombre.trim()) errors.nombre = 'Escribe el nombre del producto';
+    if (!data.sku || !data.sku.trim()) errors.sku = 'El SKU es obligatorio';
+    if (data.costo === '' || isNaN(parseFloat(data.costo)) || parseFloat(data.costo) < 0) errors.costo = 'Escribe un costo válido';
+    if (data.precio === '' || isNaN(parseFloat(data.precio)) || parseFloat(data.precio) < 0) errors.precio = 'Escribe un precio válido';
+    if (data.stock === '' || isNaN(parseInt(data.stock, 10)) || parseInt(data.stock, 10) < 0) errors.stock = 'Escribe una cantidad válida';
+    if (data.perecedero && !data.vence) errors.vence = 'Indica la fecha de vencimiento';
+    return errors;
+  }
+  submitForm() {
+    const errors = this.validateForm(this.state.formData);
+    if (Object.keys(errors).length > 0) { this.setState({ formErrors: errors }); return; }
+    this.setState({ formSaving: true });
+    setTimeout(() => {
+      const d = this.state.formData;
+      const clean = {
+        id: this.state.formMode === 'edit' ? this.state._editId : Date.now(),
+        nombre: d.nombre.trim(), sku: d.sku.trim(), barcode: d.barcode || '', categoria: d.categoria,
+        costo: parseFloat(d.costo), precio: parseFloat(d.precio), stock: parseInt(d.stock, 10),
+        perecedero: !!d.perecedero, vence: d.perecedero ? d.vence : null,
+      };
+      this.setState(s => {
+        const exists = s.products.some(p => p.id === clean.id);
+        return { products: exists ? s.products.map(p => p.id === clean.id ? clean : p) : [clean, ...s.products], formOpen: false, formSaving: false };
+      });
+      this.showToast(this.state.formMode === 'edit' ? 'Cambios guardados' : 'Producto creado');
+    }, 700);
+  }
+
+  openImport() { this.setState({ importOpen: true, importStep: 1 }); }
+  closeImport() { this.setState({ importOpen: false, importStep: 1 }); }
+  importSimulateUpload() { this.setState({ importStep: 2 }); }
+  importConfirm() {
+    this.setState({ importSaving: true });
+    setTimeout(() => this.setState({ importStep: 3, importSaving: false }), 900);
+  }
+  importFinish() { this.setState({ importOpen: false, importStep: 1 }); this.showToast('26 productos importados correctamente'); }
+
+  openScan(context) { this.setState({ scanOpen: true, scanContext: context, scanFeedback: null }); }
+  closeScan() { this.setState({ scanOpen: false, scanFeedback: null }); }
+  simulateScan() {
+    const code = '7501234567890';
+    this.setState({ scanFeedback: code });
+    setTimeout(() => {
+      if (this.state.scanContext === 'search') {
+        this.setState({ search: 'Leche entera', scanOpen: false, scanFeedback: null });
+        this.showToast('Producto encontrado');
+      } else {
+        this.updateFormField('barcode', code);
+        this.setState({ scanOpen: false, scanFeedback: null });
+        this.showToast('Código agregado');
+      }
+    }, 900);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const af = s.appliedFilters;
+    const q = s.search.trim().toLowerCase();
+
+    let list = s.products.filter(p => {
+      if (q && !(p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.barcode || '').includes(q))) return false;
+      if (af.priceMin !== '' && p.precio < parseFloat(af.priceMin)) return false;
+      if (af.priceMax !== '' && p.precio > parseFloat(af.priceMax)) return false;
+      if (af.stockCmp === 'lte' && af.stockVal !== '' && !(p.stock <= parseInt(af.stockVal, 10))) return false;
+      if (af.stockCmp === 'gte' && af.stockVal !== '' && !(p.stock >= parseInt(af.stockVal, 10))) return false;
+      if (af.categories.length > 0 && !af.categories.includes(p.categoria)) return false;
+      if (af.porVencer) { const d = daysUntil(p.vence); if (d === null || d > EXPIRY_WARNING_DAYS) return false; }
+      return true;
+    });
+
+    if (s.sortField) {
+      list = [...list].sort((a, b) => {
+        let av, bv;
+        if (s.sortField === 'margen') { av = a.precio - a.costo; bv = b.precio - b.costo; }
+        else { av = a[s.sortField]; bv = b[s.sortField]; }
+        if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+        if (av < bv) return s.sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return s.sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    const money = n => '$' + n.toFixed(2);
+
+    const totalCount = list.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const page = Math.min(Math.max(1, s.currentPage), totalPages);
+    const pageStart = (page - 1) * PAGE_SIZE;
+    const pagedList = list.slice(pageStart, pageStart + PAGE_SIZE);
+
+    const rows = pagedList.map(p => {
+      const margen = p.precio - p.costo;
+      const margenPct = p.costo > 0 ? Math.round((margen / p.costo) * 100) : 0;
+      const isLow = p.stock <= LOW_STOCK_THRESHOLD;
+      const isOut = p.stock === 0;
+      const daysLeft = daysUntil(p.vence);
+      const showVence = p.perecedero && daysLeft !== null && daysLeft <= EXPIRY_WARNING_DAYS;
+      const draft = s.stockDrafts[p.id];
+      return {
+        id: p.id, photoId: 'prod-photo-' + p.id,
+        nombre: p.nombre, sku: p.sku,
+        categoria: p.categoria,
+        costoFmt: money(p.costo), precioFmt: money(p.precio),
+        margenFmt: (margen >= 0 ? '+' : '') + money(margen), margenPct: (margenPct >= 0 ? '+' : '') + margenPct + '%',
+        stock: p.stock,
+        stockValue: draft !== undefined ? draft : String(p.stock),
+        showStockBadge: isLow,
+        stockBadgeLabel: isOut ? 'Agotado' : 'Stock bajo',
+        showVenceBadge: showVence,
+        venceBadgeLabel: showVence ? (daysLeft <= 0 ? 'Vence hoy' : ('Vence en ' + daysLeft + ' día' + (daysLeft === 1 ? '' : 's'))) : '',
+        isSelected: s.selected.includes(p.id),
+        onToggleSelect: () => this.toggleSelect(p.id),
+        onStockInputChange: e => this.onStockInputChange(p.id, e),
+        onStockInputBlur: () => this.onStockInputBlur(p.id),
+        onStockStepDown: () => this.stepStock(p.id, -1),
+        onStockStepUp: () => this.stepStock(p.id, 1),
+        onEdit: () => this.openEditForm(p),
+        onDelete: () => this.deleteProduct(p.id),
+      };
+    });
+
+    const pageIds = rows.map(r => r.id);
+    const allChecked = pageIds.length > 0 && pageIds.every(id => s.selected.includes(id));
+    const someChecked = s.selected.length > 0 && !allChecked;
+
+    const activeChips = [];
+    if (af.priceMin !== '') activeChips.push({ key: 'priceMin', label: 'Desde $' + af.priceMin, onRemove: () => this.removeChip('priceMin') });
+    if (af.priceMax !== '') activeChips.push({ key: 'priceMax', label: 'Hasta $' + af.priceMax, onRemove: () => this.removeChip('priceMax') });
+    if (af.stockCmp !== 'any' && af.stockVal !== '') activeChips.push({ key: 'stock', label: (af.stockCmp === 'lte' ? 'Stock ≤ ' : 'Stock ≥ ') + af.stockVal, onRemove: () => this.removeChip('stock') });
+    if (af.porVencer) activeChips.push({ key: 'porVencer', label: 'Por vencer', onRemove: () => this.removeChip('porVencer') });
+    af.categories.forEach(c => activeChips.push({ key: 'cat-' + c, label: c, onRemove: () => this.removeChip('categoria', c) }));
+
+    const categoryOptions = CATEGORY_LIST.map(c => ({ name: c, checked: s.filters.categories.includes(c), onToggle: () => this.toggleFilterCategory(c) }));
+
+    const lowStockCount = s.products.filter(p => p.stock <= LOW_STOCK_THRESHOLD).length;
+    const vencerCount = s.products.filter(p => p.perecedero && daysUntil(p.vence) !== null && daysUntil(p.vence) <= EXPIRY_WARNING_DAYS).length;
+
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      const active = i === page;
+      pageNumbers.push({
+        label: String(i), ariaLabel: 'Ir a la página ' + i,
+        onClick: () => this.goToPage(i),
+        bg: active ? '#2563eb' : '#fff', color: active ? '#fff' : '#334155', borderColor: active ? '#2563eb' : '#e2e8f0',
+      });
+    }
+
+    const fd = s.formData || {};
+    const costoNum = parseFloat(fd.costo), precioNum = parseFloat(fd.precio);
+    let margenPreview = 'Ganancia por unidad: —';
+    if (!isNaN(costoNum) && !isNaN(precioNum)) {
+      const m = precioNum - costoNum;
+      const pct = costoNum > 0 ? Math.round((m / costoNum) * 100) : 0;
+      margenPreview = 'Ganancia por unidad: ' + (m >= 0 ? '+' : '') + money(m) + ' (' + (pct >= 0 ? '+' : '') + pct + '%)';
+    }
+
+    const errBorder = e => e ? '#dc2626' : '#e2e8f0';
+
+    return {
+      headerSubtitle: totalCount + (totalCount === 1 ? ' producto' : ' productos'),
+      onRefresh: () => this.refresh(),
+      onOpenImport: () => this.openImport(),
+      onExportCsv: () => this.showToast('Descargando productos.csv...'),
+      onPrint: () => this.showToast('Preparando versión para imprimir...'),
+      onNewProduct: () => this.openCreateForm(),
+
+      showAlertsRow: s.previewState === 'ready' && (lowStockCount > 0 || vencerCount > 0),
+      lowStockCount, vencerCount,
+      lowStockLabel: lowStockCount + (lowStockCount === 1 ? ' producto con stock bajo' : ' productos con stock bajo'),
+      vencerLabel: vencerCount + (vencerCount === 1 ? ' producto por vencer pronto' : ' productos por vencer pronto'),
+      onLowStockAlert: () => this.applyLowStockAlert(),
+      onVencerAlert: () => this.applyVencerAlert(),
+
+      search: s.search,
+      onSearchChange: e => this.setSearch(e),
+      onOpenScanSearch: () => this.openScan('search'),
+      onToggleFilters: () => (s.filtersOpen ? this.closeFilters() : this.openFilters()),
+      filterCount: activeChips.length,
+      hasActiveFilters: activeChips.length > 0,
+      activeChips,
+      onClearAllFilters: () => this.clearAllFilters(),
+
+      bulkBarVisible: s.selected.length > 0,
+      selectedCount: s.selected.length,
+      onCancelSelection: () => this.clearSelection(),
+      onBulkDelete: () => this.bulkDelete(),
+
+      loadingVisible: s.previewState === 'loading',
+      skeletonRows: [1, 2, 3, 4, 5, 6],
+      emptyVisible: s.previewState === 'ready' && totalCount === 0,
+      showDesktopTable: s.previewState === 'ready' && totalCount > 0 && !s.isMobile,
+      showMobileCards: s.previewState === 'ready' && totalCount > 0 && s.isMobile,
+
+      onToggleSelectAll: () => this.toggleSelectAll(pageIds),
+      allChecked, someChecked,
+      onSortNombre: () => this.toggleSort('nombre'),
+      onSortCosto: () => this.toggleSort('costo'),
+      onSortPrecio: () => this.toggleSort('precio'),
+      onSortMargen: () => this.toggleSort('margen'),
+      onSortStock: () => this.toggleSort('stock'),
+      sortNombreAsc: s.sortField === 'nombre' && s.sortDir === 'asc', sortNombreDesc: s.sortField === 'nombre' && s.sortDir === 'desc',
+      sortCostoAsc: s.sortField === 'costo' && s.sortDir === 'asc', sortCostoDesc: s.sortField === 'costo' && s.sortDir === 'desc',
+      sortPrecioAsc: s.sortField === 'precio' && s.sortDir === 'asc', sortPrecioDesc: s.sortField === 'precio' && s.sortDir === 'desc',
+      sortMargenAsc: s.sortField === 'margen' && s.sortDir === 'asc', sortMargenDesc: s.sortField === 'margen' && s.sortDir === 'desc',
+      sortStockAsc: s.sortField === 'stock' && s.sortDir === 'asc', sortStockDesc: s.sortField === 'stock' && s.sortDir === 'desc',
+
+      rows,
+
+      showPagination: s.previewState === 'ready' && totalPages > 1,
+      totalCount, pageRangeStart: totalCount === 0 ? 0 : pageStart + 1, pageRangeEnd: Math.min(pageStart + PAGE_SIZE, totalCount),
+      pageNumbers,
+      isFirstPage: page <= 1, isLastPage: page >= totalPages,
+      prevOpacity: page <= 1 ? 0.45 : 1, nextOpacity: page >= totalPages ? 0.45 : 1,
+      onPrevPage: () => this.goToPage(page - 1),
+      onNextPage: () => this.goToPage(page + 1),
+
+      filtersOpen: s.filtersOpen,
+      onCloseFilters: () => this.closeFilters(),
+      draftPriceMin: s.filters.priceMin, onChangePriceMin: e => this.updateFilter('priceMin', e.target.value),
+      draftPriceMax: s.filters.priceMax, onChangePriceMax: e => this.updateFilter('priceMax', e.target.value),
+      draftStockCmp: s.filters.stockCmp, onChangeStockCmp: e => this.updateFilter('stockCmp', e.target.value),
+      stockValVisible: s.filters.stockCmp !== 'any',
+      draftStockVal: s.filters.stockVal, onChangeStockVal: e => this.updateFilter('stockVal', e.target.value),
+      categoryOptions,
+      draftPorVencer: s.filters.porVencer, onToggleDraftPorVencer: () => this.updateFilter('porVencer', !s.filters.porVencer),
+      onClearFiltersPanel: () => this.clearFiltersPanel(),
+      onApplyFilters: () => this.applyFilters(),
+
+      formOpen: s.formOpen,
+      formTitle: s.formMode === 'edit' ? 'Editar producto' : 'Nuevo producto',
+      formPhotoId: s.formMode === 'edit' ? 'prod-photo-' + s._editId : 'form-photo-new',
+      formData: fd,
+      formErrors: s.formErrors,
+      onCloseForm: () => this.closeForm(),
+      onChangeNombre: e => this.updateFormField('nombre', e.target.value),
+      onChangeSku: e => this.updateFormField('sku', e.target.value),
+      onChangeBarcode: e => this.updateFormField('barcode', e.target.value),
+      onOpenScanForm: () => this.openScan('form'),
+      onChangeCategoria: e => this.updateFormField('categoria', e.target.value),
+      categoryPlainList: CATEGORY_LIST,
+      onChangeCosto: e => this.updateFormField('costo', e.target.value),
+      onChangePrecio: e => this.updateFormField('precio', e.target.value),
+      onChangeStock: e => this.updateFormField('stock', e.target.value),
+      onTogglePerecedero: () => this.updateFormField('perecedero', !fd.perecedero),
+      showVenceField: !!fd.perecedero,
+      onChangeVence: e => this.updateFormField('vence', e.target.value),
+      margenPreview,
+      nombreBorderColor: errBorder(s.formErrors.nombre), skuBorderColor: errBorder(s.formErrors.sku),
+      costoBorderColor: errBorder(s.formErrors.costo), precioBorderColor: errBorder(s.formErrors.precio),
+      stockBorderColor: errBorder(s.formErrors.stock), venceBorderColor: errBorder(s.formErrors.vence),
+      formSaving: s.formSaving,
+      submitOpacity: s.formSaving ? 0.7 : 1,
+      submitLabel: s.formSaving ? 'Guardando...' : 'Guardar producto',
+      onSubmitForm: () => this.submitForm(),
+
+      importOpen: s.importOpen,
+      importStep1: s.importStep === 1, importStep2: s.importStep === 2, importStep3: s.importStep === 3,
+      step1BarColor: s.importStep >= 1 ? '#2563eb' : '#e2e8f0',
+      step2BarColor: s.importStep >= 2 ? '#2563eb' : '#e2e8f0',
+      step3BarColor: s.importStep >= 3 ? '#2563eb' : '#e2e8f0',
+      onCloseImport: () => this.closeImport(),
+      onImportSimulateUpload: () => this.importSimulateUpload(),
+      onDownloadTemplate: e => { e.preventDefault(); this.showToast('Descargando plantilla...'); },
+      importValidCount: 26, importErrorCount: 2,
+      importErrorRows: [{ fila: 5, motivo: 'Falta el precio de venta' }, { fila: 12, motivo: 'SKU duplicado' }],
+      importSaving: s.importSaving,
+      importConfirmLabel: s.importSaving ? 'Importando...' : 'Importar 26 productos',
+      onImportConfirm: () => this.importConfirm(),
+      onImportFinish: () => this.importFinish(),
+
+      scanOpen: s.scanOpen,
+      scanTitle: s.scanContext === 'form' ? 'Escanear código de barras' : 'Buscar por código de barras',
+      scanFeedback: s.scanFeedback,
+      onCloseScan: () => this.closeScan(),
+      onSimulateScan: () => this.simulateScan(),
+
+      toastVisible: !!s.toast,
+      toastMessage: s.toast ? s.toast.message : '',
+      toastHasUndo: !!(s.toast && s.toast.undo),
+      onToastUndo: () => { if (s.toast && s.toast.undo) s.toast.undo(); this.closeToast(); },
+      onToastClose: () => this.closeToast(),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -2,6 +2,8 @@ export interface Product {
   id: string;
   name: string;
   sku: string;
+  barcode?: string;
+  photo?: string | null;
   price: number;
   cost_price: number;
   stock: number;

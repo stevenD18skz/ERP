@@ -172,7 +172,7 @@ export default function SalePageEnhanced() {
       }
     }
     // Enter sin sugerencias activas: nunca debe enviar el formulario,
-    // solo avanzar a Cantidad
+    // solo avanzar a Cantidad (el precio ya no es editable)
     if (e.key === "Enter") {
       e.preventDefault();
       const key = lines[lineIndex]?._key;
@@ -181,13 +181,6 @@ export default function SalePageEnhanced() {
   };
 
   const onKeyDownQty = (e, lineIndex) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    const key = lines[lineIndex]?._key;
-    fieldRefs.current[key]?.price?.focus();
-  };
-
-  const onKeyDownPrice = (e, lineIndex) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
     if (lineIndex === lines.length - 1) {
@@ -209,7 +202,7 @@ export default function SalePageEnhanced() {
               product: product.name,
               sku: product.sku || "",
               sale_price: Number(product.price ?? 0),
-              price: Number(product.price ?? 0),
+              price: Number(product.cost_price ?? 0),
               stock: Number(product.stock ?? 0),
             }
           : l,
@@ -683,8 +676,21 @@ export default function SalePageEnhanced() {
                           </div>
                         </div>
 
-                        {/* Cantidad */}
+                        {/* Precio: fijo desde el catálogo, no editable */}
                         <div className="sm:col-span-2">
+                          <div className="text-xs font-semibold text-slate-600">
+                            Precio
+                          </div>
+                          <div
+                            className="mt-1 rounded-md border border-slate-200 bg-slate-100 px-2 py-1.5 text-right text-sm font-medium tabular-nums text-slate-700"
+                            title="El precio de venta viene del catálogo de productos"
+                          >
+                            {line.id ? currency(line.sale_price) : "—"}
+                          </div>
+                        </div>
+
+                        {/* Cantidad */}
+                        <div className="sm:col-span-4">
                           <label className="text-xs font-semibold text-slate-600">
                             Cantidad
                           </label>
@@ -693,7 +699,7 @@ export default function SalePageEnhanced() {
                               type="button"
                               aria-label="Disminuir cantidad"
                               onClick={() => incQty(idx, -1)}
-                              className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                              className="shrink-0 rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                             >
                               <Minus className="h-3.5 w-3.5" />
                             </button>
@@ -707,7 +713,7 @@ export default function SalePageEnhanced() {
                               type="number"
                               min="1"
                               onKeyDown={(e) => onKeyDownQty(e, idx)}
-                              className="w-16 rounded-md border border-slate-200 px-2 py-1 text-right outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                              className="no-spinner w-16 min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1 text-right outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                               value={line.quantity}
                               onChange={(e) =>
                                 updateLine(idx, {
@@ -720,40 +726,13 @@ export default function SalePageEnhanced() {
                               type="button"
                               aria-label="Aumentar cantidad"
                               onClick={() => incQty(idx, 1)}
-                              className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                              className="shrink-0 rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </div>
                           <div className="mt-1 text-xs text-slate-400">
                             {line.id ? `${line.stock} disponibles` : ""}
-                          </div>
-                        </div>
-
-                        {/* Precio */}
-                        <div className="sm:col-span-2">
-                          <label className="text-xs font-semibold text-slate-600">
-                            Precio
-                          </label>
-                          <input
-                            ref={(el) => {
-                              fieldRefs.current[line._key] = {
-                                ...fieldRefs.current[line._key],
-                                price: el,
-                              };
-                            }}
-                            type="number"
-                            min="0"
-                            onKeyDown={(e) => onKeyDownPrice(e, idx)}
-                            className="w-full rounded-md border border-slate-200 px-2 py-1 text-right outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
-                            value={line.sale_price}
-                            onChange={(e) =>
-                              updateLine(idx, { sale_price: Number(e.target.value) })
-                            }
-                            aria-label={`Precio línea ${idx + 1}`}
-                          />
-                          <div className="mt-1 text-xs text-slate-400">
-                            {line.id ? `Costo: ${currency(line.price)}` : ""}
                           </div>
                         </div>
 
@@ -795,6 +774,110 @@ export default function SalePageEnhanced() {
                   </div>
                 );
               })}
+
+              {/* Resumen del pedido, estilo factura */}
+              {hasProducts && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <h3 className="text-xs font-semibold text-slate-600">
+                    Resumen del pedido
+                  </h3>
+                  <ul className="mt-2 divide-y divide-slate-200">
+                    {lines
+                      .filter((l) => l.id)
+                      .map((l) => (
+                        <li
+                          key={l._key}
+                          className="flex items-center justify-between gap-3 py-1.5 text-sm"
+                        >
+                          <span className="min-w-0 truncate text-slate-700">
+                            {l.product}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-slate-600">
+                            {currency(l.sale_price)} · {l.quantity} und
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Pago */}
+              <div className="flex flex-col gap-4 border-t border-slate-100 pt-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-md bg-slate-100 p-2">
+                    <DollarSign className="h-5 w-5 text-teal-700" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500">Monto recibido</div>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span className="text-sm text-slate-500">$</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={receivedAmount ? formatMoney(receivedAmount) : ""}
+                        onChange={(e) => {
+                          const numeric =
+                            Number(String(e.target.value).replace(/[^\d]/g, "")) || 0;
+                          setReceivedAmount(numeric);
+                        }}
+                        className="w-36 rounded-md border border-slate-200 px-3 py-2 text-right font-semibold text-teal-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                        placeholder="0"
+                        aria-label="Monto recibido"
+                      />
+                      {receivedAmount > 0 && (
+                        <button
+                          type="button"
+                          aria-label="Limpiar monto recibido"
+                          onClick={() => setReceivedAmount(0)}
+                          className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        disabled={totals.total <= 0}
+                        onClick={() => setReceivedAmount(Math.ceil(totals.total))}
+                        className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Monto exacto
+                      </button>
+                      {CASH_CHIPS.map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() =>
+                            setReceivedAmount((r) => (Number(r) || 0) + amount)
+                          }
+                          className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          +{formatMoney(amount)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-xs text-slate-500">Vuelto</div>
+                  {receivedAmount > 0 ? (
+                    <div
+                      className={`flex items-center justify-end gap-1.5 text-lg font-bold tabular-nums ${totals.change < 0 ? "text-red-600" : "text-teal-700"}`}
+                    >
+                      {totals.change < 0 ? (
+                        <AlertTriangle className="h-4 w-4" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      {currency(totals.change)}
+                    </div>
+                  ) : (
+                    <div className="text-lg font-bold text-slate-300">—</div>
+                  )}
+                </div>
+              </div>
 
               {/* resumen y acciones */}
               <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
@@ -847,86 +930,6 @@ export default function SalePageEnhanced() {
                 </div>
               </div>
             </form>
-          </div>
-
-          {/* Pago */}
-          <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="rounded-md bg-slate-100 p-2">
-                  <DollarSign className="h-5 w-5 text-teal-700" />
-                </div>
-                <div>
-                  <div className="text-xs text-slate-500">Monto recibido</div>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <span className="text-sm text-slate-500">$</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={receivedAmount ? formatMoney(receivedAmount) : ""}
-                      onChange={(e) => {
-                        const numeric =
-                          Number(String(e.target.value).replace(/[^\d]/g, "")) || 0;
-                        setReceivedAmount(numeric);
-                      }}
-                      className="w-36 rounded-md border border-slate-200 px-3 py-2 text-right font-semibold text-teal-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
-                      placeholder="0"
-                      aria-label="Monto recibido"
-                    />
-                    {receivedAmount > 0 && (
-                      <button
-                        type="button"
-                        aria-label="Limpiar monto recibido"
-                        onClick={() => setReceivedAmount(0)}
-                        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      disabled={totals.total <= 0}
-                      onClick={() => setReceivedAmount(Math.ceil(totals.total))}
-                      className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Monto exacto
-                    </button>
-                    {CASH_CHIPS.map((amount) => (
-                      <button
-                        key={amount}
-                        type="button"
-                        onClick={() =>
-                          setReceivedAmount((r) => (Number(r) || 0) + amount)
-                        }
-                        className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                      >
-                        +{formatMoney(amount)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-xs text-slate-500">Vuelto</div>
-                {receivedAmount > 0 ? (
-                  <div
-                    className={`flex items-center justify-end gap-1.5 text-lg font-bold tabular-nums ${totals.change < 0 ? "text-red-600" : "text-teal-700"}`}
-                  >
-                    {totals.change < 0 ? (
-                      <AlertTriangle className="h-4 w-4" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
-                    {currency(totals.change)}
-                  </div>
-                ) : (
-                  <div className="text-lg font-bold text-slate-300">—</div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
 

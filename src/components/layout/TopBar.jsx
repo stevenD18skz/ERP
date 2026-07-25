@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Bell, Plus, CircleUserRound, LogOut } from "lucide-react";
+import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 
 const TopBar = ({ onSearch, onQuickCreate }) => {
   const router = useRouter();
@@ -50,6 +51,8 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
 
         {/* Derecha: acciones */}
         <div className="flex shrink-0 items-center gap-2">
+          <SupabaseStatusChip />
+
           <button
             onClick={() =>
               onQuickCreate ? onQuickCreate() : router.push("/products/new")

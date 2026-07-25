@@ -10,6 +10,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "chart.js": "^4.5.0",
     "lucide-react": "^0.539.0",
     "next": "^15.5.21",
