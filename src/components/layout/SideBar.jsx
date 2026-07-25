@@ -11,6 +11,7 @@ import {
   faClipboardList,
   faChartBar,
   faCog,
+  faBars,
 } from "@fortawesome/free-solid-svg-icons";
 
 const menuItems = [
@@ -22,29 +23,38 @@ const menuItems = [
   { path: "/settings", label: "Configuración", icon: faCog },
 ];
 
-const SidebarEnhanced = ({ isExpanded }) => {
+const SidebarEnhanced = ({ isExpanded, onToggle }) => {
   const router = useRouter();
   const pathname = usePathname();
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 h-full border-r border-slate-200 bg-white text-slate-700 shadow-sm transition-all duration-300 ${
-        isExpanded ? "w-64" : "w-16"
-      }`}
+      className={`fixed left-0 top-0 z-40 h-full border-r border-slate-200 bg-white text-slate-700 shadow-sm transition-all duration-300 ${isExpanded ? "w-64" : "w-16"
+        }`}
       aria-label="Barra lateral principal"
     >
       {/* Header */}
-      <div className="flex h-16 items-center gap-3 border-b border-slate-100 px-3">
-        <img
-          src="/logo.png"
-          alt="Logo"
-          className={`shrink-0 rounded-full object-cover transition-all duration-300 ${isExpanded ? "h-9 w-9" : "h-8 w-8"}`}
-        />
+      <div className="flex h-16 items-center justify-center space-x-3 border-b border-slate-100">
+        <button
+          onClick={onToggle}
+          aria-label={isExpanded ? "Colapsar menú" : "Expandir menú"}
+          className={`shrink-0 rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none ${!isExpanded ? "mx-auto" : ""}`}
+        >
+          <FontAwesomeIcon icon={faBars} />
+        </button>
         {isExpanded && (
-          <span className="truncate text-sm font-semibold text-slate-800">
-            ERP Supermarket
-          </span>
+          <div className="flex min-w-0 items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="h-9 w-9 shrink-0 rounded-full object-cover"
+            />
+            <span className="truncate text-sm font-semibold text-slate-800">
+              ERP Supermarket
+            </span>
+          </div>
         )}
+
       </div>
 
       {/* Menu */}
@@ -59,11 +69,10 @@ const SidebarEnhanced = ({ isExpanded }) => {
                 <button
                   onClick={() => router.push(it.path)}
                   title={!isExpanded ? it.label : undefined} // tooltip when collapsed
-                  className={`mx-2 mb-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-md border-l-2 px-3 py-2 text-left transition-colors duration-150 ${
-                    active
-                      ? "border-blue-600 bg-blue-50 text-blue-700"
-                      : "border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  } ${isExpanded ? "justify-start" : "justify-center"}`}
+                  className={`mx-2 mb-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-md border-l-2 px-3 py-2 text-left transition-colors duration-150 ${active
+                    ? "border-blue-600 bg-blue-50 text-blue-700"
+                    : "border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    } ${isExpanded ? "justify-start" : "justify-center"}`}
                   aria-current={active ? "page" : undefined}
                 >
                   <FontAwesomeIcon
@@ -99,6 +108,7 @@ const SidebarEnhanced = ({ isExpanded }) => {
 
 SidebarEnhanced.propTypes = {
   isExpanded: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
 };
 
 export default SidebarEnhanced;

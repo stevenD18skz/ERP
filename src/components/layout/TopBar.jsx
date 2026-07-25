@@ -6,7 +6,6 @@ import PropTypes from "prop-types";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBars,
   faSearch,
   faBell,
   faPlus,
@@ -14,7 +13,7 @@ import {
   faSignOutAlt,
 } from "@fortawesome/free-solid-svg-icons";
 
-const TopBar = ({ onToggleSidebar, isSidebarExpanded, onSearch, onQuickCreate }) => {
+const TopBar = ({ onSearch, onQuickCreate }) => {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
@@ -28,24 +27,6 @@ const TopBar = ({ onToggleSidebar, isSidebarExpanded, onSearch, onQuickCreate })
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
       <div className="flex items-center gap-4 px-4 py-3 md:px-6">
-        {/* Izquierda: toggle + contexto de página */}
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            onClick={onToggleSidebar}
-            aria-label={isSidebarExpanded ? "Colapsar menú" : "Expandir menú"}
-            className="shrink-0 rounded-md p-2 text-slate-600 hover:bg-slate-100 focus:outline-none"
-          >
-            <FontAwesomeIcon icon={faBars} />
-          </button>
-
-          <div className="hidden min-w-0 sm:block">
-            <h1 className="truncate text-sm font-semibold text-slate-800">
-              Panel
-            </h1>
-            <p className="truncate text-xs text-slate-400">Productos</p>
-          </div>
-        </div>
-
         {/* Centro: búsqueda */}
         <form
           onSubmit={handleSearchSubmit}
@@ -153,8 +134,6 @@ const TopBar = ({ onToggleSidebar, isSidebarExpanded, onSearch, onQuickCreate })
 };
 
 TopBar.propTypes = {
-  onToggleSidebar: PropTypes.func.isRequired,
-  isSidebarExpanded: PropTypes.bool.isRequired,
   onSearch: PropTypes.func,
   onQuickCreate: PropTypes.func,
 };

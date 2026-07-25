@@ -11,15 +11,15 @@ const AppShell = ({ children }) => {
 
   return (
     <div className="flex min-h-screen">
-      <SideBar isExpanded={sidebarOpen} />
+      <SideBar
+        isExpanded={sidebarOpen}
+        onToggle={() => setSidebarOpen((s) => !s)}
+      />
       <div
         className={`flex-1 transition-all duration-300 ${sidebarOpen ? "pl-64" : "pl-16"}`}
       >
-        <TopBar
-          onToggleSidebar={() => setSidebarOpen((s) => !s)}
-          isSidebarExpanded={sidebarOpen}
-        />
-        <main className="p-4 md:p-8">{children}</main>
+        <TopBar />
+        <main className="">{children}</main>
         <Footer />
       </div>
     </div>

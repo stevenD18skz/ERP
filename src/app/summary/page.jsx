@@ -3,7 +3,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import "tailwindcss/tailwind.css";
-import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import PropTypes from "prop-types";
@@ -551,7 +550,7 @@ export default function ReportsPage({
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <motion.div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
             <div className="rounded-md bg-blue-50 p-2 text-blue-600">
               <DollarSign className="h-6 w-6" />
             </div>
@@ -563,9 +562,9 @@ export default function ReportsPage({
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
             <div className="rounded-md bg-red-50 p-2 text-rose-600">
               <Rows4 className="h-6 w-6" />
             </div>
@@ -575,9 +574,9 @@ export default function ReportsPage({
                 {currency(inventoryMetrics.cogs)}
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
             <div className="rounded-md bg-green-50 p-2 text-emerald-600">
               <Zap className="h-6 w-6" />
             </div>
@@ -587,9 +586,9 @@ export default function ReportsPage({
                 {currency(sales.reduce((a, s) => a + Number(s.gain || 0), 0))}
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
             <div className="rounded-md bg-indigo-50 p-2 text-indigo-600">
               <Activity className="h-6 w-6" />
             </div>
@@ -599,9 +598,9 @@ export default function ReportsPage({
                 {currency(atv)}
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
             <div className="w-20">
               <CircularProgressbar
                 value={
@@ -630,7 +629,7 @@ export default function ReportsPage({
                   : "N/A"}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Row: Sales by Category (bar) + Order Fulfillment donut */}

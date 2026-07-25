@@ -1,166 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
 import PropTypes from "prop-types";
+import { productsHome, ordersHome, salesHome } from "@/lib/mockHome";
 
-// Mock data (copied + enhanced from your dataset)
-const products = [
-  {
-    id: "1",
-    name: "Arroz",
-    price: 2.5,
-    stock: 100,
-    category: "Granos",
-    description: "Arroz blanco de grano largo",
-    created_at: "2025-08-01T08:00:00Z",
-  },
-  {
-    id: "2",
-    name: "Leche",
-    price: 1.8,
-    stock: 50,
-    category: "Lácteos",
-    description: "Leche entera 1L",
-    created_at: "2025-08-02T09:00:00Z",
-  },
-  {
-    id: "3",
-    name: "Pan",
-    price: 0.75,
-    stock: 30,
-    category: "Panadería",
-    description: "Pan blanco",
-    created_at: "2025-08-03T10:00:00Z",
-  },
-  {
-    id: "4",
-    name: "Huevos",
-    price: 3.2,
-    stock: 200,
-    category: "Lácteos",
-    description: "Docena de huevos frescos",
-    created_at: "2025-08-01T08:00:00Z",
-  },
-  {
-    id: "5",
-    name: "Aceite de Girasol",
-    price: 5.5,
-    stock: 8,
-    category: "Aceites",
-    description: "Aceite de girasol 1L",
-    created_at: "2025-07-28T11:00:00Z",
-  },
-  {
-    id: "6",
-    name: "Azúcar",
-    price: 1.2,
-    stock: 150,
-    category: "Dulces",
-    description: "Azúcar refinada 1kg",
-    created_at: "2025-07-30T12:00:00Z",
-  },
-  {
-    id: "7",
-    name: "Pasta",
-    price: 2.0,
-    stock: 90,
-    category: "Granos",
-    description: "Pasta tipo espagueti 500g",
-    created_at: "2025-08-04T13:00:00Z",
-  },
-  {
-    id: "8",
-    name: "Manzanas",
-    price: 0.8,
-    stock: 6,
-    category: "Frutas",
-    description: "Manzanas rojas frescas",
-    created_at: "2025-08-05T14:00:00Z",
-  },
-  {
-    id: "9",
-    name: "Frijoles",
-    price: 2.8,
-    stock: 120,
-    category: "Granos",
-    description: "Frijoles negros 1kg",
-    created_at: "2025-08-06T15:00:00Z",
-  },
-  {
-    id: "10",
-    name: "Yogur",
-    price: 1.5,
-    stock: 40,
-    category: "Lácteos",
-    description: "Yogur natural 500ml",
-    created_at: "2025-08-02T16:00:00Z",
-  },
-  {
-    id: "11",
-    name: "Bananas",
-    price: 0.6,
-    stock: 70,
-    category: "Frutas",
-    description: "Bananas maduras",
-    created_at: "2025-08-07T17:00:00Z",
-  },
-];
 
-const orders = [
-  {
-    products: [
-      { product: "Arroz Blanco 1Kg", quantity: 100, price: 2500 },
-      { product: "Azúcar Morena 1Kg", quantity: 50, price: 3000 },
-    ],
-    total_amount: 100 * 2500 + 50 * 3000,
-    order_date: "2025-08-10T09:30:00Z",
-  },
-  {
-    products: [
-      { product: "Leche Entera 1L", quantity: 80, price: 1800 },
-      { product: "Pan Integral", quantity: 40, price: 1200 },
-      { product: "Mantequilla 250g", quantity: 30, price: 4000 },
-    ],
-    total_amount: 80 * 1800 + 40 * 1200 + 30 * 4000,
-    order_date: "2025-08-11T14:00:00Z",
-  },
-  {
-    products: [
-      { product: "Aceite de Girasol 900ml", quantity: 25, price: 4500 },
-      { product: "Café Molido 500g", quantity: 15, price: 7500 },
-    ],
-    total_amount: 25 * 4500 + 15 * 7500,
-    order_date: "2025-08-12T08:45:00Z",
-  },
-];
-
-const sales = [
-  {
-    total_amount: 150000,
-    sale_date: "2025-08-10T10:30:00Z",
-    gain: 50000,
-    products: [
-      { product: "Camiseta", quantity: 2, sale_price: 30000 },
-      { product: "Pantalón", quantity: 1, sale_price: 70000 },
-    ],
-  },
-  {
-    total_amount: 260000,
-    sale_date: "2025-08-11T15:45:00Z",
-    gain: 90000,
-    products: [
-      { product: "Zapatos", quantity: 2, sale_price: 120000 },
-      { product: "Bufanda", quantity: 1, sale_price: 18000 },
-    ],
-  },
-  {
-    total_amount: 95000,
-    sale_date: "2025-08-12T09:15:00Z",
-    gain: 35000,
-    products: [{ product: "Bolso", quantity: 1, sale_price: 95000 }],
-  },
-];
 
 // Helpers
 const currency = (n) => {
@@ -187,41 +31,13 @@ function sparklinePath(values, width = 120, height = 36) {
   return `M${points.join(" L")}`;
 }
 
-// Small, clean components
-const HeaderHome = ({ onSignIn }) => (
-  <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-6 md:px-0">
-    <div className="flex items-center gap-3">
-      <img src="/logo.png" alt="logo" className="h-10 w-10 rounded-full" />
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">ERP Supermercado</h1>
-        <p className="hidden text-xs text-slate-500 md:block">
-          Visión rápida y control de tu tienda
-        </p>
-      </div>
-    </div>
-    <nav className="flex items-center gap-3">
-      <button
-        onClick={onSignIn}
-        className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm shadow-sm hover:shadow focus:outline-none"
-      >
-        Iniciar sesión
-      </button>
-      <a
-        href="#dashboard"
-        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
-      >
-        Ver Dashboard
-      </a>
-    </nav>
-  </header>
-);
 
-HeaderHome.propTypes = {
-  onSignIn: PropTypes.func.isRequired,
-};
+
+
+
 
 const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
-  <section className="mx-auto mt-6 w-full max-w-6xl overflow-hidden rounded-2xl shadow-lg">
+  <section className="mx-auto w-full w-full overflow-hidden rounded-2xl shadow-lg">
     <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-6 md:p-10">
       <img
         src="https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=placeholder"
@@ -230,23 +46,13 @@ const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
       />
       <div className="relative z-10 grid grid-cols-1 items-center gap-6 md:grid-cols-3">
         <div className="md:col-span-2">
-          <motion.h2
-            initial={{ y: 8, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.45 }}
-            className="text-3xl font-extrabold text-white md:text-4xl"
-          >
+          <h2 className="animate-fade-slide-up text-3xl font-extrabold text-white md:text-4xl">
             Control total de tu supermercado
-          </motion.h2>
-          <motion.p
-            initial={{ y: 8, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.06, duration: 0.45 }}
-            className="mt-2 max-w-xl text-blue-100"
-          >
+          </h2>
+          <p className="mt-2 max-w-xl animate-fade-slide-up text-blue-100 [animation-delay:60ms]">
             Panel minimalista con insights clave: ventas, inventario, órdenes y
             alertas. Diseño limpio, decisiones rápidas.
-          </motion.p>
+          </p>
           <div className="mt-4 flex gap-3">
             <button
               onClick={onSignIn}
@@ -308,17 +114,14 @@ Hero.propTypes = {
 };
 
 const StatCard = ({ label, value, hint, children }) => (
-  <motion.div
-    whileHover={{ y: -4 }}
-    className="rounded-lg bg-white p-4 shadow-sm"
-  >
+  <div className="rounded-lg bg-white p-4 shadow-sm transition-transform duration-200 hover:-translate-y-1">
     <div className="text-sm font-medium text-slate-500">{label}</div>
     <div className="mt-2 flex items-baseline justify-between gap-2">
       <div className="text-2xl font-bold text-slate-800">{value}</div>
       {children}
     </div>
     {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
-  </motion.div>
+  </div>
 );
 
 StatCard.propTypes = {
@@ -328,7 +131,7 @@ StatCard.propTypes = {
   children: PropTypes.node,
 };
 
-const TopProducts = ({ items }) => (
+const TopProductsHome = ({ items }) => (
   <div className="rounded-lg bg-white p-4 shadow-sm">
     <h3 className="text-sm font-semibold text-slate-700">Top productos</h3>
     <ul className="mt-3 space-y-3">
@@ -349,7 +152,7 @@ const TopProducts = ({ items }) => (
   </div>
 );
 
-TopProducts.propTypes = {
+TopProductsHome.propTypes = {
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
@@ -374,7 +177,7 @@ const RecentSalesTable = ({ items }) => (
             <td className="py-3 font-semibold">{currency(s.total_amount)}</td>
             <td className="py-3 text-slate-600">{currency(s.gain)}</td>
             <td className="py-3 text-slate-600">
-              {s.products.map((p) => p.product).join(", ")}
+              {s.productsHome.map((p) => p.product).join(", ")}
             </td>
           </tr>
         ))}
@@ -416,14 +219,14 @@ export default function Home() {
 
   // Derived stats
   const totalSales = useMemo(
-    () => sales.reduce((s, x) => s + x.total_amount, 0),
+    () => salesHome.reduce((s, x) => s + x.total_amount, 0),
     [],
   );
   const mostSold = useMemo(() => {
-    // crude heuristic: product name frequency from orders
+    // crude heuristic: product name frequency from ordersHome
     const freq = {};
-    orders.forEach((o) =>
-      o.products.forEach(
+    ordersHome.forEach((o) =>
+      o.productsHome.forEach(
         (p) => (freq[p.product] = (freq[p.product] || 0) + p.quantity),
       ),
     );
@@ -431,25 +234,25 @@ export default function Home() {
     return best ? best[0] : "—";
   }, []);
   const highestSale = useMemo(
-    () => Math.max(...sales.map((s) => s.total_amount)),
+    () => Math.max(...salesHome.map((s) => s.total_amount)),
     [],
   );
   const dailyAvg = useMemo(
     () => Math.round(totalSales / Math.max(1, 7)),
     [totalSales],
   );
-  const salesSeries = sales.map((s) => s.total_amount);
+  const salesSeries = salesHome.map((s) => s.total_amount);
 
-  const topProducts = products
+  const topProductsHome = productsHome
     .slice()
     .sort((a, b) => b.stock - a.stock)
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <HeaderHome onSignIn={() => setShowLogin(true)} />
+    <>
+      
 
-      <main className="px-4 md:px-8">
+      <main className="">
         <Hero
           topProduct={mostSold}
           totalSales={totalSales}
@@ -459,7 +262,7 @@ export default function Home() {
 
         <section
           id="dashboard"
-          className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-3"
+          className="mx-auto mt-6 grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-3"
         >
           <div className="grid grid-cols-1 gap-6 md:col-span-2">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
@@ -502,19 +305,19 @@ export default function Home() {
               </StatCard>
               <StatCard
                 label="Productos"
-                value={`${products.length}`}
+                value={`${productsHome.length}`}
                 hint="Total en catálogo"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
-                <RecentSalesTable items={sales} />
+                <RecentSalesTable items={salesHome} />
               </div>
               <div>
-                <TopProducts items={topProducts} />
+                <TopProductsHome items={topProductsHome} />
                 <div className="mt-4">
-                  <InventoryAlerts items={products} threshold={10} />
+                  <InventoryAlerts items={productsHome} threshold={10} />
                 </div>
               </div>
             </div>
@@ -528,11 +331,11 @@ export default function Home() {
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
                 <li>
                   Orden creada —{" "}
-                  {new Date(orders[0].order_date).toLocaleString()}
+                  {new Date(ordersHome[0].order_date).toLocaleString()}
                 </li>
                 <li>
                   Venta registrada —{" "}
-                  {new Date(sales[1].sale_date).toLocaleString()}
+                  {new Date(salesHome[1].sale_date).toLocaleString()}
                 </li>
                 <li>Producto bajo stock — Aceite de Girasol</li>
               </ul>
@@ -547,7 +350,7 @@ export default function Home() {
                   Margen promedio (ej.) —{" "}
                   {currency(
                     Math.round(
-                      sales.reduce((a, b) => a + b.gain, 0) / sales.length || 0,
+                      salesHome.reduce((a, b) => a + b.gain, 0) / salesHome.length || 0,
                     ),
                   )}
                 </li>
@@ -573,46 +376,13 @@ export default function Home() {
           </aside>
         </section>
 
-        <section id="features" className="mx-auto mt-10 max-w-6xl">
-          <div className="rounded-lg bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-800">
-              Por qué este panel
-            </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Diseñado para dueños y encargados: entradas claras, decisiones
-              rápidas. Animaciones sutiles, foco en la legibilidad y jerarquía
-              visual.
-            </p>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              <li className="rounded-md border p-3 text-sm">
-                Alertas automáticas de stock
-              </li>
-              <li className="rounded-md border p-3 text-sm">
-                Exportación CSV / PDF
-              </li>
-              <li className="rounded-md border p-3 text-sm">
-                Roles y permisos (admin, cajero)
-              </li>
-              <li className="rounded-md border p-3 text-sm">
-                Integración POS y facturación
-              </li>
-            </ul>
-          </div>
-        </section>
-      </main>
 
-      <footer className="mt-10 text-center text-xs text-slate-400">
-        Desarrollado por tu equipo ERP • Diseño claro y rápido
-      </footer>
+      </main>
 
       {/* Simple login modal (non-functional placeholder) */}
       {showLogin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg"
-          >
+          <div className="w-full max-w-md animate-scale-in rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <h4 className="text-lg font-semibold">Iniciar sesión</h4>
               <button
@@ -646,9 +416,9 @@ export default function Home() {
                 </a>
               </div>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

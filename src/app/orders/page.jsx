@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import { motion } from "framer-motion";
 import PropTypes from "prop-types";
 
 import {
@@ -452,12 +451,9 @@ export default function OrdersPageEnhanced({
               className="space-y-4"
             >
               {lines.map((line, idx) => (
-                <motion.div
+                <div
                   key={idx}
-                  layout
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative rounded-md border border-slate-100 bg-slate-50 p-3"
+                  className="relative animate-fade-slide-up rounded-md border border-slate-100 bg-slate-50 p-3"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex w-12 flex-shrink-0 items-center justify-center">
@@ -645,7 +641,7 @@ export default function OrdersPageEnhanced({
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
 
               {/* notes + actions */}
@@ -801,14 +797,12 @@ export default function OrdersPageEnhanced({
       {/* Toaster */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
         {toasts.map((t) => (
-          <motion.div
+          <div
             key={t.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`rounded-md px-4 py-2 shadow ${t.type === "error" ? "bg-red-100 text-red-700" : t.type === "success" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}`}
+            className={`animate-fade-slide-up rounded-md px-4 py-2 shadow ${t.type === "error" ? "bg-red-100 text-red-700" : t.type === "success" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}`}
           >
             {t.text}
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>

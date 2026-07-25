@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import PropTypes from "prop-types";
 
 import {
@@ -437,7 +436,7 @@ export default function ProductsPage({ services }) {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-800">Productos</h2>
@@ -498,14 +497,12 @@ export default function ProductsPage({ services }) {
         </div>
 
         {/* Filters panel */}
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{
-            height: filtersOpen ? "auto" : 0,
-            opacity: filtersOpen ? 1 : 0,
-          }}
-          className={`mt-4 overflow-hidden`}
+        <div
+          className={`mt-4 grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+            filtersOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
         >
+          <div className="overflow-hidden">
           <div className="rounded-lg bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -615,7 +612,8 @@ export default function ProductsPage({ services }) {
               </div>
             </div>
           </div>
-        </motion.div>
+          </div>
+        </div>
 
         {/* Table + actions */}
         <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -871,14 +869,12 @@ export default function ProductsPage({ services }) {
       {/* Toasts */}
       <div className="fixed bottom-4 right-4 flex flex-col gap-2">
         {toasts.map((t) => (
-          <motion.div
+          <div
             key={t.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`rounded-md px-4 py-2 shadow ${t.type === "error" ? "bg-red-100 text-red-800" : t.type === "success" ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"}`}
+            className={`animate-fade-slide-up rounded-md px-4 py-2 shadow ${t.type === "error" ? "bg-red-100 text-red-800" : t.type === "success" ? "bg-green-100 text-green-800" : "bg-slate-100 text-slate-800"}`}
           >
             {t.text}
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
@@ -967,11 +963,9 @@ function ProductForm({ initial = null, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <motion.form
-        initial={{ scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+      <form
         onSubmit={submit}
-        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg"
+        className="w-full max-w-lg animate-scale-in rounded-xl bg-white p-6 shadow-lg"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">
@@ -1070,7 +1064,7 @@ function ProductForm({ initial = null, onClose, onSave }) {
             Guardar
           </button>
         </div>
-      </motion.form>
+      </form>
     </div>
   );
 }
@@ -1096,11 +1090,7 @@ function ConfirmDialog({
 }) {
   return (
     <div className="z-60 fixed inset-0 flex items-center justify-center bg-black/40 px-4">
-      <motion.div
-        initial={{ y: 8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-sm rounded-lg bg-white p-4 shadow-lg"
-      >
+      <div className="w-full max-w-sm animate-fade-slide-up rounded-lg bg-white p-4 shadow-lg">
         <h4 className="font-semibold">{title}</h4>
         <p className="mt-2 text-sm text-slate-600">{description}</p>
         <div className="mt-4 flex items-center justify-end gap-2">
@@ -1114,7 +1104,7 @@ function ConfirmDialog({
             Eliminar
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
