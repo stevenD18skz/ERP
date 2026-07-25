@@ -1,5 +1,11 @@
-import SettingsPage from "@/views/SettingsPage";
-
-export default function Page() {
-  return <SettingsPage />;
+function SettingsPage() {
+  return (
+    <div>
+      <h1>Settings Page</h1>
+      <p>Welcome to your settings.</p>
+      {/* Add your settings options here */}
+    </div>
+  );
 }
+
+export default SettingsPage;
