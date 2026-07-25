@@ -1,350 +1,468 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { products, orders, sales } from "@/lib/mockDb";
+import { useMemo } from "react";
+import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
+import {
+  ShoppingCart,
+  PackagePlus,
+  ClipboardList,
+  BarChart3,
+  AlertTriangle,
+  ChevronRight,
+  Wallet,
+  CalendarClock,
+  PiggyBank,
+  PackageSearch,
+} from "lucide-react";
+
 import { currency } from "@/utils/converts";
+import { products, orders, sales } from "@/lib/mockDb";
+import type { Product } from "@/types/product";
+import type { Sale } from "@/types/sale";
+import type { Order } from "@/types/order";
 
+const LOW_STOCK_THRESHOLD = 10;
 
-const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
-  <section className="mx-auto w-full w-full overflow-hidden rounded-2xl shadow-lg">
-    <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-6 md:p-10">
-      <img
-        src="https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=1400&auto=format&fit=crop&ixlib=rb-4.0.3&s=placeholder"
-        alt="hero"
-        className="absolute inset-0 h-full w-full object-cover opacity-10"
-      />
-      <div className="relative z-10 grid grid-cols-1 items-center gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <h2 className="animate-fade-slide-up text-3xl font-extrabold text-white md:text-4xl">
-            Control total de tu supermercado
-          </h2>
-          <p className="mt-2 max-w-xl animate-fade-slide-up text-blue-100 [animation-delay:60ms]">
-            Panel minimalista con insights clave: ventas, inventario, órdenes y
-            alertas. Diseño limpio, decisiones rápidas.
-          </p>
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={onSignIn}
-              className="rounded-md bg-white px-5 py-2 text-sm font-semibold text-blue-700 shadow transition-transform hover:translate-y-[-1px]"
-            >
-              Comenzar — Iniciar sesión
-            </button>
-            <a
-              href="#features"
-              className="rounded-md border border-white/30 px-4 py-2 text-sm text-white/90"
-            >
-              Ver características
-            </a>
-          </div>
-        </div>
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Buenos días";
+  if (hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
 
-        <div className="hidden rounded-xl bg-white/10 p-4 md:block md:p-6">
-          <div className="text-sm text-white/80">Producto top</div>
-          <div className="mt-2 flex items-center justify-between">
-            <div>
-              <div className="text-lg font-bold text-white">{topProduct}</div>
-              <div className="mt-1 text-xs text-white/80">
-                Promedio ventas diarias: {dailyAvg}
-              </div>
-            </div>
-            <div className="ml-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  d="M12 2v20M2 12h20"
-                  stroke="white"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-          </div>
+type ActivityItem = {
+  icon: LucideIcon;
+  accent: string;
+  text: string;
+  date: string;
+};
 
-          <div className="mt-3 text-xs text-white/70">
-            Ventas totales:{" "}
-            <span className="font-semibold">{currency(totalSales)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+function buildActivity(
+  productsList: Product[],
+  salesList: Sale[],
+  ordersList: Order[],
+): ActivityItem[] {
+  const items: ActivityItem[] = [];
+
+  if (salesList[0]) {
+    items.push({
+      icon: ShoppingCart,
+      accent: "bg-blue-50 text-blue-600",
+      text: `Venta registrada por ${currency(salesList[0].total_amount)}`,
+      date: salesList[0].sale_date,
+    });
+  }
+  if (ordersList[0]) {
+    items.push({
+      icon: ClipboardList,
+      accent: "bg-indigo-50 text-indigo-600",
+      text: `Pedido creado a ${ordersList[0].supplier}`,
+      date: ordersList[0].order_date,
+    });
+  }
+  const lowestStock = productsList
+    .filter((p) => p.stock <= LOW_STOCK_THRESHOLD)
+    .sort((a, b) => a.stock - b.stock)[0];
+  if (lowestStock) {
+    items.push({
+      icon: AlertTriangle,
+      accent: "bg-amber-50 text-amber-600",
+      text: `${lowestStock.name} con stock bajo (${lowestStock.stock} un.)`,
+      date: lowestStock.created_at,
+    });
+  }
+
+  return items
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 4);
+}
+
+const QuickAction = ({
+  href,
+  icon: Icon,
+  label,
+  hint,
+  primary = false,
+  accent = "bg-blue-50 text-blue-600",
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  primary?: boolean;
+  accent?: string;
+}) => (
+  <Link
+    href={href}
+    className={`group flex items-center gap-3 rounded-xl p-4 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+      primary
+        ? "bg-blue-600 text-white hover:bg-blue-700"
+        : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+    }`}
+  >
+    <span
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
+        primary ? "bg-white/15" : accent
+      }`}
+    >
+      <Icon className="h-5 w-5" aria-hidden />
+    </span>
+    <span className="min-w-0 text-left">
+      <span className="block text-sm font-semibold">{label}</span>
+      <span
+        className={`block text-xs ${primary ? "text-blue-100" : "text-slate-400"}`}
+      >
+        {hint}
+      </span>
+    </span>
+  </Link>
 );
 
-const StatCard = ({ label, value, hint, children = null }) => (
-  <div className="rounded-lg bg-white p-4 shadow-sm transition-transform duration-200 hover:-translate-y-1">
-    <div className="text-sm font-medium text-slate-500">{label}</div>
-    <div className="mt-2 flex items-baseline justify-between gap-2">
-      <div className="text-2xl font-bold text-slate-800">{value}</div>
-      {children}
+const StatCard = ({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  accent = "bg-blue-50 text-blue-600",
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  hint?: string;
+  accent?: string;
+}) => (
+  <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+    <div className="flex items-start justify-between gap-2">
+      <span className="text-sm font-medium text-slate-500">{label}</span>
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${accent}`}
+      >
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+    </div>
+    <div className="mt-3 text-2xl font-bold tabular-nums text-slate-800">
+      {value}
     </div>
     {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
   </div>
 );
 
-const TopProductsHome = ({ items }) => (
-  <div className="rounded-lg bg-white p-4 shadow-sm">
-    <h3 className="text-sm font-semibold text-slate-700">Top productos</h3>
-    <ul className="mt-3 space-y-3">
-      {items.map((p) => (
-        <li key={p.id} className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium text-slate-800">{p.name}</div>
-            <div className="text-xs text-slate-400">
-              {p.category} • stock {p.stock}
-            </div>
-          </div>
-          <div className="text-sm font-semibold text-slate-700">
-            {currency(p.price)}
-          </div>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
-
-const RecentSalesTable = ({ items }) => (
-  <div className="overflow-auto rounded-lg bg-white p-4 shadow-sm">
-    <h3 className="text-sm font-semibold text-slate-700">Ventas recientes</h3>
-    <table className="mt-3 w-full text-left text-sm">
-      <thead>
-        <tr className="text-slate-400">
-          <th className="pb-2">Fecha</th>
-          <th className="pb-2">Total</th>
-          <th className="pb-2">Ganancia</th>
-          <th className="pb-2">Productos</th>
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((s, i) => (
-          <tr key={i} className="border-t border-slate-100">
-            <td className="py-3 text-slate-600">
-              {new Date(s.sale_date).toLocaleString()}
-            </td>
-            <td className="py-3 font-semibold">{currency(s.total_amount)}</td>
-            <td className="py-3 text-slate-600">{currency(s.gain)}</td>
-            <td className="py-3 text-slate-600">
-              {s.products.map((p) => p.product).join(", ")}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
-const InventoryAlerts = ({ items, threshold = 10 }) => {
-  const low = items.filter((p) => p.stock <= threshold);
+const LowStockBanner = ({
+  items,
+  threshold,
+}: {
+  items: Product[];
+  threshold: number;
+}) => {
+  const low = items
+    .filter((p) => p.stock <= threshold)
+    .sort((a, b) => a.stock - b.stock);
   if (low.length === 0) return null;
+
+  const names = low
+    .slice(0, 3)
+    .map((p) => p.name)
+    .join(", ");
+  const extra = low.length > 3 ? ` y ${low.length - 3} más` : "";
+
   return (
-    <div className="rounded-lg border-l-4 border-yellow-400 bg-yellow-50 p-4">
-      <h4 className="text-sm font-semibold text-yellow-800">
-        Alertas de inventario
-      </h4>
-      <ul className="mt-2 text-sm text-yellow-700">
-        {low.map((p) => (
-          <li key={p.id}>
-            • {p.name} — stock: {p.stock}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Link
+      href={`/products?stockOp=lt&stockVal=${threshold + 1}`}
+      className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+        <AlertTriangle className="h-5 w-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-amber-900">
+          {low.length} producto{low.length > 1 ? "s" : ""} con stock bajo
+        </p>
+        <p className="truncate text-xs text-amber-700">
+          {names}
+          {extra} — Toca para revisarlos
+        </p>
+      </div>
+      <ChevronRight
+        className="h-5 w-5 shrink-0 text-amber-500 transition-transform group-hover:translate-x-0.5"
+        aria-hidden
+      />
+    </Link>
   );
 };
 
-export default function Home() {
-  const [showLogin, setShowLogin] = useState(false);
+const TopProductsHome = ({ items }: { items: Product[] }) => (
+  <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+    <h3 className="text-sm font-semibold text-slate-700">
+      Productos con más existencias
+    </h3>
+    {items.length === 0 ? (
+      <p className="mt-3 text-sm text-slate-400">Aún no hay productos.</p>
+    ) : (
+      <ul className="mt-3 space-y-3">
+        {items.map((p: Product) => (
+          <li key={p.id} className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-slate-800">
+                {p.name}
+              </div>
+              <div className="text-xs text-slate-400">
+                {p.category} ·{" "}
+                <span
+                  className={
+                    p.stock <= LOW_STOCK_THRESHOLD
+                      ? "font-medium text-amber-600"
+                      : ""
+                  }
+                >
+                  stock {p.stock}
+                </span>
+              </div>
+            </div>
+            <div className="shrink-0 text-sm font-semibold tabular-nums text-slate-700">
+              {currency(p.price)}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
 
-  // Derived stats
-  const totalSales = useMemo(
+const RecentActivity = ({ items }: { items: ActivityItem[] }) => (
+  <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+    <h3 className="text-sm font-semibold text-slate-700">
+      Actividad reciente
+    </h3>
+    {items.length === 0 ? (
+      <p className="mt-3 text-sm text-slate-400">Sin actividad todavía.</p>
+    ) : (
+      <ul className="mt-3 space-y-3">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${item.accent}`}
+            >
+              <item.icon className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm text-slate-700">{item.text}</p>
+              <p className="text-xs text-slate-400">
+                {new Date(item.date).toLocaleString("es-CO", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
+
+const RecentSalesTable = ({ items }: { items: Sale[] }) => (
+  <div className="overflow-auto rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+    <h3 className="text-sm font-semibold text-slate-700">Ventas recientes</h3>
+    {items.length === 0 ? (
+      <p className="mt-4 py-6 text-center text-sm text-slate-400">
+        Aún no se han registrado ventas.
+      </p>
+    ) : (
+      <table className="mt-3 w-full text-left text-sm">
+        <thead>
+          <tr className="text-xs uppercase tracking-wide text-slate-400">
+            <th className="pb-2 font-medium">Fecha</th>
+            <th className="pb-2 font-medium">Total</th>
+            <th className="pb-2 font-medium">Ganancia</th>
+            <th className="pb-2 font-medium">Productos</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((s) => {
+            const names = s.products.map((p) => p.product);
+            const preview = names.slice(0, 2).join(", ");
+            const extra =
+              names.length > 2 ? ` +${names.length - 2} más` : "";
+            return (
+              <tr key={s.id} className="border-t border-slate-100">
+                <td className="py-3 text-slate-600">
+                  {new Date(s.sale_date).toLocaleString("es-CO", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </td>
+                <td className="py-3 font-semibold tabular-nums text-slate-800">
+                  {currency(s.total_amount)}
+                </td>
+                <td className="py-3 tabular-nums text-emerald-600">
+                  {currency(s.gain)}
+                </td>
+                <td
+                  className="py-3 text-slate-600"
+                  title={names.join(", ")}
+                >
+                  {preview}
+                  {extra}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    )}
+  </div>
+);
+
+export default function Home() {
+  const totalSales: number = useMemo(
     () => sales.reduce((s, x) => s + x.total_amount, 0),
     [],
   );
-  const mostSold = useMemo(() => {
-    // crude heuristic: product name frequency from orders
-    const freq: Record<string, number> = {};
-    orders.forEach((o) =>
-      o.products.forEach(
-        (p) => (freq[p.product] = (freq[p.product] || 0) + p.quantity),
-      ),
-    );
-    const best = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
-    return best ? best[0] : "—";
-  }, []);
-  const highestSale = useMemo(
-    () => Math.max(...sales.map((s) => s.total_amount)),
+  const totalGain: number = useMemo(
+    () => sales.reduce((s, x) => s + x.gain, 0),
     [],
   );
-  const dailyAvg = useMemo(
+  const highestSale: number = useMemo(
+    () => (sales.length ? Math.max(...sales.map((s) => s.total_amount)) : 0),
+    [],
+  );
+  const dailyAvg: number = useMemo(
     () => Math.round(totalSales / Math.max(1, 7)),
     [totalSales],
   );
+  const lowStockCount = useMemo(
+    () => products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD).length,
+    [],
+  );
 
-  const topProductsHome = products
-    .slice()
-    .sort((a, b) => b.stock - a.stock)
-    .slice(0, 5);
+  const topProductsHome = useMemo(
+    () =>
+      products
+        .slice()
+        .sort((a, b) => b.stock - a.stock)
+        .slice(0, 5),
+    [],
+  );
+
+  const activity = useMemo(
+    () => buildActivity(products, sales, orders),
+    [],
+  );
+
+  const today = useMemo(
+    () =>
+      new Date().toLocaleDateString("es-CO", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }),
+    [],
+  );
 
   return (
-    <>
-      <main className="">
-        <Hero
-          topProduct={mostSold}
-          totalSales={totalSales}
-          dailyAvg={currency(dailyAvg)}
-          onSignIn={() => setShowLogin(true)}
-        />
+    <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
+      {/* Saludo */}
+      <header className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 md:p-8">
+        <p className="text-sm font-semibold text-blue-600">
+          {getGreeting()}
+        </p>
+        <h1 className="mt-1 text-2xl font-bold capitalize text-slate-900 md:text-3xl">
+          Resumen de tu tienda
+        </h1>
+        <p className="mt-1 text-sm capitalize text-slate-500">{today}</p>
+      </header>
 
-        <section
-          id="dashboard"
-          className="mx-auto mt-6 grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-3"
-        >
-          <div className="grid grid-cols-1 gap-6 md:col-span-2">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-              <StatCard
-                label="Venta mayor"
-                value={currency(highestSale)}
-                hint="Última semana"
-              >
-                <div className="text-xs text-slate-400">
-                  Cliente: customer XYZ
-                </div>
-              </StatCard>
-              <StatCard
-                label="Ventas totales"
-                value={currency(totalSales)}
-                hint="Suma de ventas recientes"
-              >
-
-              </StatCard>
-              <StatCard
-                label="Promedio diario"
-                value={currency(dailyAvg)}
-                hint="Estimado"
-              >
-                <div className="text-xs text-slate-400">Basado en 7 días</div>
-              </StatCard>
-              <StatCard
-                label="Productos"
-                value={`${products.length}`}
-                hint="Total en catálogo"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="md:col-span-2">
-                <RecentSalesTable items={sales} />
-              </div>
-              <div>
-                <TopProductsHome items={topProductsHome} />
-                <div className="mt-4">
-                  <InventoryAlerts items={products} threshold={10} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <aside className="space-y-4">
-            <div className="rounded-lg bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-slate-700">
-                Actividades recientes
-              </h3>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>
-                  Orden creada —{" "}
-                  {new Date(orders[0].order_date).toLocaleString()}
-                </li>
-                <li>
-                  Venta registrada —{" "}
-                  {new Date(sales[1].sale_date).toLocaleString()}
-                </li>
-                <li>Producto bajo stock — Aceite de Girasol</li>
-              </ul>
-            </div>
-
-            <div className="rounded-lg bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-slate-700">
-                Insights rápidos
-              </h3>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>
-                  Margen promedio (ej.) —{" "}
-                  {currency(
-                    Math.round(
-                      sales.reduce((a, b) => a + b.gain, 0) / sales.length || 0,
-                    ),
-                  )}
-                </li>
-                <li>Días de stock (prom.) — 18 días (estimado)</li>
-                <li>Productos con rotación alta — Leche, Pan</li>
-              </ul>
-            </div>
-
-            <div className="rounded-lg bg-white p-4 text-sm shadow-sm">
-              <h3 className="font-semibold text-slate-700">Acciones</h3>
-              <div className="mt-3 flex flex-col gap-2">
-                <button className="rounded-md border border-slate-200 px-3 py-2 text-sm">
-                  Registrar venta
-                </button>
-                <button className="rounded-md border border-slate-200 px-3 py-2 text-sm">
-                  Crear orden
-                </button>
-                <button className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white">
-                  Exportar reporte
-                </button>
-              </div>
-            </div>
-          </aside>
-        </section>
-
-
-      </main>
-
-      {/* Simple login modal (non-functional placeholder) */}
-      {showLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md animate-scale-in rounded-xl bg-white p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h4 className="text-lg font-semibold">Iniciar sesión</h4>
-              <button
-                onClick={() => setShowLogin(false)}
-                aria-label="Cerrar modal"
-                className="text-slate-400"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="mt-2 text-sm text-slate-500">
-              Cuenta demo: admin@erp / contraseña: demo
-            </p>
-            <form className="mt-4 space-y-3">
-              <input
-                className="w-full rounded-md border px-3 py-2"
-                placeholder="Correo"
-                defaultValue="admin@erp"
-              />
-              <input
-                className="w-full rounded-md border px-3 py-2"
-                placeholder="Contraseña"
-                defaultValue="demo"
-              />
-              <div className="flex items-center justify-between">
-                <button className="rounded-md bg-blue-600 px-4 py-2 text-white">
-                  Entrar
-                </button>
-                <a href="#" className="text-sm text-blue-600">
-                  Olvidé mi contraseña
-                </a>
-              </div>
-            </form>
-          </div>
+      {/* Acciones rápidas: lo primero que necesita el tendero */}
+      <section aria-label="Acciones rápidas">
+        <h2 className="sr-only">Acciones rápidas</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickAction
+            href="/sales"
+            icon={ShoppingCart}
+            label="Registrar venta"
+            hint="Nueva transacción"
+            primary
+          />
+          <QuickAction
+            href="/products?new=1"
+            icon={PackagePlus}
+            label="Nuevo producto"
+            hint="Agregar al catálogo"
+            accent="bg-emerald-50 text-emerald-600"
+          />
+          <QuickAction
+            href="/orders"
+            icon={ClipboardList}
+            label="Crear pedido"
+            hint="Solicitar a proveedor"
+            accent="bg-indigo-50 text-indigo-600"
+          />
+          <QuickAction
+            href="/summary"
+            icon={BarChart3}
+            label="Ver reportes"
+            hint="Resumen del negocio"
+            accent="bg-violet-50 text-violet-600"
+          />
         </div>
-      )}
-    </>
+      </section>
+
+      {/* Alerta de stock bajo — visible sin desplazarse */}
+      <LowStockBanner items={products} threshold={LOW_STOCK_THRESHOLD} />
+
+      {/* KPIs */}
+      <section
+        aria-label="Indicadores clave"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <StatCard
+          icon={Wallet}
+          label="Ventas totales"
+          value={currency(totalSales)}
+          hint={`Venta más alta: ${currency(highestSale)}`}
+        />
+        <StatCard
+          icon={CalendarClock}
+          label="Promedio diario"
+          value={currency(dailyAvg)}
+          hint="Estimado en 7 días"
+          accent="bg-indigo-50 text-indigo-600"
+        />
+        <StatCard
+          icon={PiggyBank}
+          label="Ganancia total"
+          value={currency(totalGain)}
+          hint="Suma de ventas recientes"
+          accent="bg-emerald-50 text-emerald-600"
+        />
+        <StatCard
+          icon={PackageSearch}
+          label="Stock bajo"
+          value={`${lowStockCount}`}
+          hint={`de ${products.length} productos en catálogo`}
+          accent={
+            lowStockCount > 0
+              ? "bg-amber-50 text-amber-600"
+              : "bg-slate-100 text-slate-500"
+          }
+        />
+      </section>
+
+      {/* Contenido principal */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RecentSalesTable items={sales} />
+        </div>
+        <div className="space-y-4">
+          <TopProductsHome items={topProductsHome} />
+          <RecentActivity items={activity} />
+        </div>
+      </section>
+    </main>
   );
 }

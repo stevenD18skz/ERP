@@ -94,7 +94,6 @@ export default function SalePageEnhanced() {
     };
     fetchData();
     return () => (mounted = false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Derived totals
