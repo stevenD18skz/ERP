@@ -45,6 +45,8 @@ export const createOrderWithDetails = async (order, orderDetails) => {
     });
     orders.unshift({
       id: `o${Date.now()}`,
+      status: "pendiente",
+      attachment: null,
       ...order,
       products: detailedProducts,
     });

@@ -40,10 +40,15 @@ export const createSaleWithDetails = async (sale, saleProducts) => {
       product: product ? product.name : `Producto #${p.product_id}`,
       quantity: p.quantity,
       sale_price: p.sale_price ?? product?.price ?? 0,
+      discount_type: p.discount_type ?? null,
+      discount_value: p.discount_value ?? 0,
     };
   });
   sales.unshift({
     id: `s${Date.now()}`,
+    payment_method: "efectivo",
+    client_name: null,
+    voided: false,
     ...sale,
     products: detailedProducts,
   });

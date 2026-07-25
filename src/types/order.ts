@@ -1,3 +1,5 @@
+export type OrderStatus = "pendiente" | "recibido" | "cancelado";
+
 export interface OrderProductLine {
   product_id: string;
   product: string;
@@ -12,6 +14,8 @@ export interface Order {
   expected_delivery: string | null;
   notes: string;
   total_amount: number;
+  status: OrderStatus;
+  attachment?: string | null;
   products: OrderProductLine[];
 }
 
@@ -22,6 +26,8 @@ export interface NewOrderInput {
   supplier: string;
   expected_delivery: string | null;
   notes: string;
+  status: OrderStatus;
+  attachment?: string | null;
 }
 
 // Cada línea de producto que se envía a createOrderWithDetails

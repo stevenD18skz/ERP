@@ -135,6 +135,9 @@ export const sales: Sale[] = [
     sale_date: "2025-08-15T09:50:00Z",
     total_amount: 5 * 800 + 6 * 600,
     gain: 5 * (800 - 500) + 6 * (600 - 400),
+    payment_method: "efectivo",
+    client_name: null,
+    voided: false,
     products: [
       { product_id: "8", product: "Manzanas Kg", quantity: 5, sale_price: 800 },
       { product_id: "11", product: "Bananas Kg", quantity: 6, sale_price: 600 },
@@ -145,6 +148,9 @@ export const sales: Sale[] = [
     sale_date: "2025-08-14T16:20:00Z",
     total_amount: 12 * 1500 + 3 * 8500,
     gain: 12 * (1500 - 1000) + 3 * (8500 - 6000),
+    payment_method: "tarjeta",
+    client_name: null,
+    voided: false,
     products: [
       { product_id: "10", product: "Yogur 500ml", quantity: 12, sale_price: 1500 },
       { product_id: "4", product: "Huevos x12", quantity: 3, sale_price: 8500 },
@@ -155,6 +161,9 @@ export const sales: Sale[] = [
     sale_date: "2025-08-13T11:00:00Z",
     total_amount: 8 * 2800 + 10 * 2000,
     gain: 8 * (2800 - 2000) + 10 * (2000 - 1400),
+    payment_method: "efectivo",
+    client_name: null,
+    voided: false,
     products: [
       { product_id: "9", product: "Frijoles 1Kg", quantity: 8, sale_price: 2800 },
       { product_id: "7", product: "Pasta 500g", quantity: 10, sale_price: 2000 },
@@ -165,6 +174,9 @@ export const sales: Sale[] = [
     sale_date: "2025-08-12T09:15:00Z",
     total_amount: 4 * 5500,
     gain: 4 * (5500 - 4200),
+    payment_method: "transferencia",
+    client_name: null,
+    voided: false,
     products: [
       {
         product_id: "5",
@@ -179,6 +191,9 @@ export const sales: Sale[] = [
     sale_date: "2025-08-11T15:45:00Z",
     total_amount: 20 * 1800 + 15 * 1200,
     gain: 20 * (1800 - 1300) + 15 * (1200 - 800),
+    payment_method: "efectivo",
+    client_name: null,
+    voided: false,
     products: [
       { product_id: "2", product: "Leche 1L", quantity: 20, sale_price: 1800 },
       { product_id: "3", product: "Pan 500g", quantity: 15, sale_price: 1200 },
@@ -189,6 +204,9 @@ export const sales: Sale[] = [
     sale_date: "2025-08-10T10:30:00Z",
     total_amount: 10 * 2500 + 5 * 1200,
     gain: 10 * (2500 - 1800) + 5 * (1200 - 850),
+    payment_method: "fiado",
+    client_name: "Don Roberto",
+    voided: false,
     products: [
       { product_id: "1", product: "Arroz 1Kg", quantity: 10, sale_price: 2500 },
       { product_id: "6", product: "Azúcar 1Kg", quantity: 5, sale_price: 1200 },
@@ -204,6 +222,7 @@ export const orders: Order[] = [
     supplier: "Frutas Frescas del Campo",
     expected_delivery: "2025-08-11T00:00:00Z",
     notes: "",
+    status: "recibido",
     total_amount: 40 * 500 + 50 * 400,
     products: [
       { product_id: "8", product: "Manzanas Kg", quantity: 40, unit_cost: 500 },
@@ -216,6 +235,7 @@ export const orders: Order[] = [
     supplier: "Aceites y Granos S.A.",
     expected_delivery: "2025-08-10T00:00:00Z",
     notes: "",
+    status: "recibido",
     total_amount: 25 * 4200 + 60 * 1400,
     products: [
       {
@@ -233,6 +253,7 @@ export const orders: Order[] = [
     supplier: "Lácteos del Valle",
     expected_delivery: "2025-08-09T00:00:00Z",
     notes: "",
+    status: "recibido",
     total_amount: 80 * 1300 + 40 * 1000 + 30 * 6000,
     products: [
       { product_id: "2", product: "Leche 1L", quantity: 80, unit_cost: 1300 },
@@ -246,6 +267,7 @@ export const orders: Order[] = [
     supplier: "Distribuidora La Central",
     expected_delivery: "2025-08-08T00:00:00Z",
     notes: "",
+    status: "recibido",
     total_amount: 100 * 1800 + 50 * 850,
     products: [
       { product_id: "1", product: "Arroz 1Kg", quantity: 100, unit_cost: 1800 },
