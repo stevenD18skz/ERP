@@ -6,15 +6,12 @@ import SideBar from "./SideBar";
 import Footer from "./Footer";
 import TopBar from "./TopBar";
 
-const Layout = ({ children }) => {
+const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="flex min-h-screen">
-      <SideBar
-        isExpanded={sidebarOpen}
-        onToggle={() => setSidebarOpen((s) => !s)}
-      />
+      <SideBar isExpanded={sidebarOpen} />
       <div
         className={`flex-1 transition-all duration-300 ${sidebarOpen ? "pl-64" : "pl-16"}`}
       >
@@ -29,8 +26,8 @@ const Layout = ({ children }) => {
   );
 };
 
-Layout.propTypes = {
+AppShell.propTypes = {
   children: PropTypes.node,
 };
 
-export default Layout;
+export default AppShell;
