@@ -36,10 +36,7 @@ export const updateProduct = async (id, product) => {
     if (!response) {
       throw new Error("Product not found");
     }
-    response.name = product.name;
-    response.description = product.description;
-    response.price = product.price;
-    response.stock = product.stock;
+    Object.assign(response, product);
     return response;
   } catch (error) {
     throw new Error(error.response?.data?.error || "Error updating product");

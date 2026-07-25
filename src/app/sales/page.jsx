@@ -2,28 +2,48 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import { getProducts } from "@/services/products.service";
+import { getProducts, updateProduct } from "@/services/products.service";
 import { getSales, createSaleWithDetails } from "@/services/sales.service";
+import { currency, formatMoney } from "@/utils/converts";
 
 import {
   ShoppingCart,
   Plus,
+  Minus,
   Trash2,
   Check,
   DollarSign,
   Search,
-  CreditCard,
+  Printer,
   Tag,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 
 /*
   SalePageEnhanced
-  - UX-focused: pasos claros, validaciones, feedback, keyboard-friendly suggestions
-  - Usa servicios: getSales(), createSaleWithDetails(), getProducts()
+  - Flujo guiado con navegación por teclado (Enter avanza de campo en campo,
+    nunca envía el formulario por accidente), validación por línea visible,
+    control de doble envío y sincronización de stock tras registrar la venta.
+  - Usa servicios: getSales(), createSaleWithDetails(), getProducts(), updateProduct()
 */
+
+const uid = () => Math.random().toString(36).slice(2, 9);
+const makeEmptyLine = () => ({
+  _key: uid(),
+  id: "",
+  product: "",
+  sku: "",
+  quantity: 1,
+  price: 0,
+  sale_price: 0,
+  stock: 0,
+});
+const CASH_CHIPS = [5000, 10000, 20000, 50000, 100000];
 
 export default function SalePageEnhanced() {
   // data
@@ -32,17 +52,10 @@ export default function SalePageEnhanced() {
   const [loadingSales, setLoadingSales] = useState(true);
 
   // venta en curso
-  const emptyLine = {
-    id: "",
-    product: "",
-    sku: "",
-    quantity: 1,
-    price: 0,
-    sale_price: 0,
-    stock: 0,
-  };
-  const [lines, setLines] = useState([{ ...emptyLine }]);
+  const [lines, setLines] = useState([makeEmptyLine()]);
+  const [lineErrors, setLineErrors] = useState({});
   const [receivedAmount, setReceivedAmount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   // suggestions + UI
   const [suggestions, setSuggestions] = useState([]);
@@ -52,27 +65,14 @@ export default function SalePageEnhanced() {
   // small toasts (local)
   const [toasts, setToasts] = useState([]);
   const pushToast = (text, type = "info") => {
-    const id = Math.random().toString(36).slice(2, 9);
+    const id = uid();
     setToasts((t) => [...t, { id, text, type }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3500);
   };
 
-  const productInputRefs = useRef([]);
-
-  // Formatted helpers
-  const fmt = (n) =>
-    typeof n === "number"
-      ? n.toLocaleString("es-CO", { minimumFractionDigits: 0 })
-      : n;
-
-  const currency = (n) =>
-    typeof n === "number"
-      ? n.toLocaleString("es-CO", {
-          style: "currency",
-          currency: "COP",
-          minimumFractionDigits: 0,
-        })
-      : "-";
+  // refs indexadas por _key (estable), no por posición: evitar que el foco
+  // "salte" a la línea equivocada al agregar/quitar líneas en medio de la lista
+  const fieldRefs = useRef({});
 
   // FETCH initial data
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function SalePageEnhanced() {
         console.error("Error fetching sales/products:", err);
         pushToast("No se pudo cargar datos. Revisa conexión.", "error");
       } finally {
-        setLoadingSales(false);
+        if (mounted) setLoadingSales(false);
       }
     };
     fetchData();
@@ -110,6 +110,8 @@ export default function SalePageEnhanced() {
     const change = Number(receivedAmount || 0) - total;
     return { total, gain, cost, change };
   }, [lines, receivedAmount]);
+
+  const hasProducts = lines.some((l) => l.id);
 
   // suggestions logic
   const updateSuggestions = (text, lineIndex) => {
@@ -133,29 +135,71 @@ export default function SalePageEnhanced() {
           ),
       );
     setSuggestions(filtered.slice(0, 8));
-    setActiveSuggestionIndex(0);
+    setActiveSuggestionIndex(filtered.length ? 0 : -1);
   };
 
-  // keyboard navigation for suggestions
+  const clearLineError = (index) =>
+    setLineErrors((prev) => {
+      if (!(index in prev)) return prev;
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
+
+  // keyboard navigation for suggestions + avance guiado entre campos
   const onKeyDownProduct = (e, lineIndex) => {
-    if (!suggestions.length) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveSuggestionIndex((i) => Math.min(i + 1, suggestions.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveSuggestionIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter") {
-      if (activeSuggestionIndex >= 0 && suggestions[activeSuggestionIndex]) {
+    if (suggestions.length && focusedLineIndex === lineIndex) {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        pickSuggestion(lineIndex, suggestions[activeSuggestionIndex]);
+        setActiveSuggestionIndex((i) => Math.min(i + 1, suggestions.length - 1));
+        return;
       }
-    } else if (e.key === "Escape") {
-      setSuggestions([]);
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveSuggestionIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (activeSuggestionIndex >= 0 && suggestions[activeSuggestionIndex]) {
+          pickSuggestion(lineIndex, suggestions[activeSuggestionIndex]);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setSuggestions([]);
+        return;
+      }
+    }
+    // Enter sin sugerencias activas: nunca debe enviar el formulario,
+    // solo avanzar a Cantidad
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const key = lines[lineIndex]?._key;
+      fieldRefs.current[key]?.qty?.focus();
+    }
+  };
+
+  const onKeyDownQty = (e, lineIndex) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const key = lines[lineIndex]?._key;
+    fieldRefs.current[key]?.price?.focus();
+  };
+
+  const onKeyDownPrice = (e, lineIndex) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (lineIndex === lines.length - 1) {
+      addLine(lineIndex);
+    } else {
+      const nextKey = lines[lineIndex + 1]?._key;
+      fieldRefs.current[nextKey]?.prod?.focus();
     }
   };
 
   const pickSuggestion = (lineIndex, product) => {
+    const key = lines[lineIndex]?._key;
     setLines((prev) =>
       prev.map((l, idx) =>
         idx === lineIndex
@@ -164,43 +208,41 @@ export default function SalePageEnhanced() {
               id: product.id,
               product: product.name,
               sku: product.sku || "",
-              sale_price: Number(product.sale_price ?? product.price ?? 0),
+              sale_price: Number(product.price ?? 0),
               price: Number(product.price ?? 0),
               stock: Number(product.stock ?? 0),
             }
           : l,
       ),
     );
+    clearLineError(lineIndex);
     setSuggestions([]);
     setActiveSuggestionIndex(-1);
-    // focus quantity next
-    setTimeout(() => {
-      const nextQty = productInputRefs.current?.[lineIndex]?.qty;
-      if (nextQty) nextQty.focus();
-    }, 40);
+    setTimeout(() => fieldRefs.current[key]?.qty?.focus(), 40);
   };
 
   // Add / remove lines
   const addLine = (atIndex = null) => {
+    const newLine = makeEmptyLine();
     setLines((prev) => {
       const next = [...prev];
-      if (atIndex === null) next.push({ ...emptyLine });
-      else next.splice(atIndex + 1, 0, { ...emptyLine });
+      if (atIndex === null) next.push(newLine);
+      else next.splice(atIndex + 1, 0, newLine);
       return next;
     });
-    setTimeout(() => {
-      const idx = atIndex === null ? lines.length : atIndex + 1;
-      productInputRefs.current[idx]?.prod?.focus();
-    }, 80);
+    setTimeout(() => fieldRefs.current[newLine._key]?.prod?.focus(), 80);
   };
 
   const removeLine = (index) => {
+    const key = lines[index]?._key;
     if (lines.length === 1) {
       // clear instead of removing last
-      setLines([{ ...emptyLine }]);
-      return;
+      setLines([makeEmptyLine()]);
+    } else {
+      setLines((prev) => prev.filter((_, i) => i !== index));
     }
-    setLines((prev) => prev.filter((_, i) => i !== index));
+    delete fieldRefs.current[key];
+    clearLineError(index);
   };
 
   // update a field
@@ -208,44 +250,48 @@ export default function SalePageEnhanced() {
     setLines((prev) =>
       prev.map((l, idx) => (idx === index ? { ...l, ...changes } : l)),
     );
+    clearLineError(index);
   };
 
   // Quick increment/decrement for quantity
   const incQty = (index, delta) => {
-    setLines((prev) =>
-      prev.map((l, i) =>
-        i === index
-          ? { ...l, quantity: Math.max(1, (Number(l.quantity) || 0) + delta) }
-          : l,
-      ),
-    );
+    updateLine(index, {
+      quantity: Math.max(1, (Number(lines[index].quantity) || 0) + delta),
+    });
   };
 
-  // Validate before submit
+  // Validate before submit: devuelve un error general y/o errores por línea
   const validateSale = () => {
-    if (!lines.length) return "Agrega al menos 1 producto.";
-    for (const [i, l] of lines.entries()) {
-      if (!l.product) return `Falta producto en la línea ${i + 1}.`;
-      if (!Number(l.quantity) || Number(l.quantity) <= 0)
-        return `Cantidad inválida en línea ${i + 1}.`;
-      if (!Number(l.sale_price) || Number(l.sale_price) < 0)
-        return `Precio inválido en línea ${i + 1}.`;
-      if (l.stock && Number(l.quantity) > Number(l.stock))
-        return `Stock insuficiente para ${l.product} (línea ${i + 1}).`;
-    }
-    return null;
+    const errors = {};
+    lines.forEach((l, i) => {
+      if (!l.product.trim()) {
+        errors[i] = "Falta el producto";
+      } else if (!l.id) {
+        errors[i] = "Selecciona el producto de la lista de sugerencias";
+      } else if (!Number(l.quantity) || Number(l.quantity) <= 0) {
+        errors[i] = "Cantidad inválida";
+      } else if (!Number(l.sale_price) || Number(l.sale_price) < 0) {
+        errors[i] = "Precio inválido";
+      } else if (Number(l.quantity) > Number(l.stock || 0)) {
+        errors[i] = `Stock insuficiente (${l.stock} disponibles)`;
+      }
+    });
+    return errors;
   };
 
   // Submit sale (with confirmation)
   const submitSale = async () => {
-    const error = validateSale();
-    if (error) {
-      pushToast(error, "error");
+    if (submitting) return;
+    const errors = validateSale();
+    setLineErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      pushToast("Revisa los productos marcados en rojo", "error");
+      const firstIdx = Number(Object.keys(errors)[0]);
+      fieldRefs.current[lines[firstIdx]?._key]?.prod?.focus();
       return;
     }
 
     const total = totals.total;
-    // if received is less than total, warn
     if (Number(receivedAmount || 0) < total) {
       const { isConfirmed } = await Swal.fire({
         title: "Pago insuficiente",
@@ -258,8 +304,7 @@ export default function SalePageEnhanced() {
       if (!isConfirmed) return;
     }
 
-    // confirm final
-    const confirm = await Swal.fire({
+    const confirmResult = await Swal.fire({
       title: "Confirmar venta",
       html: `<strong>Total:</strong> ${currency(total)}<br/><strong>Recibido:</strong> ${currency(receivedAmount)}<br/><strong>Vuelto:</strong> ${currency(totals.change)}`,
       icon: "question",
@@ -267,29 +312,45 @@ export default function SalePageEnhanced() {
       confirmButtonText: "Registrar venta",
       cancelButtonText: "Cancelar",
     });
+    if (!confirmResult.isConfirmed) return;
 
-    if (!confirm.isConfirmed) return;
-
-    // prepare payload
+    const soldLines = lines.filter((l) => l.id);
     const salePayload = {
       total_amount: Number(total),
       sale_date: new Date().toISOString(),
       gain: Number(totals.gain),
     };
-    const productsFormat = lines.map((l) => ({
-      product_id: Number(l.id) || null,
+    const productsFormat = soldLines.map((l) => ({
+      product_id: l.id,
       quantity: Number(l.quantity) || 0,
       sale_price: Number(l.sale_price) || 0,
     }));
 
+    setSubmitting(true);
     try {
-      // optimistic feedback
-      pushToast("Registrando venta...", "info");
       await createSaleWithDetails(salePayload, productsFormat);
-      const updatedSales = await getSales();
-      setSales(Array.isArray(updatedSales) ? updatedSales : []);
 
-      // success UI
+      // sincroniza el stock vendido en el catálogo
+      await Promise.all(
+        soldLines.map((l) => {
+          const current = allProducts.find((p) => String(p.id) === String(l.id));
+          const newStock = Math.max(
+            0,
+            (current?.stock ?? Number(l.stock)) - Number(l.quantity),
+          );
+          return updateProduct(l.id, { stock: newStock }).catch((err) =>
+            console.error("No se pudo sincronizar el stock:", err),
+          );
+        }),
+      );
+
+      const [updatedSales, updatedProducts] = await Promise.all([
+        getSales(),
+        getProducts(),
+      ]);
+      setSales(Array.isArray(updatedSales) ? updatedSales : []);
+      setAllProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
+
       Swal.fire({
         icon: "success",
         title: "Venta registrada",
@@ -298,75 +359,131 @@ export default function SalePageEnhanced() {
         showConfirmButton: false,
       });
 
-      // reset
-      setLines([{ ...emptyLine }]);
+      setLines([makeEmptyLine()]);
+      setLineErrors({});
       setReceivedAmount(0);
     } catch (err) {
       console.error("Error creating sale:", err);
       pushToast("Error registrando venta. Intenta de nuevo.", "error");
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const printReceipt = () => {
+    const soldLines = lines.filter((l) => l.id);
+    if (!soldLines.length) {
+      pushToast("Agrega productos antes de imprimir el recibo", "error");
+      return;
+    }
+    const rows = soldLines
+      .map(
+        (l) =>
+          `<tr><td>${l.product}</td><td style="text-align:center">${l.quantity}</td><td style="text-align:right">${currency(l.sale_price)}</td><td style="text-align:right">${currency(l.sale_price * l.quantity)}</td></tr>`,
+      )
+      .join("");
+    const html = `<html><head><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        body{font-family:system-ui,-apple-system,Roboto,'Helvetica Neue',Arial;width:300px;margin:0 auto;padding:16px;color:#111}
+        h2{font-size:16px;margin:0 0 4px}
+        table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+        th,td{padding:4px 0}
+        th{text-align:left;border-bottom:1px solid #ccc}
+        tfoot td{border-top:1px solid #ccc;font-weight:bold;padding-top:6px}
+        .muted{color:#666;font-size:11px}
+      </style></head><body>
+      <h2>Recibo de venta</h2>
+      <div class="muted">${new Date().toLocaleString("es-CO")}</div>
+      <table>
+        <thead><tr><th>Producto</th><th>Cant.</th><th style="text-align:right">Precio</th><th style="text-align:right">Subtotal</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td colspan="3">Total</td><td style="text-align:right">${currency(totals.total)}</td></tr>
+          <tr><td colspan="3">Recibido</td><td style="text-align:right">${currency(receivedAmount)}</td></tr>
+          <tr><td colspan="3">Vuelto</td><td style="text-align:right">${currency(Math.max(0, totals.change))}</td></tr>
+        </tfoot>
+      </table>
+      <p class="muted" style="margin-top:16px;text-align:center">¡Gracias por su compra!</p>
+      </body></html>`;
+
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) {
+      pushToast("Permite las ventanas emergentes para imprimir el recibo", "error");
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
   };
 
   // suggestion watcher (when product input changes)
   useEffect(() => {
-    // maintain keyboard selection visibility
     setActiveSuggestionIndex((i) =>
       i >= suggestions.length ? suggestions.length - 1 : i,
     );
   }, [suggestions]);
 
-  // friendly helpers
   const totalItems = lines.reduce(
     (acc, l) => acc + (Number(l.quantity) || 0),
     0,
   );
+  const totalSalesCount = sales.length;
+  const totalSalesAmount = useMemo(
+    () => sales.reduce((a, s) => a + (s.total_amount || 0), 0),
+    [sales],
+  );
 
-  // small UI render helpers for product list preview
   const RecentSales = () => (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800">
+        <h3 className="text-sm font-semibold text-slate-700">
           Historial de ventas
         </h3>
-        <div className="text-sm text-slate-500">
-          {loadingSales ? "Cargando..." : `${sales.length} registros`}
+        <div className="text-xs text-slate-400">
+          {loadingSales ? "" : `${sales.length} registros`}
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {loadingSales ? (
-          <div className="py-12 text-center text-slate-500">
-            Cargando ventas...
-          </div>
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-100"
+            >
+              <div className="h-3.5 w-2/3 animate-pulse rounded bg-slate-200 motion-reduce:animate-none" />
+              <div className="mt-2 h-3 w-1/3 animate-pulse rounded bg-slate-100 motion-reduce:animate-none" />
+            </div>
+          ))
         ) : sales.length === 0 ? (
-          <div className="py-6 text-slate-500">No hay ventas registradas.</div>
+          <div className="rounded-lg bg-white p-6 text-center text-sm text-slate-400 shadow-sm ring-1 ring-slate-100">
+            Aún no hay ventas registradas.
+          </div>
         ) : (
-          <div className="divide-y rounded-lg bg-white shadow-sm">
-            {sales.slice(0, 8).map((s, idx) => (
+          <div className="divide-y rounded-lg bg-white shadow-sm ring-1 ring-slate-100">
+            {sales.slice(0, 8).map((s) => (
               <div
-                key={idx}
-                className="flex items-start justify-between p-3 hover:bg-slate-50"
+                key={s.id}
+                className="flex items-start justify-between gap-2 p-3 hover:bg-slate-50"
               >
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-slate-800">
-                    {s.products
-                      .map((p) => `${p.product} (${p.quantity})`)
-                      .join(", ")}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-slate-800">
+                    {s.products.map((p) => `${p.product} (${p.quantity})`).join(", ")}
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {new Date(s.sale_date).toLocaleString("es-ES", {
+                    {new Date(s.sale_date).toLocaleString("es-CO", {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
                   </div>
                 </div>
 
-                <div className="ml-3 text-right">
-                  <div className="text-sm font-bold text-slate-800">
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-bold tabular-nums text-slate-800">
                     {currency(s.total_amount)}
                   </div>
-                  <div className="text-xs text-slate-500">
-                    Ganancia {currency(s.gain)}
+                  <div className="text-xs tabular-nums text-emerald-600">
+                    +{currency(s.gain)}
                   </div>
                 </div>
               </div>
@@ -383,36 +500,41 @@ export default function SalePageEnhanced() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
         {/* LEFT: Formulario de venta */}
         <div className="lg:col-span-2">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="rounded-md bg-teal-600 p-2 text-white">
                   <ShoppingCart className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">
+                  <h1 className="text-xl font-bold text-slate-800">
                     Registrar venta
-                  </h2>
+                  </h1>
                   <div className="text-xs text-slate-500">
-                    Flujo guiado: añade productos, cantidad y confirma.
+                    Añade productos, confirma cantidades y registra el pago.
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  title="Limpiar"
+                  type="button"
+                  title="Limpiar venta actual"
+                  disabled={submitting}
                   onClick={() => {
-                    setLines([{ ...emptyLine }]);
+                    setLines([makeEmptyLine()]);
+                    setLineErrors({});
                     setReceivedAmount(0);
                   }}
-                  className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" /> Limpiar
                 </button>
                 <button
+                  type="button"
+                  disabled={submitting}
                   onClick={() => addLine()}
-                  className="flex items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm text-white"
+                  className="flex items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" /> Añadir línea
                 </button>
@@ -424,213 +546,269 @@ export default function SalePageEnhanced() {
                 e.preventDefault();
                 submitSale();
               }}
-              className="space-y-4"
+              className="space-y-3"
             >
-              {lines.map((line, idx) => (
-                <div
-                  key={idx}
-                  className="relative animate-fade-slide-up rounded-md border border-slate-100 bg-slate-50 p-3"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex w-12 flex-shrink-0 items-center justify-center">
-                      <div className="text-xs text-slate-500">{idx + 1}</div>
-                    </div>
+              {lines.map((line, idx) => {
+                const error = lineErrors[idx];
+                const showSuggestions =
+                  focusedLineIndex === idx && !line.id && line.product.trim() !== "";
+                return (
+                  <div
+                    key={line._key}
+                    className={`relative animate-fade-slide-up rounded-md border p-3 transition-colors ${
+                      error
+                        ? "border-red-300 bg-red-50/60"
+                        : "border-slate-100 bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex w-6 flex-shrink-0 items-center justify-center pt-2">
+                        <div className="text-xs text-slate-400">{idx + 1}</div>
+                      </div>
 
-                    <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-12">
-                      {/* Producto input (col 1-6) */}
-                      <div className="sm:col-span-6">
-                        <label className="text-xs font-semibold text-slate-600">
-                          Producto
-                        </label>
-                        <div className="relative">
-                          <div className="flex items-center gap-2 rounded-md border bg-white px-2 py-1">
-                            <Search className="h-4 w-4 text-slate-300" />
-                            <input
-                              ref={(el) => {
-                                productInputRefs.current[idx] = {
-                                  ...productInputRefs.current[idx],
-                                  prod: el,
-                                  qty: productInputRefs.current[idx]?.qty,
-                                };
-                              }}
-                              type="text"
-                              className="w-full px-2 py-2 text-sm outline-none"
-                              placeholder="Escribe nombre o SKU..."
-                              value={line.product}
-                              onChange={(e) => {
-                                updateLine(idx, {
-                                  product: e.target.value,
-                                  id: "",
-                                  sku: "",
-                                  sale_price: 0,
-                                  price: 0,
-                                  stock: 0,
-                                });
-                                updateSuggestions(e.target.value, idx);
-                              }}
-                              onFocus={() => {
-                                setFocusedLineIndex(idx);
-                                updateSuggestions(line.product, idx);
-                              }}
-                              onBlur={() => {
-                                setTimeout(() => {
-                                  setSuggestions([]);
-                                  setActiveSuggestionIndex(-1);
-                                  setFocusedLineIndex(null);
-                                }, 150);
-                              }}
-                              onKeyDown={(e) => onKeyDownProduct(e, idx)}
-                              aria-label={`Producto línea ${idx + 1}`}
-                            />
-                            <div className="px-2 text-xs text-slate-400">
-                              {line.sku}
+                      <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-12">
+                        {/* Producto */}
+                        <div className="sm:col-span-6">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Producto
+                          </label>
+                          <div className="relative">
+                            <div
+                              className={`flex items-center gap-2 rounded-md border bg-white px-2 focus-within:ring-2 ${
+                                error
+                                  ? "border-red-300 focus-within:ring-red-100"
+                                  : "border-slate-200 focus-within:border-teal-400 focus-within:ring-teal-100"
+                              }`}
+                            >
+                              <Search className="h-4 w-4 shrink-0 text-slate-300" />
+                              <input
+                                ref={(el) => {
+                                  fieldRefs.current[line._key] = {
+                                    ...fieldRefs.current[line._key],
+                                    prod: el,
+                                  };
+                                }}
+                                type="text"
+                                role="combobox"
+                                aria-expanded={showSuggestions}
+                                aria-controls={`suggestions-${line._key}`}
+                                aria-autocomplete="list"
+                                aria-activedescendant={
+                                  showSuggestions && activeSuggestionIndex >= 0
+                                    ? `suggestion-${line._key}-${activeSuggestionIndex}`
+                                    : undefined
+                                }
+                                className="w-full px-2 py-2 text-sm outline-none"
+                                placeholder="Escribe nombre o SKU..."
+                                value={line.product}
+                                onChange={(e) => {
+                                  updateLine(idx, {
+                                    product: e.target.value,
+                                    id: "",
+                                    sku: "",
+                                    sale_price: 0,
+                                    price: 0,
+                                    stock: 0,
+                                  });
+                                  updateSuggestions(e.target.value, idx);
+                                }}
+                                onFocus={() => {
+                                  setFocusedLineIndex(idx);
+                                  if (!line.id) updateSuggestions(line.product, idx);
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    setSuggestions([]);
+                                    setActiveSuggestionIndex(-1);
+                                    setFocusedLineIndex(null);
+                                  }, 150);
+                                }}
+                                onKeyDown={(e) => onKeyDownProduct(e, idx)}
+                                aria-label={`Producto línea ${idx + 1}`}
+                              />
+                              {line.sku && (
+                                <div className="shrink-0 px-2 text-xs text-slate-400">
+                                  {line.sku}
+                                </div>
+                              )}
                             </div>
-                          </div>
 
-                          {/* suggestions dropdown */}
-                          {focusedLineIndex === idx &&
-                            suggestions.length > 0 && (
-                              <div className="absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-auto rounded-md border bg-white shadow-lg">
-                                {suggestions.map((s, sidx) => (
-                                  <button
-                                    key={s.id || sidx}
-                                    onMouseDown={(ev) => {
-                                      ev.preventDefault();
-                                      pickSuggestion(idx, s);
-                                    }}
-                                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-teal-50 ${sidx === activeSuggestionIndex ? "bg-teal-50" : ""}`}
-                                  >
-                                    <div>
-                                      <div className="font-medium text-slate-800">
-                                        {s.name}
+                            {showSuggestions && (
+                              <div
+                                id={`suggestions-${line._key}`}
+                                role="listbox"
+                                className="absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-auto rounded-md border border-slate-200 bg-white shadow-lg"
+                              >
+                                {suggestions.length === 0 ? (
+                                  <div className="px-3 py-3 text-sm text-slate-400">
+                                    No se encontraron productos con ese nombre o SKU.
+                                  </div>
+                                ) : (
+                                  suggestions.map((s, sidx) => (
+                                    <button
+                                      key={s.id}
+                                      id={`suggestion-${line._key}-${sidx}`}
+                                      role="option"
+                                      aria-selected={sidx === activeSuggestionIndex}
+                                      type="button"
+                                      onMouseDown={(ev) => {
+                                        ev.preventDefault();
+                                        pickSuggestion(idx, s);
+                                      }}
+                                      className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-teal-50 ${sidx === activeSuggestionIndex ? "bg-teal-50" : ""}`}
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="truncate font-medium text-slate-800">
+                                          {s.name}
+                                        </div>
+                                        <div className="text-xs text-slate-400">
+                                          {s.category || ""} {s.sku ? `• ${s.sku}` : ""}
+                                        </div>
                                       </div>
-                                      <div className="text-xs text-slate-400">
-                                        {s.category || ""} • {s.sku || ""}
+                                      <div className="shrink-0 pl-2 text-right text-sm text-slate-600">
+                                        <div className="tabular-nums">
+                                          {currency(s.price ?? 0)}
+                                        </div>
+                                        <div
+                                          className={`text-xs tabular-nums ${s.stock <= 5 ? "font-medium text-red-600" : "text-slate-500"}`}
+                                        >
+                                          {s.stock} en stock
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="text-right text-sm text-slate-600">
-                                      <div>
-                                        {currency(s.sale_price ?? s.price ?? 0)}
-                                      </div>
-                                      <div
-                                        className={`text-xs ${s.stock <= 5 ? "text-red-600" : "text-slate-500"}`}
-                                      >
-                                        {s.stock} en stock
-                                      </div>
-                                    </div>
-                                  </button>
-                                ))}
+                                    </button>
+                                  ))
+                                )}
                               </div>
                             )}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Cantidad (col 7-8) */}
-                      <div className="sm:col-span-2">
-                        <label className="text-xs font-semibold text-slate-600">
-                          Cantidad
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => incQty(idx, -1)}
-                            className="rounded-md border px-2 py-1 text-slate-600"
-                          >
-                            −
-                          </button>
-                          <input
-                            ref={(el) =>
-                              (productInputRefs.current[idx] = {
-                                ...productInputRefs.current[idx],
-                                qty: el,
-                              })
-                            }
-                            type="number"
-                            min="1"
-                            className="w-20 rounded-md border px-2 py-1 text-right"
-                            value={line.quantity}
-                            onChange={(e) =>
-                              updateLine(idx, {
-                                quantity: Math.max(1, Number(e.target.value)),
-                              })
-                            }
-                          />
-                          <button
-                            type="button"
-                            onClick={() => incQty(idx, 1)}
-                            className="rounded-md border px-2 py-1 text-slate-600"
-                          >
-                            +
-                          </button>
+                        {/* Cantidad */}
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Cantidad
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              aria-label="Disminuir cantidad"
+                              onClick={() => incQty(idx, -1)}
+                              className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <input
+                              ref={(el) => {
+                                fieldRefs.current[line._key] = {
+                                  ...fieldRefs.current[line._key],
+                                  qty: el,
+                                };
+                              }}
+                              type="number"
+                              min="1"
+                              onKeyDown={(e) => onKeyDownQty(e, idx)}
+                              className="w-16 rounded-md border border-slate-200 px-2 py-1 text-right outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                              value={line.quantity}
+                              onChange={(e) =>
+                                updateLine(idx, {
+                                  quantity: Math.max(1, Number(e.target.value)),
+                                })
+                              }
+                              aria-label={`Cantidad línea ${idx + 1}`}
+                            />
+                            <button
+                              type="button"
+                              aria-label="Aumentar cantidad"
+                              onClick={() => incQty(idx, 1)}
+                              className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="mt-1 text-xs text-slate-400">
+                            {line.id ? `${line.stock} disponibles` : ""}
+                          </div>
                         </div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          {line.stock ? `${line.stock} disponibles` : ""}
-                        </div>
-                      </div>
 
-                      {/* Precio Venta (col 9) */}
-                      <div className="sm:col-span-2">
-                        <label className="text-xs font-semibold text-slate-600">
-                          Precio
-                        </label>
-                        <div className="flex items-center gap-2">
+                        {/* Precio */}
+                        <div className="sm:col-span-2">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Precio
+                          </label>
                           <input
+                            ref={(el) => {
+                              fieldRefs.current[line._key] = {
+                                ...fieldRefs.current[line._key],
+                                price: el,
+                              };
+                            }}
                             type="number"
-                            className="w-full rounded-md border px-2 py-1 text-right"
+                            min="0"
+                            onKeyDown={(e) => onKeyDownPrice(e, idx)}
+                            className="w-full rounded-md border border-slate-200 px-2 py-1 text-right outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
                             value={line.sale_price}
                             onChange={(e) =>
-                              updateLine(idx, {
-                                sale_price: Number(e.target.value),
-                              })
+                              updateLine(idx, { sale_price: Number(e.target.value) })
                             }
+                            aria-label={`Precio línea ${idx + 1}`}
                           />
+                          <div className="mt-1 text-xs text-slate-400">
+                            {line.id ? `Costo: ${currency(line.price)}` : ""}
+                          </div>
                         </div>
-                        <div className="mt-1 text-xs text-slate-400">
-                          Costo: {line.price ? currency(line.price) : "-"}
-                        </div>
-                      </div>
 
-                      {/* acciones (col 12) */}
-                      <div className="mt-2 flex justify-end sm:col-span-12">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            title="Agregar debajo"
-                            onClick={() => addLine(idx)}
-                            className="rounded-md border px-2 py-1 text-sm"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Eliminar línea"
-                            onClick={() => removeLine(idx)}
-                            className="rounded-md border px-2 py-1 text-sm text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        {/* acciones */}
+                        <div className="mt-1 flex items-center justify-between sm:col-span-12">
+                          {error ? (
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-red-600">
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                              {error}
+                            </div>
+                          ) : (
+                            <span />
+                          )}
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              title="Agregar línea debajo"
+                              aria-label="Agregar línea debajo"
+                              disabled={submitting}
+                              onClick={() => addLine(idx)}
+                              className="rounded-md border border-slate-200 p-1.5 text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Eliminar línea"
+                              aria-label="Eliminar línea"
+                              disabled={submitting}
+                              onClick={() => removeLine(idx)}
+                              className="rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* resumen y acciones */}
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-md bg-slate-100 p-3">
+              <div className="flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-md bg-slate-100 px-3 py-2">
                     <div className="text-xs text-slate-500">Items</div>
-                    <div className="text-lg font-bold text-slate-800">
+                    <div className="text-lg font-bold tabular-nums text-slate-800">
                       {totalItems}
                     </div>
                   </div>
 
-                  <div className="rounded-md bg-slate-100 p-3">
-                    <div className="text-xs text-slate-500">
-                      Ganancia estimada
-                    </div>
-                    <div className="text-lg font-bold text-slate-800">
+                  <div className="rounded-md bg-slate-100 px-3 py-2">
+                    <div className="text-xs text-slate-500">Ganancia estimada</div>
+                    <div className="text-lg font-bold tabular-nums text-slate-800">
                       {currency(totals.gain)}
                     </div>
                   </div>
@@ -639,36 +817,31 @@ export default function SalePageEnhanced() {
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-xs text-slate-500">Total</div>
-                    <div className="text-2xl font-extrabold text-teal-700">
+                    <div className="text-2xl font-extrabold tabular-nums text-teal-700">
                       {currency(totals.total)}
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2 md:flex-row">
                     <button
-                      type="button"
-                      onClick={() => submitSale()}
-                      className="flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 font-semibold text-white"
+                      type="submit"
+                      disabled={submitting || !hasProducts}
+                      className="flex items-center justify-center gap-2 rounded-md bg-teal-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <Check className="h-4 w-4" /> Registrar venta
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                      {submitting ? "Registrando..." : "Registrar venta"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        Swal.fire({
-                          title: "Imprimir recibo",
-                          text: "Se abrirá una vista de impresión con los detalles de la venta actual.",
-                          icon: "info",
-                          showCancelButton: true,
-                          confirmButtonText: "Imprimir",
-                          cancelButtonText: "Cancelar",
-                        }).then((r) => {
-                          if (r.isConfirmed) window.print();
-                        });
-                      }}
-                      className="flex items-center gap-2 rounded-md border px-4 py-2"
+                      disabled={!hasProducts}
+                      onClick={printReceipt}
+                      className="flex items-center justify-center gap-2 rounded-md border border-slate-200 px-4 py-2 text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <CreditCard className="h-4 w-4" /> Recibo
+                      <Printer className="h-4 w-4" /> Recibo
                     </button>
                   </div>
                 </div>
@@ -676,39 +849,82 @@ export default function SalePageEnhanced() {
             </form>
           </div>
 
-          {/* Recibo rápido / recibido */}
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-md bg-slate-100 p-2">
-                <DollarSign className="h-5 w-5 text-teal-700" />
-              </div>
-              <div>
-                <div className="text-xs text-slate-500">Monto recibido</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600">$</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={receivedAmount ? fmt(receivedAmount) : ""}
-                    onChange={(e) => {
-                      const numeric =
-                        Number(String(e.target.value).replace(/[^\d]/g, "")) ||
-                        0;
-                      setReceivedAmount(numeric);
-                    }}
-                    className="w-40 rounded-md border px-3 py-2 text-right font-semibold text-teal-800"
-                    placeholder="0"
-                  />
+          {/* Pago */}
+          <div className="mt-4 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="rounded-md bg-slate-100 p-2">
+                  <DollarSign className="h-5 w-5 text-teal-700" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500">Monto recibido</div>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className="text-sm text-slate-500">$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={receivedAmount ? formatMoney(receivedAmount) : ""}
+                      onChange={(e) => {
+                        const numeric =
+                          Number(String(e.target.value).replace(/[^\d]/g, "")) || 0;
+                        setReceivedAmount(numeric);
+                      }}
+                      className="w-36 rounded-md border border-slate-200 px-3 py-2 text-right font-semibold text-teal-800 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                      placeholder="0"
+                      aria-label="Monto recibido"
+                    />
+                    {receivedAmount > 0 && (
+                      <button
+                        type="button"
+                        aria-label="Limpiar monto recibido"
+                        onClick={() => setReceivedAmount(0)}
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      disabled={totals.total <= 0}
+                      onClick={() => setReceivedAmount(Math.ceil(totals.total))}
+                      className="rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Monto exacto
+                    </button>
+                    {CASH_CHIPS.map((amount) => (
+                      <button
+                        key={amount}
+                        type="button"
+                        onClick={() =>
+                          setReceivedAmount((r) => (Number(r) || 0) + amount)
+                        }
+                        className="rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                      >
+                        +{formatMoney(amount)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="text-right">
-              <div className="text-xs text-slate-500">Vuelto estimado</div>
-              <div
-                className={`text-lg font-bold ${totals.change < 0 ? "text-red-600" : "text-teal-700"}`}
-              >
-                {currency(totals.change)}
+              <div className="text-right">
+                <div className="text-xs text-slate-500">Vuelto</div>
+                {receivedAmount > 0 ? (
+                  <div
+                    className={`flex items-center justify-end gap-1.5 text-lg font-bold tabular-nums ${totals.change < 0 ? "text-red-600" : "text-teal-700"}`}
+                  >
+                    {totals.change < 0 ? (
+                      <AlertTriangle className="h-4 w-4" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {currency(totals.change)}
+                  </div>
+                ) : (
+                  <div className="text-lg font-bold text-slate-300">—</div>
+                )}
               </div>
             </div>
           </div>
@@ -716,55 +932,36 @@ export default function SalePageEnhanced() {
 
         {/* RIGHT: Side panel - resumen + historial */}
         <aside>
-          <div className="sticky top-6 rounded-xl bg-white p-4 shadow-sm">
+          <div className="sticky top-6 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-md bg-slate-100 p-2 text-slate-700">
                   <Tag className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500">Resumen rápido</div>
-                  <div className="text-lg font-bold text-slate-800">
-                    {currency(totals.total)}
+                  <div className="text-xs text-slate-500">Total histórico</div>
+                  <div className="text-lg font-bold tabular-nums text-slate-800">
+                    {currency(totalSalesAmount)}
                   </div>
                 </div>
               </div>
-              <div className="text-sm text-slate-500">Hoy</div>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between text-sm text-slate-600">
-                <div>Artículos</div>
-                <div className="font-medium text-slate-800">{totalItems}</div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-slate-600">
-                <div>Ganancia</div>
-                <div className="font-medium text-teal-700">
-                  {currency(totals.gain)}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-slate-600">
-                <div>Costo estimado</div>
-                <div className="font-medium text-slate-800">
-                  {currency(totals.cost)}
-                </div>
-              </div>
-
-              <div>
-                <button
-                  onClick={() => {
-                    setLines([{ ...emptyLine }]);
-                    setReceivedAmount(0);
-                    pushToast("Venta limpiada", "info");
-                  }}
-                  className="w-full rounded-md border px-3 py-2 text-sm"
-                >
-                  Limpiar venta
-                </button>
+              <div className="text-right text-xs text-slate-500">
+                {totalSalesCount} venta{totalSalesCount === 1 ? "" : "s"}
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLines([makeEmptyLine()]);
+                setLineErrors({});
+                setReceivedAmount(0);
+                pushToast("Venta limpiada", "info");
+              }}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            >
+              Limpiar venta
+            </button>
 
             <div className="mt-4">
               <RecentSales />
@@ -774,11 +971,15 @@ export default function SalePageEnhanced() {
       </div>
 
       {/* Toaster */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      <div
+        aria-live="polite"
+        role="status"
+        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`animate-fade-slide-up rounded-md px-4 py-2 shadow ${t.type === "error" ? "bg-red-100 text-red-700" : t.type === "success" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}`}
+            className={`animate-fade-slide-up rounded-md px-4 py-2 text-sm shadow ${t.type === "error" ? "bg-red-100 text-red-700" : t.type === "success" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}`}
           >
             {t.text}
           </div>
