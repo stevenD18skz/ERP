@@ -1,4 +1,3 @@
-import PropTypes from "prop-types";
 import "@/index.css";
 import AppShell from "@/components/layout/AppShell";
 
@@ -19,7 +18,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-
-RootLayout.propTypes = {
-  children: PropTypes.node,
-};

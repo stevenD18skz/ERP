@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import PropTypes from "prop-types";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -131,11 +130,6 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
       </div>
     </header>
   );
-};
-
-TopBar.propTypes = {
-  onSearch: PropTypes.func,
-  onQuickCreate: PropTypes.func,
 };
 
 export default TopBar;

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import PropTypes from "prop-types";
 
 import {
   Truck,
@@ -26,14 +25,6 @@ import {
     services = { getOrders, createOrderWithDetails, getProducts }
  - Si no pasas servicios, el componente intenta leer de window.* para demo
 */
-
-OrdersPageEnhanced.propTypes = {
-  services: PropTypes.shape({
-    getOrders: PropTypes.func.isRequired,
-    createOrderWithDetails: PropTypes.func.isRequired,
-    getProducts: PropTypes.func.isRequired,
-  }),
-};
 
 export default function OrdersPageEnhanced({
   services = {},

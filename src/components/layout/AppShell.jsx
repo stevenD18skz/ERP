@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import PropTypes from "prop-types";
 import SideBar from "./SideBar";
 import Footer from "./Footer";
 import TopBar from "./TopBar";
@@ -24,10 +23,6 @@ const AppShell = ({ children }) => {
       </div>
     </div>
   );
-};
-
-AppShell.propTypes = {
-  children: PropTypes.node,
 };
 
 export default AppShell;

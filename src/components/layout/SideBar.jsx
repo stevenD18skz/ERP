@@ -1,7 +1,6 @@
 // SidebarEnhanced.jsx
 "use client";
 
-import PropTypes from "prop-types";
 import { useRouter, usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -104,11 +103,6 @@ const SidebarEnhanced = ({ isExpanded, onToggle }) => {
       </div>
     </aside>
   );
-};
-
-SidebarEnhanced.propTypes = {
-  isExpanded: PropTypes.bool.isRequired,
-  onToggle: PropTypes.func.isRequired,
 };
 
 export default SidebarEnhanced;

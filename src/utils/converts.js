@@ -19,4 +19,15 @@ const formatMoney = (money) => {
     : "";
 };
 
-export { formatMoneySymbol, formatMoney };
+// Helpers
+const currency = (n) => {
+  if (typeof n !== "number") return "-";
+  return n.toLocaleString("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0,
+  });
+};
+
+
+export { formatMoneySymbol, formatMoney, currency };

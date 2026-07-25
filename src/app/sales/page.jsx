@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import PropTypes from "prop-types";
 
 import {
   ShoppingCart,
@@ -24,14 +23,6 @@ import {
   - Usa servicios: getSales(), createSaleWithDetails(), getProducts() (los tuyos)
   - Si quieres puedo adaptarlo a un "services" prop como en ProductsPage
 */
-
-SalePageEnhanced.propTypes = {
-  services: PropTypes.shape({
-    getSales: PropTypes.func.isRequired,
-    createSaleWithDetails: PropTypes.func.isRequired,
-    getProducts: PropTypes.func.isRequired,
-  }),
-};
 
 export default function SalePageEnhanced({
   // si quieres pasar servicios como props, se respeta:

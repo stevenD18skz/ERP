@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-import PropTypes from "prop-types";
 
 import {
   Chart as ChartJS,
@@ -56,14 +55,6 @@ ChartJS.register(
   - UI/UX consistent with previous pages: cards, clear microcopy, icons
   - Notes: some calculations assume products array contains { id, name, price, stock, category }
 */
-
-ReportsPage.propTypes = {
-  services: PropTypes.shape({
-    getSales: PropTypes.func.isRequired,
-    getProducts: PropTypes.func.isRequired,
-    getOrders: PropTypes.func.isRequired,
-  }),
-};
 
 export default function ReportsPage({
   services = {},

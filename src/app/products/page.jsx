@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import PropTypes from "prop-types";
-
 import {
   PlusCircle,
   Edit3,
@@ -881,15 +879,6 @@ export default function ProductsPage({ services }) {
   );
 }
 
-ProductsPage.propTypes = {
-  services: PropTypes.shape({
-    getProducts: PropTypes.func,
-    createProduct: PropTypes.func,
-    updateProduct: PropTypes.func,
-    deleteProduct: PropTypes.func,
-  }),
-};
-
 function InlineStockEditor({ value, onSave }) {
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value);
@@ -934,11 +923,6 @@ function InlineStockEditor({ value, onSave }) {
     </div>
   );
 }
-InlineStockEditor.propTypes = {
-  value: PropTypes.number.isRequired,
-  onSave: PropTypes.func.isRequired,
-};
-
 function ProductForm({ initial = null, onClose, onSave }) {
   const [form, setForm] = useState(() => ({
     name: "",
@@ -1069,19 +1053,6 @@ function ProductForm({ initial = null, onClose, onSave }) {
   );
 }
 
-ProductForm.propTypes = {
-  initial: PropTypes.shape({
-    name: PropTypes.string,
-    sku: PropTypes.string,
-    price: PropTypes.number,
-    stock: PropTypes.number,
-    category: PropTypes.string,
-    description: PropTypes.string,
-  }),
-  onClose: PropTypes.func.isRequired,
-  onSave: PropTypes.func.isRequired,
-};
-
 function ConfirmDialog({
   title = "Confirmar",
   description = "¿Estás seguro?",
@@ -1108,10 +1079,3 @@ function ConfirmDialog({
     </div>
   );
 }
-
-ConfirmDialog.propTypes = {
-  title: PropTypes.string,
-  description: PropTypes.string,
-  onClose: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func.isRequired,
-};

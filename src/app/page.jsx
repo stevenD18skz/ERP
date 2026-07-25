@@ -1,39 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import PropTypes from "prop-types";
 import { productsHome, ordersHome, salesHome } from "@/lib/mockHome";
-
-
-
-// Helpers
-const currency = (n) => {
-  if (typeof n !== "number") return "-";
-  return n.toLocaleString("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  });
-};
-
-function sparklinePath(values, width = 120, height = 36) {
-  if (!values || values.length === 0) return "";
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const len = values.length;
-  const vRange = max - min || 1;
-  const step = width / Math.max(1, len - 1);
-  const points = values.map((v, i) => {
-    const x = Math.round(i * step);
-    const y = Math.round(((max - v) / vRange) * (height - 4)) + 2; // padding
-    return `${x},${y}`;
-  });
-  return `M${points.join(" L")}`;
-}
-
-
-
-
+import { currency } from "@/utils/converts";
 
 
 const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
@@ -106,13 +75,6 @@ const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
     </div>
   </section>
 );
-Hero.propTypes = {
-  topProduct: PropTypes.string.isRequired,
-  totalSales: PropTypes.number.isRequired,
-  dailyAvg: PropTypes.number.isRequired,
-  onSignIn: PropTypes.func.isRequired,
-};
-
 const StatCard = ({ label, value, hint, children }) => (
   <div className="rounded-lg bg-white p-4 shadow-sm transition-transform duration-200 hover:-translate-y-1">
     <div className="text-sm font-medium text-slate-500">{label}</div>
@@ -123,13 +85,6 @@ const StatCard = ({ label, value, hint, children }) => (
     {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
   </div>
 );
-
-StatCard.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-  hint: PropTypes.string.isRequired,
-  children: PropTypes.node,
-};
 
 const TopProductsHome = ({ items }) => (
   <div className="rounded-lg bg-white p-4 shadow-sm">
@@ -151,10 +106,6 @@ const TopProductsHome = ({ items }) => (
     </ul>
   </div>
 );
-
-TopProductsHome.propTypes = {
-  items: PropTypes.arrayOf(PropTypes.object).isRequired,
-};
 
 const RecentSalesTable = ({ items }) => (
   <div className="overflow-auto rounded-lg bg-white p-4 shadow-sm">
@@ -186,10 +137,6 @@ const RecentSalesTable = ({ items }) => (
   </div>
 );
 
-RecentSalesTable.propTypes = {
-  items: PropTypes.arrayOf(PropTypes.object).isRequired,
-};
-
 const InventoryAlerts = ({ items, threshold = 10 }) => {
   const low = items.filter((p) => p.stock <= threshold);
   if (low.length === 0) return null;
@@ -207,11 +154,6 @@ const InventoryAlerts = ({ items, threshold = 10 }) => {
       </ul>
     </div>
   );
-};
-
-InventoryAlerts.propTypes = {
-  items: PropTypes.arrayOf(PropTypes.object).isRequired,
-  threshold: PropTypes.number,
 };
 
 export default function Home() {
@@ -241,7 +183,7 @@ export default function Home() {
     () => Math.round(totalSales / Math.max(1, 7)),
     [totalSales],
   );
-  const salesSeries = salesHome.map((s) => s.total_amount);
+  //const salesSeries = salesHome.map((s) => s.total_amount);
 
   const topProductsHome = productsHome
     .slice()
@@ -280,21 +222,7 @@ export default function Home() {
                 value={currency(totalSales)}
                 hint="Suma de ventas recientes"
               >
-                <svg
-                  width="120"
-                  height="36"
-                  viewBox="0 0 120 36"
-                  className="ml-2"
-                >
-                  <path
-                    d={sparklinePath(salesSeries)}
-                    fill="none"
-                    stroke="#2563EB"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+
               </StatCard>
               <StatCard
                 label="Promedio diario"
