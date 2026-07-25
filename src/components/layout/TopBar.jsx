@@ -3,14 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSearch,
-  faBell,
-  faPlus,
-  faUserCircle,
-  faSignOutAlt,
-} from "@fortawesome/free-solid-svg-icons";
+import { Search, Bell, Plus, CircleUserRound, LogOut } from "lucide-react";
 
 const TopBar = ({ onSearch, onQuickCreate }) => {
   const router = useRouter();
@@ -35,7 +28,7 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
             Buscar
           </label>
           <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-200">
-            <FontAwesomeIcon icon={faSearch} className="text-slate-400" />
+            <Search className="h-4 w-4 text-slate-400" />
             <input
               id="top-search"
               value={q}
@@ -64,7 +57,7 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
             className="hidden items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 sm:flex"
             title="Crear nuevo"
           >
-            <FontAwesomeIcon icon={faPlus} /> Nuevo
+            <Plus className="h-4 w-4" /> Nuevo
           </button>
 
           <button
@@ -72,7 +65,7 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
             className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 focus:outline-none"
             aria-label="Notificaciones"
           >
-            <FontAwesomeIcon icon={faBell} />
+            <Bell className="h-4 w-4" />
             {notifications > 0 && (
               <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-semibold text-white">
                 {notifications}
@@ -89,10 +82,7 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
               aria-haspopup="menu"
               aria-expanded={userOpen}
             >
-              <FontAwesomeIcon
-                icon={faUserCircle}
-                className="h-6 w-6 text-slate-500"
-              />
+              <CircleUserRound className="h-6 w-6 text-slate-500" />
               <div className="hidden text-left sm:block">
                 <div className="text-xs font-medium text-slate-700">
                   Administrador
@@ -121,7 +111,7 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  <FontAwesomeIcon icon={faSignOutAlt} /> Cerrar sesión
+                  <LogOut className="h-4 w-4" /> Cerrar sesión
                 </button>
               </div>
             )}

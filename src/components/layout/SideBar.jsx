@@ -2,24 +2,23 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faHome,
-  faBox,
-  faShoppingCart,
-  faClipboardList,
-  faChartBar,
-  faCog,
-  faBars,
-} from "@fortawesome/free-solid-svg-icons";
+  Home,
+  Box,
+  ShoppingCart,
+  ClipboardList,
+  BarChart3,
+  Settings,
+  Menu,
+} from "lucide-react";
 
 const menuItems = [
-  { path: "/", label: "Inicio", icon: faHome },
-  { path: "/products", label: "Productos", icon: faBox },
-  { path: "/sales", label: "Ventas", icon: faShoppingCart },
-  { path: "/orders", label: "Pedidos", icon: faClipboardList },
-  { path: "/summary", label: "Reportes", icon: faChartBar },
-  { path: "/settings", label: "Configuración", icon: faCog },
+  { path: "/", label: "Inicio", icon: Home },
+  { path: "/products", label: "Productos", icon: Box },
+  { path: "/sales", label: "Ventas", icon: ShoppingCart },
+  { path: "/orders", label: "Pedidos", icon: ClipboardList },
+  { path: "/summary", label: "Reportes", icon: BarChart3 },
+  { path: "/settings", label: "Configuración", icon: Settings },
 ];
 
 const SidebarEnhanced = ({ isExpanded, onToggle }) => {
@@ -39,7 +38,7 @@ const SidebarEnhanced = ({ isExpanded, onToggle }) => {
           aria-label={isExpanded ? "Colapsar menú" : "Expandir menú"}
           className={`shrink-0 rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none ${!isExpanded ? "mx-auto" : ""}`}
         >
-          <FontAwesomeIcon icon={faBars} />
+          <Menu className="h-4 w-4" />
         </button>
         {isExpanded && (
           <div className="flex min-w-0 items-center gap-3">
@@ -74,8 +73,7 @@ const SidebarEnhanced = ({ isExpanded, onToggle }) => {
                     } ${isExpanded ? "justify-start" : "justify-center"}`}
                   aria-current={active ? "page" : undefined}
                 >
-                  <FontAwesomeIcon
-                    icon={it.icon}
+                  <it.icon
                     className={`h-4 w-4 ${active ? "text-blue-600" : "text-slate-400"}`}
                   />
                   {isExpanded && (
