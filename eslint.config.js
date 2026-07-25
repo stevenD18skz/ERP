@@ -27,6 +27,9 @@ export default [
       ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
       'react/jsx-no-target-blank': 'off',
+      // PropTypes was removed in favor of migrating components to TypeScript;
+      // prop validation will come from .tsx types as files are converted.
+      'react/prop-types': 'off',
     },
   },
 ]

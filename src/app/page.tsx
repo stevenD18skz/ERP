@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { productsHome, ordersHome, salesHome } from "@/lib/mockHome";
+import { products, orders, sales } from "@/lib/mockDb";
 import { currency } from "@/utils/converts";
 
 
@@ -75,7 +75,8 @@ const Hero = ({ topProduct, totalSales, dailyAvg, onSignIn }) => (
     </div>
   </section>
 );
-const StatCard = ({ label, value, hint, children }) => (
+
+const StatCard = ({ label, value, hint, children = null }) => (
   <div className="rounded-lg bg-white p-4 shadow-sm transition-transform duration-200 hover:-translate-y-1">
     <div className="text-sm font-medium text-slate-500">{label}</div>
     <div className="mt-2 flex items-baseline justify-between gap-2">
@@ -128,7 +129,7 @@ const RecentSalesTable = ({ items }) => (
             <td className="py-3 font-semibold">{currency(s.total_amount)}</td>
             <td className="py-3 text-slate-600">{currency(s.gain)}</td>
             <td className="py-3 text-slate-600">
-              {s.productsHome.map((p) => p.product).join(", ")}
+              {s.products.map((p) => p.product).join(", ")}
             </td>
           </tr>
         ))}
@@ -161,14 +162,14 @@ export default function Home() {
 
   // Derived stats
   const totalSales = useMemo(
-    () => salesHome.reduce((s, x) => s + x.total_amount, 0),
+    () => sales.reduce((s, x) => s + x.total_amount, 0),
     [],
   );
   const mostSold = useMemo(() => {
-    // crude heuristic: product name frequency from ordersHome
-    const freq = {};
-    ordersHome.forEach((o) =>
-      o.productsHome.forEach(
+    // crude heuristic: product name frequency from orders
+    const freq: Record<string, number> = {};
+    orders.forEach((o) =>
+      o.products.forEach(
         (p) => (freq[p.product] = (freq[p.product] || 0) + p.quantity),
       ),
     );
@@ -176,16 +177,15 @@ export default function Home() {
     return best ? best[0] : "—";
   }, []);
   const highestSale = useMemo(
-    () => Math.max(...salesHome.map((s) => s.total_amount)),
+    () => Math.max(...sales.map((s) => s.total_amount)),
     [],
   );
   const dailyAvg = useMemo(
     () => Math.round(totalSales / Math.max(1, 7)),
     [totalSales],
   );
-  //const salesSeries = salesHome.map((s) => s.total_amount);
 
-  const topProductsHome = productsHome
+  const topProductsHome = products
     .slice()
     .sort((a, b) => b.stock - a.stock)
     .slice(0, 5);
@@ -233,19 +233,19 @@ export default function Home() {
               </StatCard>
               <StatCard
                 label="Productos"
-                value={`${productsHome.length}`}
+                value={`${products.length}`}
                 hint="Total en catálogo"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
-                <RecentSalesTable items={salesHome} />
+                <RecentSalesTable items={sales} />
               </div>
               <div>
                 <TopProductsHome items={topProductsHome} />
                 <div className="mt-4">
-                  <InventoryAlerts items={productsHome} threshold={10} />
+                  <InventoryAlerts items={products} threshold={10} />
                 </div>
               </div>
             </div>
@@ -259,11 +259,11 @@ export default function Home() {
               <ul className="mt-3 space-y-2 text-sm text-slate-600">
                 <li>
                   Orden creada —{" "}
-                  {new Date(ordersHome[0].order_date).toLocaleString()}
+                  {new Date(orders[0].order_date).toLocaleString()}
                 </li>
                 <li>
                   Venta registrada —{" "}
-                  {new Date(salesHome[1].sale_date).toLocaleString()}
+                  {new Date(sales[1].sale_date).toLocaleString()}
                 </li>
                 <li>Producto bajo stock — Aceite de Girasol</li>
               </ul>
@@ -278,7 +278,7 @@ export default function Home() {
                   Margen promedio (ej.) —{" "}
                   {currency(
                     Math.round(
-                      salesHome.reduce((a, b) => a + b.gain, 0) / salesHome.length || 0,
+                      sales.reduce((a, b) => a + b.gain, 0) / sales.length || 0,
                     ),
                   )}
                 </li>

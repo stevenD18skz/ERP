@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { getProducts } from "@/services/products.service";
+import { getSales } from "@/services/sales.service";
+import { getOrders } from "@/services/orders.service";
 
 import {
   Chart as ChartJS,
@@ -50,15 +53,12 @@ ChartJS.register(
 
 /*
   ReportsPage.jsx
-  - Input services prop: { getSales, getProducts, getOrders } (async)
-  - If not provided tries window.getSales etc. (demo fallback)
+  - Usa servicios: getSales(), getProducts(), getOrders()
   - UI/UX consistent with previous pages: cards, clear microcopy, icons
   - Notes: some calculations assume products array contains { id, name, price, stock, category }
 */
 
-export default function ReportsPage({
-  services = {},
-}) {
+export default function ReportsPage() {
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -69,9 +69,9 @@ export default function ReportsPage({
     const load = async () => {
       try {
         const [sRes, pRes, oRes] = await Promise.all([
-          services.getSales ? services.getSales() : [],
-          services.getProducts ? services.getProducts() : [],
-          services.getOrders ? services.getOrders() : [],
+          getSales(),
+          getProducts(),
+          getOrders(),
         ]);
         if (!mounted) return;
         setSales(Array.isArray(sRes) ? sRes : []);

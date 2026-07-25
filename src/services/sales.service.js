@@ -1,4 +1,4 @@
-import { sales } from "../lib/mock";
+import { sales, products } from "../lib/mockDb";
 
 export const getSales = async () => {
   try {
@@ -30,15 +30,22 @@ export const createSale = async (sale) => {
   }
 };
 
-export const createSaleWithDetails = async (sale, products) => {
-  console.log("Nueva venta:", sale, products);
-  sales.push({
-    ...sale,
-    products: products.map((p) => ({
-      product: `Producto #${p.product_id}`,
+export const createSaleWithDetails = async (sale, saleProducts) => {
+  const detailedProducts = saleProducts.map((p) => {
+    const product = products.find(
+      (prod) => String(prod.id) === String(p.product_id),
+    );
+    return {
+      product_id: p.product_id,
+      product: product ? product.name : `Producto #${p.product_id}`,
       quantity: p.quantity,
-      sale_price: 0, // Aquí puedes buscar el precio real si quieres
-    })),
+      sale_price: p.sale_price ?? product?.price ?? 0,
+    };
+  });
+  sales.unshift({
+    id: `s${Date.now()}`,
+    ...sale,
+    products: detailedProducts,
   });
   return Promise.resolve();
 };

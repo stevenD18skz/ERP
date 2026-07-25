@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "@/services/products.service";
+import {
   PlusCircle,
   Edit3,
   Trash2,
@@ -20,81 +26,8 @@ import {
   - Added: sorting, advanced filters (price range, stock comparisons, multi-category),
     export CSV + Print-to-PDF, improved UI with icons and clearer colors
   - UX: collapseable filter panel, column-sort by click, visual affordances for non-technical users
-  - Notes: keeps fallback mock if no `services` provided. Uses window.print() for PDF export (no external deps).
+  - Notes: Uses window.print() for PDF export (no external deps).
 */
-
-const MOCK_PRODUCTS = [
-  {
-    id: "1",
-    name: "Arroz 1Kg",
-    sku: "ARZ-001",
-    price: 2500,
-    stock: 100,
-    category: "Granos",
-    description: "Arroz blanco de grano largo",
-    created_at: "2025-08-01T08:00:00Z",
-  },
-  {
-    id: "2",
-    name: "Leche 1L",
-    sku: "MLK-001",
-    price: 1800,
-    stock: 50,
-    category: "Lácteos",
-    description: "Leche entera 1L",
-    created_at: "2025-08-02T09:00:00Z",
-  },
-  {
-    id: "3",
-    name: "Pan 500g",
-    sku: "PAN-001",
-    price: 1200,
-    stock: 30,
-    category: "Panadería",
-    description: "Pan integral",
-    created_at: "2025-08-03T10:00:00Z",
-  },
-  {
-    id: "4",
-    name: "Aceite 1L",
-    sku: "ACE-001",
-    price: 5500,
-    stock: 8,
-    category: "Aceites",
-    description: "Aceite de girasol 1L",
-    created_at: "2025-07-28T11:00:00Z",
-  },
-  {
-    id: "5",
-    name: "Azúcar 1Kg",
-    sku: "AZU-001",
-    price: 1200,
-    stock: 150,
-    category: "Dulces",
-    description: "Azúcar refinada 1kg",
-    created_at: "2025-07-30T12:00:00Z",
-  },
-  {
-    id: "6",
-    name: "Manzanas Kg",
-    sku: "MAN-001",
-    price: 800,
-    stock: 6,
-    category: "Frutas",
-    description: "Manzanas rojas frescas",
-    created_at: "2025-08-05T14:00:00Z",
-  },
-  {
-    id: "7",
-    name: "Yogur 500ml",
-    sku: "YOG-001",
-    price: 1500,
-    stock: 40,
-    category: "Lácteos",
-    description: "Yogur natural 500ml",
-    created_at: "2025-08-02T16:00:00Z",
-  },
-];
 
 const currency = (n) =>
   typeof n === "number"
@@ -116,7 +49,7 @@ function useToasts() {
   return { toasts, push };
 }
 
-export default function ProductsPage({ services }) {
+export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -146,17 +79,11 @@ export default function ProductsPage({ services }) {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      if (services && services.getProducts) {
-        const res = await services.getProducts();
-        setProducts(res && res.length ? res : MOCK_PRODUCTS);
-      } else {
-        await new Promise((r) => setTimeout(r, 300));
-        setProducts(MOCK_PRODUCTS);
-      }
+      const res = await getProducts();
+      setProducts(res || []);
     } catch (err) {
       console.error(err);
-      push("No se pudo cargar productos — usando datos locales", "error");
-      setProducts(MOCK_PRODUCTS);
+      push("No se pudo cargar productos", "error");
     } finally {
       setLoading(false);
     }
@@ -268,8 +195,7 @@ export default function ProductsPage({ services }) {
       ps.map((p) => (p.id === id ? { ...p, stock: newStock } : p)),
     );
     try {
-      if (services && services.updateProduct)
-        await services.updateProduct(id, { stock: newStock });
+      await updateProduct(id, { stock: newStock });
       push("Stock actualizado", "success");
     } catch (err) {
       console.error(err);
@@ -370,8 +296,7 @@ export default function ProductsPage({ services }) {
       );
       push("Producto actualizado", "success");
       try {
-        if (services && services.updateProduct)
-          await services.updateProduct(payload.id, payload);
+        await updateProduct(payload.id, payload);
       } catch (err) {
         console.error(err);
         setProducts(prev);
@@ -386,8 +311,7 @@ export default function ProductsPage({ services }) {
       setProducts((ps) => [newProduct, ...ps]);
       push("Producto creado", "success");
       try {
-        if (services && services.createProduct)
-          await services.createProduct(newProduct);
+        await createProduct(newProduct);
       } catch (err) {
         console.error(err);
         setProducts((ps) => ps.filter((p) => p.id !== newProduct.id));
@@ -401,7 +325,7 @@ export default function ProductsPage({ services }) {
     setProducts((ps) => ps.filter((p) => p.id !== id));
     push("Producto eliminado", "info");
     try {
-      if (services && services.deleteProduct) await services.deleteProduct(id);
+      await deleteProduct(id);
     } catch (err) {
       console.error(err);
       setProducts(prev);
@@ -417,9 +341,7 @@ export default function ProductsPage({ services }) {
     clearSelection();
     push(`${toDelete.length} productos eliminados`, "info");
     try {
-      if (services && services.deleteProduct) {
-        for (const id of toDelete) await services.deleteProduct(id);
-      }
+      for (const id of toDelete) await deleteProduct(id);
     } catch (err) {
       console.error(err);
       setProducts(prev);

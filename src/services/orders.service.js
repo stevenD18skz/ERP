@@ -1,4 +1,4 @@
-import { orders } from "../lib/mock";
+import { orders, products } from "../lib/mockDb";
 
 export const getOrders = async () => {
   try {
@@ -32,11 +32,23 @@ export const createOrder = async (order) => {
 
 export const createOrderWithDetails = async (order, orderDetails) => {
   try {
-    const response = orders.push({
-      ...order,
-      orderDetails,
+    const detailedProducts = orderDetails.map((p) => {
+      const product = products.find(
+        (prod) => String(prod.id) === String(p.product_id),
+      );
+      return {
+        product_id: p.product_id,
+        product: product ? product.name : `Producto #${p.product_id}`,
+        quantity: p.quantity,
+        unit_cost: p.unit_cost ?? product?.cost_price ?? 0,
+      };
     });
-    return response;
+    orders.unshift({
+      id: `o${Date.now()}`,
+      ...order,
+      products: detailedProducts,
+    });
+    return orders[0];
   } catch (error) {
     throw new Error(
       error.response?.data?.error || "Error creating order with details",

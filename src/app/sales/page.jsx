@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { getProducts } from "@/services/products.service";
+import { getSales, createSaleWithDetails } from "@/services/sales.service";
 
 import {
   ShoppingCart,
@@ -20,14 +22,10 @@ import {
 /*
   SalePageEnhanced
   - UX-focused: pasos claros, validaciones, feedback, keyboard-friendly suggestions
-  - Usa servicios: getSales(), createSaleWithDetails(), getProducts() (los tuyos)
-  - Si quieres puedo adaptarlo a un "services" prop como en ProductsPage
+  - Usa servicios: getSales(), createSaleWithDetails(), getProducts()
 */
 
-export default function SalePageEnhanced({
-  // si quieres pasar servicios como props, se respeta:
-  services = {},
-}) {
+export default function SalePageEnhanced() {
   // data
   const [allProducts, setAllProducts] = useState([]);
   const [sales, setSales] = useState([]);
@@ -82,8 +80,8 @@ export default function SalePageEnhanced({
     const fetchData = async () => {
       setLoadingSales(true);
       try {
-        const p = services.getProducts ? await services.getProducts() : [];
-        const s = services.getSales ? await services.getSales() : [];
+        const p = await getProducts();
+        const s = await getSales();
         if (!mounted) return;
         setAllProducts(Array.isArray(p) ? p : []);
         setSales(Array.isArray(s) ? s : []);
@@ -288,24 +286,9 @@ export default function SalePageEnhanced({
     try {
       // optimistic feedback
       pushToast("Registrando venta...", "info");
-      if (services.createSaleWithDetails) {
-        await services.createSaleWithDetails(salePayload, productsFormat);
-      } else {
-        // fallback: push to local list for demo
-        setSales((s) => [
-          {
-            products: lines.map((l) => ({
-              product: l.product,
-              quantity: l.quantity,
-              sale_price: l.sale_price,
-            })),
-            total_amount: totals.total,
-            gain: totals.gain,
-            sale_date: new Date().toISOString(),
-          },
-          ...s,
-        ]);
-      }
+      await createSaleWithDetails(salePayload, productsFormat);
+      const updatedSales = await getSales();
+      setSales(Array.isArray(updatedSales) ? updatedSales : []);
 
       // success UI
       Swal.fire({

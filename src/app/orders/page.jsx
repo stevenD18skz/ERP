@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "tailwindcss/tailwind.css";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import { getProducts } from "@/services/products.service";
+import { getOrders, createOrderWithDetails } from "@/services/orders.service";
 
 import {
   Truck,
@@ -21,14 +23,10 @@ import {
  OrdersPageEnhanced
  - UI/UX: flujo guiado como SalesPage, adaptado a órdenes de compra
  - Colores: indigo (distinto a Sales teal)
- - Servicios esperados (pueden pasarse como props):
-    services = { getOrders, createOrderWithDetails, getProducts }
- - Si no pasas servicios, el componente intenta leer de window.* para demo
+ - Usa servicios: getOrders(), createOrderWithDetails(), getProducts()
 */
 
-export default function OrdersPageEnhanced({
-  services = {},
-}) {
+export default function OrdersPageEnhanced() {
   // data
   const [allProducts, setAllProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -78,8 +76,8 @@ export default function OrdersPageEnhanced({
     const fetchData = async () => {
       setLoadingOrders(true);
       try {
-        const p = services.getProducts ? await services.getProducts() : [];
-        const ord = services.getOrders ? await services.getOrders() : [];
+        const p = await getProducts();
+        const ord = await getOrders();
         if (!mounted) return;
         setAllProducts(Array.isArray(p) ? p : []);
         setOrders(Array.isArray(ord) ? ord : []);
@@ -255,24 +253,9 @@ export default function OrdersPageEnhanced({
 
     try {
       pushToast("Registrando orden...", "info");
-      if (services.createOrderWithDetails) {
-        await services.createOrderWithDetails(orderPayload, productsFormat);
-      } else {
-        // fallback: local list push
-        setOrders((o) => [
-          {
-            products: lines.map((l) => ({
-              product: l.product,
-              quantity: l.quantity,
-              unit_cost: l.unit_cost,
-            })),
-            total_amount: totals.totalCost,
-            order_date: new Date().toISOString(),
-            supplier,
-          },
-          ...o,
-        ]);
-      }
+      await createOrderWithDetails(orderPayload, productsFormat);
+      const updatedOrders = await getOrders();
+      setOrders(Array.isArray(updatedOrders) ? updatedOrders : []);
 
       Swal.fire({
         icon: "success",

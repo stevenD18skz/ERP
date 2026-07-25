@@ -1,4 +1,4 @@
-import { products } from "../lib/mock";
+import { products } from "../lib/mockDb";
 
 export const getProducts = async () => {
   try {
