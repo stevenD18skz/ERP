@@ -1,6 +1,8 @@
 // SidebarEnhanced.jsx
+"use client";
+
 import PropTypes from "prop-types";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useRouter, usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -23,8 +25,8 @@ const menuItems = [
 ];
 
 const SidebarEnhanced = ({ isExpanded, onToggle }) => {
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <aside
@@ -65,7 +67,7 @@ const SidebarEnhanced = ({ isExpanded, onToggle }) => {
             return (
               <li key={it.path}>
                 <button
-                  onClick={() => navigate(it.path)}
+                  onClick={() => router.push(it.path)}
                   title={!isExpanded ? it.label : undefined} // tooltip when collapsed
                   className={`mx-3 mb-1 flex w-[calc(100%-1rem)] items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors duration-150 ${active ? "bg-blue-600 text-white" : "text-gray-200 hover:bg-gray-800/80"} ${isExpanded ? "justify-start" : "justify-center"}`}
                   aria-current={active ? "page" : undefined}

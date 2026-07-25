@@ -1,4 +1,6 @@
 // ReportsPage.jsx
+"use client";
+
 import { useEffect, useMemo, useState } from "react";
 import "tailwindcss/tailwind.css";
 import { motion } from "framer-motion";
@@ -65,11 +67,7 @@ ReportsPage.propTypes = {
 };
 
 export default function ReportsPage({
-  services = {
-    getSales: window.getSales,
-    getProducts: window.getProducts,
-    getOrders: window.getOrders,
-  },
+  services = {},
 }) {
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);

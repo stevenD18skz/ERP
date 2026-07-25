@@ -1,7 +1,9 @@
 // TopBar.jsx
+"use client";
+
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBars,
@@ -13,7 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
   const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
@@ -73,7 +75,7 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={() =>
-              onQuickCreate ? onQuickCreate() : navigate("/products/new")
+              onQuickCreate ? onQuickCreate() : router.push("/products/new")
             }
             className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white shadow-sm"
             title="Crear nuevo"
@@ -118,7 +120,7 @@ const TopBar = ({ onToggleSidebar, onSearch, onQuickCreate }) => {
                 <button
                   onClick={() => {
                     setUserOpen(false);
-                    navigate("/profile");
+                    router.push("/profile");
                   }}
                   className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
                 >
