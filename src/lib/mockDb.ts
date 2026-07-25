@@ -2,7 +2,9 @@
 // Todas las páginas y servicios deben leer/escribir a través de esto,
 // nunca declarar su propio set de datos de ejemplo.
 
-export const products = [
+import type { Product, Sale, Order } from "@/types";
+
+export const products: Product[] = [
   {
     id: "1",
     name: "Arroz 1Kg",
@@ -127,7 +129,7 @@ export const products = [
 ];
 
 // Ventas ordenadas de más reciente a más antigua
-export const sales = [
+export const sales: Sale[] = [
   {
     id: "s6",
     sale_date: "2025-08-15T09:50:00Z",
@@ -195,7 +197,7 @@ export const sales = [
 ];
 
 // Órdenes de compra a proveedores, ordenadas de más reciente a más antigua
-export const orders = [
+export const orders: Order[] = [
   {
     id: "o4",
     order_date: "2025-08-08T10:15:00Z",
