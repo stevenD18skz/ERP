@@ -504,7 +504,7 @@ export default function SalePageEnhanced() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50  md:px-8">
+    <>
       {/* Selector de modo de captura */}
       <div className="mb-4 flex w-fit rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-100">
         {[
@@ -1178,7 +1178,7 @@ export default function SalePageEnhanced() {
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
 

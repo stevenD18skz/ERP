@@ -698,20 +698,20 @@ export default function Home() {
   );
 
   return (
-    <div className="mx-auto px-4 md:px-8">
+    <>
       {/* Saludo */}
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+      <header className="flex flex-wrap items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-blue-600">{getGreeting()}</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-900 md:text-3xl">
             Resumen de tu tienda
           </h2>
         </div>
+
         <p className="text-sm text-slate-500">{today}</p>
       </header>
 
-
-      <main className="mt-6 space-y-6">
+      <main className="mt-4 space-y-4">
         {/* Indicadores del día, a todo el ancho */}
         <section
           aria-label="Indicadores clave"
@@ -767,7 +767,7 @@ export default function Home() {
         </section>
 
         {/* Reparto del día + accesos rápidos */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <section
             aria-label="Reparto de la plata del día"
             className="lg:col-span-2"
@@ -776,7 +776,7 @@ export default function Home() {
             <DayMoneyDonut day={dayBreakdown} lastRecorded={lastRecorded} />
           </section>
 
-          <section aria-label="Acciones rápidas" className="flex flex-col gap-3">
+          <section aria-label="Acciones rápidas" className="flex flex-col gap-4">
             <h2 className="sr-only">Acciones rápidas</h2>
             <QuickAction
               href="/sales"
@@ -810,7 +810,7 @@ export default function Home() {
         </div>
 
         {/* Contenido principal */}
-        <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <RecentCloses items={recentCloses} todayIso={todayIso} />
           </div>
@@ -819,13 +819,7 @@ export default function Home() {
             <TopProductsHome items={topProductsHome} />
           </div>
         </section>
-
-
-
-
-
-
       </main>
-    </div>
+    </>
   );
 }

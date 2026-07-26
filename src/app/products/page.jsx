@@ -770,7 +770,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 md:px-8">
+    <>
       <div className="mx-auto l">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1555,7 +1555,7 @@ export default function ProductsPage() {
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
 

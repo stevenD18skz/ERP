@@ -2,40 +2,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { Search, Bell, CircleUserRound, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Bell, CircleUserRound, LogOut, Menu } from "lucide-react";
 import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 
-const PAGE_TITLES = [
-  { path: "/", label: "Inicio" },
-  { path: "/products", label: "Productos" },
-  { path: "/sales", label: "Ventas" },
-  { path: "/orders", label: "Pedidos" },
-  { path: "/expenses", label: "Gastos y caja" },
-  { path: "/summary", label: "Reportes" },
-  { path: "/settings", label: "Configuración" },
-];
-
-const getPageTitle = (pathname) => {
-  const exact = PAGE_TITLES.find((p) => p.path === pathname);
-  if (exact) return exact.label;
-  const prefixMatch = PAGE_TITLES.find(
-    (p) => p.path !== "/" && pathname?.startsWith(p.path),
-  );
-  return prefixMatch ? prefixMatch.label : "";
-};
-
-const TopBar = ({ onSearch }) => {
+const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
   const router = useRouter();
-  const pathname = usePathname();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
   const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
-
-  // El título de la vista está comentado en el header más abajo; se deja
-  // calculado para poder volver a mostrarlo sin rehacer el mapa de rutas.
-  // eslint-disable-next-line no-unused-vars
-  const title = getPageTitle(pathname);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -43,30 +18,43 @@ const TopBar = ({ onSearch }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30  bg-white">
-      <div className="flex items-center justify-end gap-4 px-4 py-3 md:px-6">
+    <header className="sticky top-0 z-40 h-16 border-b border-slate-200 bg-white">
+      <div className="flex h-full items-center gap-3 px-4 md:px-6">
+        {/* Izquierda: colapsar sidebar + marca */}
+        <button
+          onClick={onToggleSidebar}
+          aria-label={sidebarExpanded ? "Colapsar menú" : "Expandir menú"}
+          aria-expanded={sidebarExpanded}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
 
+        <button
+          onClick={() => router.push("/")}
+          className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          aria-label="Ir al inicio"
+        >
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-9 w-9 shrink-0 rounded-full object-cover"
+          />
+          <span className="hidden truncate text-sm font-semibold text-slate-800 sm:inline">
+            ERP Supermarket
+          </span>
+        </button>
 
-
-
-        {/* Izquierda: título de la vista actual
-        <h1 className="  text-lg font-bold text-slate-900 md:text-xl">
-          {title}
-        </h1> */}
-
-
+        <div className="flex-1" />
 
         {/* Derecha: acciones */}
-        <div className="flex  items-center gap-2">
-
-          
+        <div className="flex shrink-0 items-center gap-2">
           <SupabaseStatusChip />
-
 
           {/* Búsqueda */}
           <form
             onSubmit={handleSearchSubmit}
-            className="w-full max-w-xs flex-1"
+            className="hidden w-56 md:block xl:w-72"
           >
             <label htmlFor="top-search" className="sr-only">
               Buscar
@@ -92,11 +80,9 @@ const TopBar = ({ onSearch }) => {
             </div>
           </form>
 
-
-
           <button
             onClick={() => alert("Notificaciones (placeholder)")}
-            className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 focus:outline-none"
+            className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             aria-label="Notificaciones"
           >
             <Bell className="h-4 w-4" />
@@ -112,7 +98,7 @@ const TopBar = ({ onSearch }) => {
           <div className="relative">
             <button
               onClick={() => setUserOpen((s) => !s)}
-              className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-slate-100 focus:outline-none"
+              className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-haspopup="menu"
               aria-expanded={userOpen}
             >
@@ -151,9 +137,6 @@ const TopBar = ({ onSearch }) => {
             )}
           </div>
         </div>
-
-
-
       </div>
     </header>
   );

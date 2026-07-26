@@ -445,7 +445,7 @@ export default function OrdersPageEnhanced() {
     new Date(o.expected_delivery) < new Date();
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <>
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-2">
@@ -1005,6 +1005,6 @@ export default function OrdersPageEnhanced() {
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
