@@ -9,9 +9,11 @@ import {
   updateSale,
 } from "@/services/sales.service";
 import { currency, formatMoney } from "@/utils/converts";
+import DailyCloseMode from "@/components/sales/DailyCloseMode";
 
 import {
   ShoppingCart,
+  CalendarDays,
   Search,
   Minus,
   Plus,
@@ -75,6 +77,10 @@ function useToasts() {
 }
 
 export default function SalePageEnhanced() {
+  // modo de captura: "transaccion" registra venta por venta con carrito;
+  // "cierre" anota un único total al final del día, como se llevaba en el Excel.
+  const [mode, setMode] = useState("transaccion");
+
   // data
   const [allProducts, setAllProducts] = useState([]);
   const [sales, setSales] = useState([]);
@@ -495,6 +501,31 @@ export default function SalePageEnhanced() {
 
   return (
     <div className="min-h-screen bg-slate-50  md:px-8">
+      {/* Selector de modo de captura */}
+      <div className="mb-4 flex w-fit rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-100">
+        {[
+          { key: "transaccion", label: "Venta por venta", icon: ShoppingCart },
+          { key: "cierre", label: "Cierre del día", icon: CalendarDays },
+        ].map((m) => (
+          <button
+            key={m.key}
+            onClick={() => setMode(m.key)}
+            aria-pressed={mode === m.key}
+            className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              mode === m.key
+                ? "bg-teal-600 text-white"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <m.icon className="h-4 w-4" />
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "cierre" ? (
+        <DailyCloseMode onNotify={push} />
+      ) : (
       <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-3">
@@ -1011,6 +1042,7 @@ export default function SalePageEnhanced() {
           </div>
         </div>
       </div>
+      )}
 
       {voidConfirmId && (
         <div

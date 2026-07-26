@@ -11,6 +11,7 @@ const PAGE_TITLES = [
   { path: "/products", label: "Productos" },
   { path: "/sales", label: "Ventas" },
   { path: "/orders", label: "Pedidos" },
+  { path: "/expenses", label: "Gastos y caja" },
   { path: "/summary", label: "Reportes" },
   { path: "/settings", label: "Configuración" },
 ];
@@ -31,6 +32,9 @@ const TopBar = ({ onSearch }) => {
   const [userOpen, setUserOpen] = useState(false);
   const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
 
+  // El título de la vista está comentado en el header más abajo; se deja
+  // calculado para poder volver a mostrarlo sin rehacer el mapa de rutas.
+  // eslint-disable-next-line no-unused-vars
   const title = getPageTitle(pathname);
 
   const handleSearchSubmit = (e) => {

@@ -7,6 +7,7 @@ import {
   Box,
   ShoppingCart,
   ClipboardList,
+  Wallet,
   BarChart3,
   Settings,
   Menu,
@@ -17,6 +18,7 @@ const menuItems = [
   { path: "/products", label: "Productos", icon: Box },
   { path: "/sales", label: "Ventas", icon: ShoppingCart },
   { path: "/orders", label: "Pedidos", icon: ClipboardList },
+  { path: "/expenses", label: "Gastos y caja", icon: Wallet },
   { path: "/summary", label: "Reportes", icon: BarChart3 },
   { path: "/settings", label: "Configuración", icon: Settings },
 ];

@@ -24,3 +24,5 @@ next-env.d.ts
 *.njsproj
 *.sln
 *.sw?
+
+/Excel_PA
