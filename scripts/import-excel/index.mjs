@@ -60,6 +60,7 @@ const products = items.map((it, i) => {
     photo: null,
     price: it.price,
     cost_price: it.cost,
+    cost_is_estimated: !it.costFromExcel,
     stock: 0,
     category: it.category,
     description: buildDescription(it),
@@ -76,7 +77,9 @@ const productsTs = `// GENERADO desde Excel_PA/2025 Contabilidad.xlsx - Hoja2.cs
 //   - category    inferida del prefijo que usaba el Excel (ACE, BEBIDA, CIG, LIC...).
 //   - cost_price  costo real del Excel cuando quedaba entre el 30% y el 95% del precio
 //                 (${products.filter((_, i) => items[i].costFromExcel).length} productos);
-//                 el resto es precio x 0.81, el margen del 19% que usa la contabilidad.
+//                 el resto es precio x 0.81, el margen del 19% que usa la contabilidad,
+//                 y queda marcado con cost_is_estimated: true. Ese porcentaje es circular
+//                 (siempre da 19%), por eso la UI no lo muestra como dato firme.
 //   - barcode / photo / stock  el Excel no los tenía: quedan vacíos para llenar a mano.
 
 import type { Product } from "@/types";
@@ -90,6 +93,7 @@ ${products.map((p) => `  {
     photo: null,
     price: ${p.price},
     cost_price: ${p.cost_price},
+    cost_is_estimated: ${p.cost_is_estimated},
     stock: ${p.stock},
     category: ${q(p.category)},
     description: ${q(p.description)},

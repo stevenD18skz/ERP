@@ -77,8 +77,15 @@ function useToasts() {
 }
 
 const getMargin = (p) => (Number(p.price) || 0) - (Number(p.cost_price) || 0);
+// El margen se mide sobre el PRECIO DE VENTA, igual que la contabilidad del
+// negocio: en Hoja1 la ganancia siempre fue venta x 19%. Medirlo sobre el costo
+// daría otro número (23% en vez de 19%) y no cuadraría con el resto de la app.
 const getMarginPct = (p) =>
-  p.cost_price ? Math.round((getMargin(p) / p.cost_price) * 100) : 0;
+  Number(p.price) ? Math.round((getMargin(p) / Number(p.price)) * 100) : 0;
+// Un costo estimado sale de multiplicar el precio por 0.81, así que su margen
+// siempre devuelve 19%: es la suposición, no una medición. Se muestra en gris
+// para que no se lea como un dato de factura.
+const isCostEstimated = (p) => Boolean(p.cost_is_estimated);
 
 const Chip = ({ label, onRemove }) => (
   <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 py-1 pl-2.5 pr-1.5 text-xs font-medium text-blue-700">
@@ -719,6 +726,9 @@ export default function ProductsPage() {
             barcode: obj.barcode || "",
             category: obj.category || "",
             cost_price: Number(obj.cost_price),
+            // Un costo que viene en el archivo importado es un dato aportado,
+            // no el estimado que calcula el importador del Excel.
+            cost_is_estimated: false,
             price: Number(obj.price),
             stock: Number(obj.stock),
             description: obj.description || "",
@@ -1173,22 +1183,50 @@ export default function ProductsPage() {
                         {p.category || "Sin categoría"}
                       </span>
                     </td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
-                      {currency(p.cost_price)}
+                    <td className="px-2 py-2.5 text-right tabular-nums">
+                      {isCostEstimated(p) ? (
+                        <span
+                          className="text-slate-400"
+                          title="Costo estimado: precio x 0.81. Confirmar con la factura del proveedor."
+                        >
+                          ~{currency(p.cost_price)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">
+                          {currency(p.cost_price)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2.5 text-right font-bold tabular-nums text-slate-900">
                       {currency(p.price)}
                     </td>
                     <td className="px-2 py-2.5 text-right">
                       <div
-                        className={`font-bold tabular-nums ${getMargin(p) >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                        className={`font-bold tabular-nums ${
+                          isCostEstimated(p)
+                            ? "text-slate-400"
+                            : getMargin(p) >= 0
+                              ? "text-emerald-600"
+                              : "text-red-600"
+                        }`}
+                        title={
+                          isCostEstimated(p)
+                            ? "Sale del costo estimado, no de una factura"
+                            : undefined
+                        }
                       >
-                        {getMargin(p) >= 0 ? "+" : ""}
+                        {isCostEstimated(p) ? "~" : getMargin(p) >= 0 ? "+" : ""}
                         {currency(getMargin(p))}
                       </div>
                       <div className="text-[11.5px] text-slate-400">
-                        {getMarginPct(p) >= 0 ? "+" : ""}
-                        {getMarginPct(p)}%
+                        {isCostEstimated(p) ? (
+                          "estimado"
+                        ) : (
+                          <>
+                            {getMarginPct(p) >= 0 ? "+" : ""}
+                            {getMarginPct(p)}%
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-2 py-2.5">
@@ -1266,7 +1304,15 @@ export default function ProductsPage() {
                     <div className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
                       Costo
                     </div>
-                    <div className="mt-0.5 text-[14px] font-semibold tabular-nums text-slate-700">
+                    <div
+                      className={`mt-0.5 text-[14px] font-semibold tabular-nums ${isCostEstimated(p) ? "text-slate-400" : "text-slate-700"}`}
+                      title={
+                        isCostEstimated(p)
+                          ? "Costo estimado: precio x 0.81. Confirmar con la factura."
+                          : undefined
+                      }
+                    >
+                      {isCostEstimated(p) ? "~" : ""}
                       {currency(p.cost_price)}
                     </div>
                   </div>
@@ -1280,12 +1326,18 @@ export default function ProductsPage() {
                   </div>
                   <div>
                     <div className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
-                      Margen
+                      {isCostEstimated(p) ? "Margen est." : "Margen"}
                     </div>
                     <div
-                      className={`mt-0.5 text-[14px] font-bold tabular-nums ${getMargin(p) >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                      className={`mt-0.5 text-[14px] font-bold tabular-nums ${
+                        isCostEstimated(p)
+                          ? "text-slate-400"
+                          : getMargin(p) >= 0
+                            ? "text-emerald-600"
+                            : "text-red-600"
+                      }`}
                     >
-                      {getMargin(p) >= 0 ? "+" : ""}
+                      {isCostEstimated(p) ? "~" : getMargin(p) >= 0 ? "+" : ""}
                       {currency(getMargin(p))}
                     </div>
                   </div>
@@ -1580,7 +1632,9 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
     !Number.isNaN(costNum) &&
     !Number.isNaN(priceNum);
   const marginPreview = priceNum - costNum;
-  const marginPreviewPct = costNum > 0 ? Math.round((marginPreview / costNum) * 100) : 0;
+  // Sobre el precio de venta, igual que la contabilidad del negocio.
+  const marginPreviewPct =
+    priceNum > 0 ? Math.round((marginPreview / priceNum) * 100) : 0;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -1607,6 +1661,8 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
         photo,
         price: Number(form.price),
         cost_price: Number(form.cost_price),
+        // Si el costo se escribió a mano deja de ser el estimado del importador.
+        cost_is_estimated: false,
         stock: Number(form.stock),
       });
     } catch {
@@ -1808,7 +1864,7 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
               <DollarSign className="h-4 w-4" />
               Ganancia por unidad: {marginPreview >= 0 ? "+" : ""}
               {currency(marginPreview)} ({marginPreviewPct >= 0 ? "+" : ""}
-              {marginPreviewPct}%)
+              {marginPreviewPct}% de la venta)
             </div>
           )}
 
