@@ -603,8 +603,8 @@ export default function Home() {
             <RecentSalesTable items={sales} />
           </div>
           <div className="space-y-4">
-            <TopProductsHome items={topProductsHome} />
             <RecentActivity items={activity} />
+            <TopProductsHome items={topProductsHome} />
           </div>
         </section>
 
