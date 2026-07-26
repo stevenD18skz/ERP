@@ -156,7 +156,7 @@ function StockStepper({ value, onCommit }) {
 
 const StockBadge = ({ stock }) =>
   stock <= LOW_STOCK_THRESHOLD ? (
-    <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+    <span className=" inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
       <AlertTriangle className="h-2.5 w-2.5" />
       {stock === 0 ? "Agotado" : "Stock bajo"}
     </span>
@@ -195,7 +195,7 @@ export default function ProductsPage() {
   const perPage = 8;
 
   // sorting
-  const [sortBy, setSortBy] = useState(null); // 'name'|'price'|'cost_price'|'margin'|'stock'
+  const [sortBy, setSortBy] = useState(null); // 'name'|'category'|'price'|'cost_price'|'margin'|'stock'
   const [sortDir, setSortDir] = useState("asc");
 
   // UI toggles
@@ -763,8 +763,7 @@ export default function ProductsPage() {
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Productos</h1>
-            <p className="mt-0.5 text-sm text-slate-500">
+            <p className="text-sm font-semibold text-slate-600">
               {products.length} producto{products.length === 1 ? "" : "s"}
             </p>
           </div>
@@ -816,7 +815,7 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Alerta de stock bajo */}
+        {/* Alerta de stock bajo 
         {!loading && lowStockCount > 0 && (
           <button
             type="button"
@@ -838,7 +837,7 @@ export default function ProductsPage() {
             </div>
             <ChevronRight className="h-[18px] w-[18px] shrink-0 text-amber-600" />
           </button>
-        )}
+        )}*/}
 
         {/* Toolbar: búsqueda + filtros + chips */}
         <div className="mt-4 rounded-xl bg-white p-3.5 shadow-sm ring-1 ring-slate-100">
@@ -943,7 +942,7 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3 items-center justify-center">
                 <div>
                   <div className="text-xs font-medium text-slate-500">
                     Precio (COP)
@@ -972,7 +971,7 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                <div>
+                <div className="flex flex-col items-center justify-center">
                   <div className="text-xs font-medium text-slate-500">
                     Stock
                   </div>
@@ -1006,7 +1005,8 @@ export default function ProductsPage() {
                   <div className="text-xs font-medium text-slate-500">
                     Categorías
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+
+                  <div className="mt-2 grid grid-cols-4 gap-2 text-sm">
                     {categories.map((c) => {
                       const checked =
                         categoryFilter.includes(c) ||
@@ -1066,7 +1066,7 @@ export default function ProductsPage() {
         {/* Tabla — escritorio */}
         {!loading && pageItems.length > 0 && (
           <div className="mt-4 hidden overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-100 md:block">
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className="w-10 py-3 pl-4 pr-2">
@@ -1089,9 +1089,14 @@ export default function ProductsPage() {
                     sortDir={sortDir}
                     onClick={toggleSort}
                   />
-                  <th className="px-2 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                    Categoría
-                  </th>
+                  <SortHeader
+                    label="Categoría"
+                    sortKey="category"
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onClick={toggleSort}
+                    className="w-24"
+                  />
                   <SortHeader
                     label="Costo"
                     sortKey="cost_price"
@@ -1099,6 +1104,7 @@ export default function ProductsPage() {
                     sortDir={sortDir}
                     onClick={toggleSort}
                     align="right"
+                    className="w-24"
                   />
                   <SortHeader
                     label="Precio"
@@ -1107,6 +1113,7 @@ export default function ProductsPage() {
                     sortDir={sortDir}
                     onClick={toggleSort}
                     align="right"
+                    className="w-24"
                   />
                   <SortHeader
                     label="Margen"
@@ -1115,6 +1122,7 @@ export default function ProductsPage() {
                     sortDir={sortDir}
                     onClick={toggleSort}
                     align="right"
+                    className="w-28"
                   />
                   <SortHeader
                     label="Stock"
@@ -1122,8 +1130,9 @@ export default function ProductsPage() {
                     sortBy={sortBy}
                     sortDir={sortDir}
                     onClick={toggleSort}
+                    className="w-44"
                   />
-                  <th className="py-3 pl-2 pr-4 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  <th className="w-52 py-3 pl-2 pr-4 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
                     Acciones
                   </th>
                 </tr>
@@ -1147,13 +1156,18 @@ export default function ProductsPage() {
                       <Thumb photo={p.photo} />
                     </td>
                     <td className="px-2 py-2.5">
-                      <div className="font-bold text-slate-900">{p.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-slate-900">
+                          {p.name}
+                        </div>
+                        <StockBadge stock={p.stock} />
+                      </div>
                       <div className="text-[12.5px] text-slate-400">
                         SKU {p.sku}
                       </div>
                     </td>
                     <td className="px-2 py-2.5">
-                      <span className="whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-[12.5px] font-semibold text-slate-700">
+                      <span className="inline-block max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 text-[12.5px] font-semibold text-slate-700 align-bottom">
                         {p.category || "Sin categoría"}
                       </span>
                     </td>
@@ -1180,7 +1194,6 @@ export default function ProductsPage() {
                         value={p.stock}
                         onCommit={(val) => quickUpdateStock(p.id, val)}
                       />
-                      <StockBadge stock={p.stock} />
                     </td>
                     <td className="py-2.5 pl-2 pr-4">
                       <div className="flex gap-1.5">
@@ -1491,7 +1504,15 @@ export default function ProductsPage() {
   );
 }
 
-function SortHeader({ label, sortKey, sortBy, sortDir, onClick, align = "left" }) {
+function SortHeader({
+  label,
+  sortKey,
+  sortBy,
+  sortDir,
+  onClick,
+  align = "left",
+  className = "",
+}) {
   const active = sortBy === sortKey;
   const Icon = !active
     ? ChevronsUpDown
@@ -1500,7 +1521,7 @@ function SortHeader({ label, sortKey, sortBy, sortDir, onClick, align = "left" }
       : ChevronDown;
   return (
     <th
-      className={`cursor-pointer select-none px-2 py-3 text-${align} transition-colors hover:bg-slate-50 ${active ? "text-blue-600" : "text-slate-500"}`}
+      className={`cursor-pointer select-none px-2 py-3 text-${align} transition-colors hover:bg-slate-50 ${active ? "text-blue-600" : "text-slate-500"} ${className}`}
       onClick={() => onClick(sortKey)}
       aria-sort={
         active ? (sortDir === "asc" ? "ascending" : "descending") : "none"

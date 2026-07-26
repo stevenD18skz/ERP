@@ -2,15 +2,36 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Search, Bell, Plus, CircleUserRound, LogOut } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { Search, Bell, CircleUserRound, LogOut } from "lucide-react";
 import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 
-const TopBar = ({ onSearch, onQuickCreate }) => {
+const PAGE_TITLES = [
+  { path: "/", label: "Inicio" },
+  { path: "/products", label: "Productos" },
+  { path: "/sales", label: "Ventas" },
+  { path: "/orders", label: "Pedidos" },
+  { path: "/summary", label: "Reportes" },
+  { path: "/settings", label: "Configuración" },
+];
+
+const getPageTitle = (pathname) => {
+  const exact = PAGE_TITLES.find((p) => p.path === pathname);
+  if (exact) return exact.label;
+  const prefixMatch = PAGE_TITLES.find(
+    (p) => p.path !== "/" && pathname?.startsWith(p.path),
+  );
+  return prefixMatch ? prefixMatch.label : "";
+};
+
+const TopBar = ({ onSearch }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
   const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
+
+  const title = getPageTitle(pathname);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -18,50 +39,56 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
-      <div className="flex items-center gap-4 px-4 py-3 md:px-6">
-        {/* Centro: búsqueda */}
-        <form
-          onSubmit={handleSearchSubmit}
-          className="mx-auto w-full max-w-md flex-1"
-        >
-          <label htmlFor="top-search" className="sr-only">
-            Buscar
-          </label>
-          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-200">
-            <Search className="h-4 w-4 text-slate-400" />
-            <input
-              id="top-search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar productos, SKU..."
-              className="w-full text-sm outline-none placeholder:text-slate-400"
-            />
-            {q && (
-              <button
-                type="button"
-                onClick={() => setQ("")}
-                className="px-1 text-xs text-slate-400 hover:text-slate-600"
-              >
-                Limpiar
-              </button>
-            )}
-          </div>
-        </form>
+    <header className="sticky top-0 z-30  bg-slate-50">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6">
+
+
+
+
+        {/* Izquierda: título de la vista actual */}
+        <h1 className="  text-lg font-bold text-slate-900 md:text-xl">
+          {title}
+        </h1>
+
+
 
         {/* Derecha: acciones */}
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex  items-center gap-2">
+
+          
           <SupabaseStatusChip />
 
-          <button
-            onClick={() =>
-              onQuickCreate ? onQuickCreate() : router.push("/products/new")
-            }
-            className="hidden items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 sm:flex"
-            title="Crear nuevo"
+
+          {/* Búsqueda */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="w-full max-w-xs flex-1"
           >
-            <Plus className="h-4 w-4" /> Nuevo
-          </button>
+            <label htmlFor="top-search" className="sr-only">
+              Buscar
+            </label>
+            <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-200">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input
+                id="top-search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar productos, SKU..."
+                className="w-full text-sm outline-none placeholder:text-slate-400"
+              />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => setQ("")}
+                  className="px-1 text-xs text-slate-400 hover:text-slate-600"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+          </form>
+
+
 
           <button
             onClick={() => alert("Notificaciones (placeholder)")}
@@ -120,6 +147,9 @@ const TopBar = ({ onSearch, onQuickCreate }) => {
             )}
           </div>
         </div>
+
+
+
       </div>
     </header>
   );

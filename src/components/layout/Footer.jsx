@@ -1,6 +1,6 @@
 const Footer = () => {
   return (
-    <footer className="mt-8 border-t bg-white">
+    <footer className="border-t bg-white">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 md:grid-cols-3">
         <div>
           <img src="/logo.png" alt="Logo" className="h-10 w-10 rounded-full" />
@@ -67,7 +67,7 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="border-t bg-gray-50">
+      <div className="border-t ">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 text-xs text-slate-500">
           <div>© {new Date().getFullYear()} ERP Supermarket</div>
           <div>Hecho con ♥ — Simple & útil</div>

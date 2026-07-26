@@ -14,6 +14,8 @@ import {
   CalendarClock,
   PiggyBank,
   PackageSearch,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 
 import { currency } from "@/utils/converts";
@@ -23,12 +25,34 @@ import type { Sale } from "@/types/sale";
 import type { Order } from "@/types/order";
 
 const LOW_STOCK_THRESHOLD = 10;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return "Buenos días";
   if (hour < 19) return "Buenas tardes";
   return "Buenas noches";
+}
+
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function shortCurrency(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
+  return `$${Math.round(n)}`;
+}
+
+function dayLabel(date: Date): string {
+  const short = date.toLocaleDateString("es-CO", { weekday: "short" });
+  const clean = short.replace(".", "");
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function pctDelta(current: number, previous: number): number {
+  if (previous > 0) return ((current - previous) / previous) * 100;
+  return current > 0 ? 100 : 0;
 }
 
 type ActivityItem = {
@@ -119,18 +143,38 @@ const QuickAction = ({
   </Link>
 );
 
-const StatCard = ({
+const DeltaBadge = ({ pct }: { pct: number }) => {
+  const positive = pct >= 0;
+  const Icon = positive ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+        positive
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-red-50 text-red-700"
+      }`}
+    >
+      <Icon className="h-3 w-3" aria-hidden />
+      {positive ? "+" : ""}
+      {pct.toFixed(0)}%
+    </span>
+  );
+};
+
+const TrendCard = ({
   icon: Icon,
   label,
   value,
-  hint,
+  pct,
   accent = "bg-blue-50 text-blue-600",
+  valueColor = "text-slate-800",
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
-  hint?: string;
+  pct: number;
   accent?: string;
+  valueColor?: string;
 }) => (
   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
     <div className="flex items-start justify-between gap-2">
@@ -141,10 +185,14 @@ const StatCard = ({
         <Icon className="h-4 w-4" aria-hidden />
       </span>
     </div>
-    <div className="mt-3 text-2xl font-bold tabular-nums text-slate-800">
+    <div
+      className={`mt-3 text-2xl font-bold tabular-nums ${valueColor}`}
+    >
       {value}
     </div>
-    {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
+    <div className="mt-2">
+      <DeltaBadge pct={pct} />
+    </div>
   </div>
 );
 
@@ -263,6 +311,77 @@ const RecentActivity = ({ items }: { items: ActivityItem[] }) => (
   </div>
 );
 
+type WeekBar = {
+  key: string;
+  label: string;
+  value: number;
+  isToday: boolean;
+};
+
+const WeekTrendChart = ({
+  bars,
+  total,
+  pct,
+}: {
+  bars: WeekBar[];
+  total: number;
+  pct: number;
+}) => {
+  const max = Math.max(1, ...bars.map((b) => b.value));
+  const positive = pct >= 0;
+  return (
+    <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100 md:p-5">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-base font-bold text-slate-900">
+          Ventas de los últimos 7 días
+        </h3>
+        <div className="text-sm text-slate-500">
+          Total:{" "}
+          <span className="font-bold tabular-nums text-slate-900">
+            {currency(total)}
+          </span>{" "}
+          ·{" "}
+          <span
+            className={`font-bold ${positive ? "text-emerald-600" : "text-red-600"}`}
+          >
+            {positive ? "+" : ""}
+            {pct.toFixed(0)}%
+          </span>{" "}
+          vs. semana pasada
+        </div>
+      </div>
+      <div className="flex h-[150px] items-end gap-3 px-1 sm:gap-5">
+        {bars.map((bar) => {
+          const heightPx = bar.value > 0 ? Math.max(8, (bar.value / max) * 132) : 4;
+          return (
+            <div
+              key={bar.key}
+              className="flex h-full flex-1 flex-col items-center justify-end gap-2"
+            >
+              <div className="text-xs tabular-nums text-slate-400">
+                {bar.value > 0 ? shortCurrency(bar.value) : ""}
+              </div>
+              <div
+                className={`w-full max-w-[44px] rounded-xl ${
+                  bar.isToday ? "bg-blue-600" : "bg-blue-200"
+                }`}
+                style={{ height: `${heightPx}px` }}
+              />
+              <div
+                className={`text-sm font-bold ${
+                  bar.isToday ? "text-blue-600" : "text-slate-700"
+                }`}
+              >
+                {bar.isToday ? "Hoy" : bar.label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const RecentSalesTable = ({ items }: { items: Sale[] }) => (
   <div className="overflow-auto rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
     <h3 className="text-sm font-semibold text-slate-700">Ventas recientes</h3>
@@ -319,26 +438,66 @@ const RecentSalesTable = ({ items }: { items: Sale[] }) => (
 );
 
 export default function Home() {
-  const totalSales: number = useMemo(
-    () => sales.reduce((s, x) => s + x.total_amount, 0),
-    [],
-  );
-  const totalGain: number = useMemo(
-    () => sales.reduce((s, x) => s + x.gain, 0),
-    [],
-  );
-  const highestSale: number = useMemo(
-    () => (sales.length ? Math.max(...sales.map((s) => s.total_amount)) : 0),
-    [],
-  );
-  const dailyAvg: number = useMemo(
-    () => Math.round(totalSales / Math.max(1, 7)),
-    [totalSales],
-  );
   const lowStockCount = useMemo(
     () => products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD).length,
     [],
   );
+
+  const {
+    ventasHoy,
+    ventasDelta,
+    gananciaHoy,
+    gananciaDelta,
+    promedioSemana,
+    tendenciaPct,
+    weekBars,
+    weekTotal,
+  } = useMemo(() => {
+    const byDay = new Map<string, { total: number; gain: number }>();
+    for (const s of sales) {
+      const key = dayKey(new Date(s.sale_date));
+      const acc = byDay.get(key) ?? { total: 0, gain: 0 };
+      acc.total += s.total_amount;
+      acc.gain += s.gain;
+      byDay.set(key, acc);
+    }
+
+    const latestMs = sales.length
+      ? Math.max(...sales.map((s) => new Date(s.sale_date).getTime()))
+      : Date.now();
+    const latest = new Date(latestMs);
+
+    const bars: WeekBar[] = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(latest.getTime() - (6 - i) * DAY_MS);
+      const key = dayKey(d);
+      return {
+        key,
+        label: dayLabel(d),
+        value: byDay.get(key)?.total ?? 0,
+        isToday: i === 6,
+      };
+    });
+
+    const todayKey = dayKey(latest);
+    const yesterdayKey = dayKey(new Date(latest.getTime() - DAY_MS));
+    const today = byDay.get(todayKey) ?? { total: 0, gain: 0 };
+    const yesterday = byDay.get(yesterdayKey) ?? { total: 0, gain: 0 };
+
+    const firstHalf = bars.slice(0, 3).reduce((s, b) => s + b.value, 0) / 3;
+    const secondHalf = bars.slice(4, 7).reduce((s, b) => s + b.value, 0) / 3;
+    const total = bars.reduce((s, b) => s + b.value, 0);
+
+    return {
+      ventasHoy: today.total,
+      ventasDelta: pctDelta(today.total, yesterday.total),
+      gananciaHoy: today.gain,
+      gananciaDelta: pctDelta(today.gain, yesterday.gain),
+      promedioSemana: total / 7,
+      tendenciaPct: pctDelta(secondHalf, firstHalf),
+      weekBars: bars,
+      weekTotal: total,
+    };
+  }, []);
 
   const topProductsHome = useMemo(
     () =>
@@ -365,15 +524,15 @@ export default function Home() {
   );
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
+    <main className="mx-auto space-y-6 p-4 md:p-8">
       {/* Saludo */}
       <header className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 md:p-8">
         <p className="text-sm font-semibold text-blue-600">
           {getGreeting()}
         </p>
-        <h1 className="mt-1 text-2xl font-bold capitalize text-slate-900 md:text-3xl">
+        <h2 className="mt-1 text-2xl font-bold capitalize text-slate-900 md:text-3xl">
           Resumen de tu tienda
-        </h1>
+        </h2>
         <p className="mt-1 text-sm capitalize text-slate-500">{today}</p>
       </header>
 
@@ -420,38 +579,56 @@ export default function Home() {
         aria-label="Indicadores clave"
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
-        <StatCard
+        <TrendCard
           icon={Wallet}
-          label="Ventas totales"
-          value={currency(totalSales)}
-          hint={`Venta más alta: ${currency(highestSale)}`}
+          label="Ventas de hoy"
+          value={currency(ventasHoy)}
+          pct={ventasDelta}
         />
-        <StatCard
+        <TrendCard
           icon={CalendarClock}
-          label="Promedio diario"
-          value={currency(dailyAvg)}
-          hint="Estimado en 7 días"
+          label="Promedio diario (7 días)"
+          value={currency(promedioSemana)}
+          pct={tendenciaPct}
           accent="bg-indigo-50 text-indigo-600"
         />
-        <StatCard
+        <TrendCard
           icon={PiggyBank}
-          label="Ganancia total"
-          value={currency(totalGain)}
-          hint="Suma de ventas recientes"
+          label="Ganancia de hoy"
+          value={currency(gananciaHoy)}
+          pct={gananciaDelta}
           accent="bg-emerald-50 text-emerald-600"
+          valueColor="text-emerald-600"
         />
-        <StatCard
-          icon={PackageSearch}
-          label="Stock bajo"
-          value={`${lowStockCount}`}
-          hint={`de ${products.length} productos en catálogo`}
-          accent={
-            lowStockCount > 0
-              ? "bg-amber-50 text-amber-600"
-              : "bg-slate-100 text-slate-500"
-          }
-        />
+        <Link
+          href={`/products?stockOp=lt&stockVal=${LOW_STOCK_THRESHOLD + 1}`}
+          className="rounded-xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-100 transition-colors hover:bg-slate-50"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-medium text-slate-500">
+              Stock bajo
+            </span>
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                lowStockCount > 0
+                  ? "bg-amber-50 text-amber-600"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              <PackageSearch className="h-4 w-4" aria-hidden />
+            </span>
+          </div>
+          <div className="mt-3 text-2xl font-bold tabular-nums text-amber-600">
+            {lowStockCount}
+          </div>
+          <div className="mt-2 text-xs text-slate-400">
+            productos por revisar
+          </div>
+        </Link>
       </section>
+
+      {/* Tendencia de ventas de los últimos 7 días */}
+      <WeekTrendChart bars={weekBars} total={weekTotal} pct={tendenciaPct} />
 
       {/* Contenido principal */}
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">

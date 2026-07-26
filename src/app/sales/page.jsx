@@ -255,14 +255,6 @@ export default function SalePageEnhanced() {
     delete qtyRefs.current[key];
   };
 
-  const openDiscount = (key) => {
-    const line = lines.find((l) => l._key === key);
-    setDiscountEditingKey(key);
-    setDiscountDraftType(line?.discountType || "pct");
-    setDiscountDraftValue(
-      line?.discountValue ? String(line.discountValue) : "",
-    );
-  };
   const cancelDiscount = () => {
     setDiscountEditingKey(null);
     setDiscountDraftValue("");
@@ -283,13 +275,6 @@ export default function SalePageEnhanced() {
     setDiscountEditingKey(null);
     setDiscountDraftValue("");
   };
-  const removeDiscount = (key) =>
-    setLines((prev) =>
-      prev.map((l) =>
-        l._key === key ? { ...l, discountType: null, discountValue: 0 } : l,
-      ),
-    );
-
   const setPayment = (m) => {
     setPaymentMethod(m);
     setSaleErrors({});
@@ -514,9 +499,9 @@ export default function SalePageEnhanced() {
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-2">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">
+            <h2 className="text-lg font-bold text-slate-900">
               Registrar venta
-            </h1>
+            </h2>
             <p className="mt-0.5 text-sm text-slate-500">
               Busca un producto para empezar
             </p>
@@ -600,10 +585,6 @@ export default function SalePageEnhanced() {
             <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-slate-100">
               {lines.map((line) => {
                 const hasDiscount = !!line.discountType && line.discountValue > 0;
-                const discountLabel =
-                  line.discountType === "pct"
-                    ? `-${line.discountValue}%`
-                    : `-${currency(line.discountValue)}`;
                 return (
                   <div
                     key={line._key}

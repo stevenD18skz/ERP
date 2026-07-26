@@ -450,9 +450,9 @@ export default function OrdersPageEnhanced() {
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-2">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">
+            <h2 className="text-lg font-bold text-slate-900">
               Registrar pedido
-            </h1>
+            </h2>
             <p className="mt-0.5 text-sm text-slate-500">
               Compra a un proveedor
             </p>
