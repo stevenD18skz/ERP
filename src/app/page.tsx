@@ -119,16 +119,14 @@ const QuickAction = ({
 }) => (
   <Link
     href={href}
-    className={`group flex items-center gap-3 rounded-xl p-4 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
-      primary
-        ? "bg-blue-600 text-white hover:bg-blue-700"
-        : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-    }`}
+    className={`group flex items-center gap-3 rounded-xl p-4 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${primary
+      ? "bg-blue-600 text-white hover:bg-blue-700"
+      : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+      }`}
   >
     <span
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
-        primary ? "bg-white/15" : accent
-      }`}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${primary ? "bg-white/15" : accent
+        }`}
     >
       <Icon className="h-5 w-5" aria-hidden />
     </span>
@@ -148,11 +146,10 @@ const DeltaBadge = ({ pct }: { pct: number }) => {
   const Icon = positive ? TrendingUp : TrendingDown;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
-        positive
-          ? "bg-emerald-50 text-emerald-700"
-          : "bg-red-50 text-red-700"
-      }`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${positive
+        ? "bg-emerald-50 text-emerald-700"
+        : "bg-red-50 text-red-700"
+        }`}
     >
       <Icon className="h-3 w-3" aria-hidden />
       {positive ? "+" : ""}
@@ -177,8 +174,8 @@ const TrendCard = ({
   valueColor?: string;
 }) => (
   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-    <div className="flex items-start justify-between gap-2">
-      <span className="text-sm font-medium text-slate-500">{label}</span>
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-lg font-medium text-slate-500">{label}</span>
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${accent}`}
       >
@@ -186,7 +183,7 @@ const TrendCard = ({
       </span>
     </div>
     <div
-      className={`mt-3 text-2xl font-bold tabular-nums ${valueColor}`}
+      className={`text-2xl font-bold tabular-nums ${valueColor}`}
     >
       {value}
     </div>
@@ -196,48 +193,8 @@ const TrendCard = ({
   </div>
 );
 
-const LowStockBanner = ({
-  items,
-  threshold,
-}: {
-  items: Product[];
-  threshold: number;
-}) => {
-  const low = items
-    .filter((p) => p.stock <= threshold)
-    .sort((a, b) => a.stock - b.stock);
-  if (low.length === 0) return null;
 
-  const names = low
-    .slice(0, 3)
-    .map((p) => p.name)
-    .join(", ");
-  const extra = low.length > 3 ? ` y ${low.length - 3} más` : "";
 
-  return (
-    <Link
-      href={`/products?stockOp=lt&stockVal=${threshold + 1}`}
-      className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm transition-colors hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-    >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-        <AlertTriangle className="h-5 w-5" aria-hidden />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-amber-900">
-          {low.length} producto{low.length > 1 ? "s" : ""} con stock bajo
-        </p>
-        <p className="truncate text-xs text-amber-700">
-          {names}
-          {extra} — Toca para revisarlos
-        </p>
-      </div>
-      <ChevronRight
-        className="h-5 w-5 shrink-0 text-amber-500 transition-transform group-hover:translate-x-0.5"
-        aria-hidden
-      />
-    </Link>
-  );
-};
 
 const TopProductsHome = ({ items }: { items: Product[] }) => (
   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
@@ -362,15 +319,13 @@ const WeekTrendChart = ({
                 {bar.value > 0 ? shortCurrency(bar.value) : ""}
               </div>
               <div
-                className={`w-full max-w-[44px] rounded-xl ${
-                  bar.isToday ? "bg-blue-600" : "bg-blue-200"
-                }`}
+                className={`w-full max-w-[44px] rounded-xl ${bar.isToday ? "bg-blue-600" : "bg-blue-200"
+                  }`}
                 style={{ height: `${heightPx}px` }}
               />
               <div
-                className={`text-sm font-bold ${
-                  bar.isToday ? "text-blue-600" : "text-slate-700"
-                }`}
+                className={`text-sm font-bold ${bar.isToday ? "text-blue-600" : "text-slate-700"
+                  }`}
               >
                 {bar.isToday ? "Hoy" : bar.label}
               </div>
@@ -524,122 +479,141 @@ export default function Home() {
   );
 
   return (
-    <main className="mx-auto space-y-6 p-4 md:p-8">
+    <div className="mx-auto px-4 md:px-8 ">
       {/* Saludo */}
-      <header className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 md:p-8">
-        <p className="text-sm font-semibold text-blue-600">
+      <header>
+        <p className="text-lg font-semibold text-blue-600">
           {getGreeting()}
         </p>
-        <h2 className="mt-1 text-2xl font-bold capitalize text-slate-900 md:text-3xl">
-          Resumen de tu tienda
-        </h2>
-        <p className="mt-1 text-sm capitalize text-slate-500">{today}</p>
+
+        <div className="flex items-end justify-between">
+          <h2 className="mt-1 text-2xl font-bold capitalize text-slate-900 md:text-3xl">
+            Resumen de tu tienda
+          </h2>
+          <p className="mt-1 text-md capitalize text-slate-500">{today}</p>
+        </div>
       </header>
 
-      {/* Acciones rápidas: lo primero que necesita el tendero */}
-      <section aria-label="Acciones rápidas">
-        <h2 className="sr-only">Acciones rápidas</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <QuickAction
-            href="/sales"
-            icon={ShoppingCart}
-            label="Registrar venta"
-            hint="Nueva transacción"
-            primary
-          />
-          <QuickAction
-            href="/products?new=1"
-            icon={PackagePlus}
-            label="Nuevo producto"
-            hint="Agregar al catálogo"
-            accent="bg-emerald-50 text-emerald-600"
-          />
-          <QuickAction
-            href="/orders"
-            icon={ClipboardList}
-            label="Crear pedido"
-            hint="Solicitar a proveedor"
-            accent="bg-indigo-50 text-indigo-600"
-          />
-          <QuickAction
-            href="/summary"
-            icon={BarChart3}
-            label="Ver reportes"
-            hint="Resumen del negocio"
-            accent="bg-violet-50 text-violet-600"
-          />
-        </div>
-      </section>
 
-      {/* Alerta de stock bajo — visible sin desplazarse */}
-      <LowStockBanner items={products} threshold={LOW_STOCK_THRESHOLD} />
+      <main className="mt-5 space-y-6 ">
 
-      {/* KPIs */}
-      <section
-        aria-label="Indicadores clave"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <TrendCard
-          icon={Wallet}
-          label="Ventas de hoy"
-          value={currency(ventasHoy)}
-          pct={ventasDelta}
-        />
-        <TrendCard
-          icon={CalendarClock}
-          label="Promedio diario (7 días)"
-          value={currency(promedioSemana)}
-          pct={tendenciaPct}
-          accent="bg-indigo-50 text-indigo-600"
-        />
-        <TrendCard
-          icon={PiggyBank}
-          label="Ganancia de hoy"
-          value={currency(gananciaHoy)}
-          pct={gananciaDelta}
-          accent="bg-emerald-50 text-emerald-600"
-          valueColor="text-emerald-600"
-        />
-        <Link
-          href={`/products?stockOp=lt&stockVal=${LOW_STOCK_THRESHOLD + 1}`}
-          className="rounded-xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-100 transition-colors hover:bg-slate-50"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-slate-500">
-              Stock bajo
-            </span>
-            <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                lowStockCount > 0
-                  ? "bg-amber-50 text-amber-600"
-                  : "bg-slate-100 text-slate-500"
-              }`}
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+          {/* Acciones rápidas: lo primero que necesita el tendero */}
+          <section aria-label="Acciones rápidas" className="col-span-1">
+            <h2 className="sr-only">Acciones rápidas</h2>
+            <div className="grid grid-rows-4 gap-6">
+              <QuickAction
+                href="/sales"
+                icon={ShoppingCart}
+                label="Registrar venta"
+                hint="Nueva transacción"
+                primary
+              />
+              <QuickAction
+                href="/products?new=1"
+                icon={PackagePlus}
+                label="Nuevo producto"
+                hint="Agregar al catálogo"
+                accent="bg-emerald-50 text-emerald-600"
+              />
+              <QuickAction
+                href="/orders"
+                icon={ClipboardList}
+                label="Crear pedido"
+                hint="Solicitar a proveedor"
+                accent="bg-indigo-50 text-indigo-600"
+              />
+              <QuickAction
+                href="/summary"
+                icon={BarChart3}
+                label="Ver reportes"
+                hint="Resumen del negocio"
+                accent="bg-violet-50 text-violet-600"
+              />
+            </div>
+          </section>
+
+
+          <section className="col-span-3 space-y-6">
+            {/* KPIs */}
+            <section
+              aria-label="Indicadores clave"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 "
             >
-              <PackageSearch className="h-4 w-4" aria-hidden />
-            </span>
-          </div>
-          <div className="mt-3 text-2xl font-bold tabular-nums text-amber-600">
-            {lowStockCount}
-          </div>
-          <div className="mt-2 text-xs text-slate-400">
-            productos por revisar
-          </div>
-        </Link>
-      </section>
+              <TrendCard
+                icon={Wallet}
+                label="Ventas de hoy"
+                value={currency(ventasHoy)}
+                pct={ventasDelta}
+              />
+              <TrendCard
+                icon={CalendarClock}
+                label="Promedio diario (7 días)"
+                value={currency(promedioSemana)}
+                pct={tendenciaPct}
+                accent="bg-indigo-50 text-indigo-600"
+              />
+              <TrendCard
+                icon={PiggyBank}
+                label="Ganancia de hoy"
+                value={currency(gananciaHoy)}
+                pct={gananciaDelta}
+                accent="bg-emerald-50 text-emerald-600"
+                valueColor="text-emerald-600"
+              />
+              <Link
+                href={`/products?stockOp=lt&stockVal=${LOW_STOCK_THRESHOLD + 1}`}
+                className="rounded-xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-100 transition-colors hover:bg-slate-50"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xl font-medium text-slate-500">
+                    Stock bajo
+                  </span>
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${lowStockCount > 0
+                      ? "bg-amber-50 text-amber-600"
+                      : "bg-slate-100 text-slate-500"
+                      }`}
+                  >
+                    <PackageSearch className="h-4 w-4" aria-hidden />
+                  </span>
+                </div>
+                <div className=" text-2xl font-bold tabular-nums text-amber-600">
+                  {lowStockCount}
+                </div>
+                <div className="mt-2 text-xs text-slate-400">
+                  productos por revisar
+                </div>
+              </Link>
+            </section>
 
-      {/* Tendencia de ventas de los últimos 7 días */}
-      <WeekTrendChart bars={weekBars} total={weekTotal} pct={tendenciaPct} />
+            {/* Tendencia de ventas de los últimos 7 días */}
+            <section aria-label="Tendencia de ventas" className="col-span-2">
+              <h2 className="sr-only">Tendencia de ventas</h2>
+              <WeekTrendChart bars={weekBars} total={weekTotal} pct={tendenciaPct} />
+            </section>
+          </section>
 
-      {/* Contenido principal */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RecentSalesTable items={sales} />
         </div>
-        <div className="space-y-4">
-          <TopProductsHome items={topProductsHome} />
-          <RecentActivity items={activity} />
-        </div>
-      </section>
-    </main>
+
+        {/* Contenido principal */}
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <RecentSalesTable items={sales} />
+          </div>
+          <div className="space-y-4">
+            <TopProductsHome items={topProductsHome} />
+            <RecentActivity items={activity} />
+          </div>
+        </section>
+
+
+
+
+
+
+      </main>
+    </div>
   );
 }

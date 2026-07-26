@@ -759,11 +759,12 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-slate-50 px-4 md:px-8">
+      <div className="mx-auto l">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
+            <h2 className="mb-1 text-lg font-bold tracking-tight text-slate-900">Tabla con todos los productos</h2>
             <p className="text-sm font-semibold text-slate-600">
               {products.length} producto{products.length === 1 ? "" : "s"}
             </p>

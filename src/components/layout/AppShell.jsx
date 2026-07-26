@@ -15,7 +15,7 @@ const AppShell = ({ children }) => {
         onToggle={() => setSidebarOpen((s) => !s)}
       />
       <div
-        className={`flex-1 transition-all duration-300 ${sidebarOpen ? "pl-64" : "pl-16"}`}
+        className={`flex-1 transition-all duration-300 ${sidebarOpen ? "pl-64" : "pl-16"} space-y-2`}
       >
         <TopBar />
         <main className="">{children}</main>

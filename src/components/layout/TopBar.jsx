@@ -39,16 +39,16 @@ const TopBar = ({ onSearch }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30  bg-slate-50">
-      <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6">
+    <header className="sticky top-0 z-30  bg-white">
+      <div className="flex items-center justify-end gap-4 px-4 py-3 md:px-6">
 
 
 
 
-        {/* Izquierda: título de la vista actual */}
+        {/* Izquierda: título de la vista actual
         <h1 className="  text-lg font-bold text-slate-900 md:text-xl">
           {title}
-        </h1>
+        </h1> */}
 
 
 

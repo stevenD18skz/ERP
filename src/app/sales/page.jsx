@@ -494,18 +494,11 @@ export default function SalePageEnhanced() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="min-h-screen bg-slate-50  md:px-8">
+      <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* MAIN */}
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">
-              Registrar venta
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Busca un producto para empezar
-            </p>
-          </div>
+        <div className="flex flex-col gap-4 lg:col-span-3">
+
 
           {/* Buscador */}
           <div className="relative rounded-xl bg-white p-3.5 shadow-sm ring-1 ring-slate-100">
@@ -592,7 +585,7 @@ export default function SalePageEnhanced() {
                   >
                     <div className="flex flex-wrap items-center gap-2.5">
                       <div className="min-w-[140px] flex-1">
-                        <div className="text-[15px] font-bold text-slate-900">
+                        <div className="text-[18px] font-bold text-slate-900">
                           {line.name}
                         </div>
                         <div className="mt-0.5 text-xs text-slate-400">
@@ -728,7 +721,7 @@ export default function SalePageEnhanced() {
           {lines.length > 0 && (
             <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
               <div className="mb-4 flex items-baseline justify-between">
-                <div className="text-[16px] font-bold text-slate-900">
+                <div className="text-[22px] font-bold text-slate-900">
                   Total a cobrar
                 </div>
                 <div className="text-[28px] font-extrabold tabular-nums text-slate-900">
@@ -767,55 +760,66 @@ export default function SalePageEnhanced() {
               </div>
 
               {paymentMethod === "efectivo" && (
-                <div>
-                  <label className="mb-1.5 block text-sm font-bold text-slate-900">
-                    Monto recibido <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={receivedAmount ? formatMoney(Number(receivedAmount)) : ""}
-                    onChange={(e) => {
-                      const numeric = String(e.target.value).replace(/[^\d]/g, "");
-                      setReceivedAmount(numeric);
-                      if (saleErrors.monto)
-                        setSaleErrors((er) => ({ ...er, monto: undefined }));
-                    }}
-                    placeholder="0"
-                    aria-invalid={!!saleErrors.monto}
-                    className={`h-12 w-full max-w-[220px] rounded-lg border px-3.5 text-lg font-bold tabular-nums outline-none focus:ring-2 ${saleErrors.monto ? "border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-teal-500 focus:ring-teal-100"}`}
-                  />
-                  {saleErrors.monto && (
-                    <div className="mt-1.5 text-xs font-semibold text-red-600">
-                      {saleErrors.monto}
-                    </div>
-                  )}
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {QUICK_CASH.map((amount) => (
+
+                <div className="flex  justify-between">
+
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-bold text-slate-900">
+                      Monto recibido <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={receivedAmount ? formatMoney(Number(receivedAmount)) : ""}
+                      onChange={(e) => {
+                        const numeric = String(e.target.value).replace(/[^\d]/g, "");
+                        setReceivedAmount(numeric);
+                        if (saleErrors.monto)
+                          setSaleErrors((er) => ({ ...er, monto: undefined }));
+                      }}
+                      placeholder="0"
+                      aria-invalid={!!saleErrors.monto}
+                      className={`h-12 w-full max-w-[220px] rounded-lg border px-3.5 text-lg font-bold tabular-nums outline-none focus:ring-2 ${saleErrors.monto ? "border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-teal-500 focus:ring-teal-100"}`}
+                    />
+
+
+                    {saleErrors.monto && (
+                      <div className="mt-1.5 text-xs font-semibold text-red-600">
+                        {saleErrors.monto}
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {QUICK_CASH.map((amount) => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => addQuickCash(amount)}
+                          className="h-[38px] rounded-full bg-teal-50 px-3.5 text-[13.5px] font-bold text-teal-800 hover:bg-teal-100"
+                        >
+                          +{formatMoney(amount)}
+                        </button>
+                      ))}
                       <button
-                        key={amount}
                         type="button"
-                        onClick={() => addQuickCash(amount)}
-                        className="h-[38px] rounded-full bg-teal-50 px-3.5 text-[13.5px] font-bold text-teal-800 hover:bg-teal-100"
+                        onClick={setExactAmount}
+                        className="h-[38px] rounded-full border-[1.5px] border-teal-600 bg-white px-3.5 text-[13.5px] font-bold text-teal-700 hover:bg-teal-50"
                       >
-                        +{formatMoney(amount)}
+                        Monto exacto
                       </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={setExactAmount}
-                      className="h-[38px] rounded-full border-[1.5px] border-teal-600 bg-white px-3.5 text-[13.5px] font-bold text-teal-700 hover:bg-teal-50"
-                    >
-                      Monto exacto
-                    </button>
+                    </div>
+
+
                   </div>
+
 
                   <div
                     className={`mt-4 flex items-center justify-between rounded-lg p-3.5 ${vueltoInsufficient ? "bg-red-50" : "bg-teal-50"}`}
                   >
                     <div
-                      className={`flex items-center gap-2 text-sm font-bold ${vueltoInsufficient ? "text-red-700" : "text-teal-800"}`}
+                      className={`flex items-center gap-2 text-sm font-bold mr-4 ${vueltoInsufficient ? "text-red-700" : "text-teal-800"}`}
                     >
                       {vueltoInsufficient && (
                         <AlertTriangle className="h-[17px] w-[17px]" />
@@ -832,18 +836,23 @@ export default function SalePageEnhanced() {
                       )}
                     </div>
                   </div>
+
+
                 </div>
+
+
+
               )}
 
               {(paymentMethod === "tarjeta" ||
                 paymentMethod === "transferencia") && (
-                <div className="flex items-center gap-2.5 rounded-lg bg-teal-50 p-3.5 text-sm font-medium text-teal-800">
-                  <CheckCircle2 className="h-[18px] w-[18px] shrink-0" />
-                  {paymentMethod === "tarjeta"
-                    ? "Confirma cuando el pago con tarjeta se acredite en el datáfono."
-                    : "Confirma cuando veas la transferencia (Nequi, Daviplata u otra) en tu cuenta."}
-                </div>
-              )}
+                  <div className="flex items-center gap-2.5 rounded-lg bg-teal-50 p-3.5 text-sm font-medium text-teal-800">
+                    <CheckCircle2 className="h-[18px] w-[18px] shrink-0" />
+                    {paymentMethod === "tarjeta"
+                      ? "Confirma cuando el pago con tarjeta se acredite en el datáfono."
+                      : "Confirma cuando veas la transferencia (Nequi, Daviplata u otra) en tu cuenta."}
+                  </div>
+                )}
 
               {paymentMethod === "fiado" && (
                 <div>
@@ -956,30 +965,45 @@ export default function SalePageEnhanced() {
                         })}
                       </div>
                     </div>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11.5px] font-bold text-slate-700">
-                        {METHOD_LABELS[sale.payment_method] || sale.payment_method}
-                      </span>
-                      {sale.client_name && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
-                          {sale.client_name}
+
+
+
+
+                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
+
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11.5px] font-bold text-slate-700">
+                          {METHOD_LABELS[sale.payment_method] || sale.payment_method}
                         </span>
-                      )}
+
+
+
+                        {sale.client_name && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
+                            {sale.client_name}
+                          </span>
+                        )}
+                      </div>
+
                       {sale.voided && (
                         <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11.5px] font-bold text-red-700">
                           Anulada
                         </span>
                       )}
+
+                      {!sale.voided && (
+                        <button
+                          type="button"
+                          onClick={() => requestVoid(sale.id)}
+                          className="mt-2 text-[12.5px] font-bold text-red-700 underline hover:text-red-800"
+                        >
+                          Anular venta
+                        </button>
+                      )}
                     </div>
-                    {!sale.voided && (
-                      <button
-                        type="button"
-                        onClick={() => requestVoid(sale.id)}
-                        className="mt-2 text-[12.5px] font-bold text-red-700 underline hover:text-red-800"
-                      >
-                        Anular venta
-                      </button>
-                    )}
+
+
+
                   </div>
                 ))
               )}
@@ -1115,11 +1139,10 @@ function PaymentMethodButton({ active, onClick, icon: Icon, label }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-12 items-center justify-center gap-2 rounded-lg border-[1.5px] px-2 text-sm font-bold transition-colors ${
-        active
-          ? "border-teal-600 bg-teal-600 text-white"
-          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-      }`}
+      className={`flex h-12 items-center justify-center gap-2 rounded-lg border-[1.5px] px-2 text-sm font-bold transition-colors ${active
+        ? "border-teal-600 bg-teal-600 text-white"
+        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        }`}
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
       {label}
