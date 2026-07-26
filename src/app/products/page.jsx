@@ -9,6 +9,7 @@ import {
   deleteProduct,
 } from "@/services/products.service";
 import { currency } from "@/utils/converts";
+import MoneyInput from "@/components/ui/MoneyInput";
 import {
   PlusCircle,
   Edit3,
@@ -1616,6 +1617,11 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
     setErrors((er) => (er[key] ? { ...er, [key]: undefined } : er));
   };
 
+  const setMoneyField = (key) => (val) => {
+    setForm((s) => ({ ...s, [key]: val }));
+    setErrors((er) => (er[key] ? { ...er, [key]: undefined } : er));
+  };
+
   const onPhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1680,13 +1686,9 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
     }`;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8">
       <form
         onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
         noValidate
         className="w-full max-w-lg animate-scale-in rounded-2xl bg-white shadow-2xl"
       >
@@ -1705,47 +1707,6 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
         </div>
 
         <div className="flex flex-col gap-4 p-5">
-          {/* Foto */}
-          <div className="flex items-start gap-4">
-            <div className="relative h-24 w-24 shrink-0">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100"
-              >
-                {photo ? (
-                  <img src={photo} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex flex-col items-center gap-1 text-slate-400">
-                    <ImagePlus className="h-5 w-5" />
-                    <span className="text-[10px] font-semibold">Foto</span>
-                  </span>
-                )}
-              </button>
-              {photo && (
-                <button
-                  type="button"
-                  onClick={() => setPhoto(null)}
-                  aria-label="Quitar foto"
-                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 hover:text-red-600"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={onPhotoChange}
-              className="hidden"
-            />
-            <p className="pt-1.5 text-xs text-slate-500">
-              Toca el recuadro para subir una foto. Ayuda a reconocer el
-              producto rápido en la lista y en Ventas.
-            </p>
-          </div>
-
           <label className="text-sm">
             <span className="font-semibold text-slate-700">
               Nombre <span className="text-red-500">*</span>
@@ -1820,12 +1781,9 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
               <span className="font-semibold text-slate-700">
                 Costo <span className="text-red-500">*</span>
               </span>
-              <input
-                type="number"
-                min="0"
+              <MoneyInput
                 value={form.cost_price}
-                onChange={setField("cost_price")}
-                placeholder="0"
+                onChange={setMoneyField("cost_price")}
                 aria-invalid={!!errors.cost_price}
                 aria-describedby={errors.cost_price ? "error-cost_price" : undefined}
                 className={fieldClass("cost_price")}
@@ -1841,12 +1799,9 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
               <span className="font-semibold text-slate-700">
                 Precio de venta <span className="text-red-500">*</span>
               </span>
-              <input
-                type="number"
-                min="0"
+              <MoneyInput
                 value={form.price}
-                onChange={setField("price")}
-                placeholder="0"
+                onChange={setMoneyField("price")}
                 aria-invalid={!!errors.price}
                 aria-describedby={errors.price ? "error-price" : undefined}
                 className={fieldClass("price")}
@@ -1888,6 +1843,60 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
               </p>
             )}
           </label>
+
+          <div>
+            <span className="text-sm font-semibold text-slate-700">Foto</span>
+            <div className="mt-1 flex items-center gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3.5">
+              <div className="relative h-20 w-20 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-blue-300 hover:bg-blue-50"
+                >
+                  {photo ? (
+                    <img src={photo} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex flex-col items-center gap-1 text-slate-400">
+                      <ImagePlus className="h-5 w-5" />
+                      <span className="text-[10px] font-semibold">Subir</span>
+                    </span>
+                  )}
+                </button>
+                {photo && (
+                  <button
+                    type="button"
+                    onClick={() => setPhoto(null)}
+                    aria-label="Quitar foto"
+                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 hover:text-red-600"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onPhotoChange}
+                className="hidden"
+              />
+              <div className="flex-1">
+                <p className="text-[13px] font-semibold text-slate-700">
+                  {photo ? "Foto cargada" : "Sube una foto del producto"}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Ayuda a reconocerlo rápido en la lista y en Ventas.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {photo ? "Cambiar foto" : "Elegir archivo"}
+                </button>
+              </div>
+            </div>
+          </div>
 
           <label className="text-sm">
             <span className="font-semibold text-slate-700">Descripción</span>

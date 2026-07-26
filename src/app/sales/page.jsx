@@ -10,6 +10,7 @@ import {
 } from "@/services/sales.service";
 import { currency, formatMoney } from "@/utils/converts";
 import DailyCloseMode from "@/components/sales/DailyCloseMode";
+import MoneyInput from "@/components/ui/MoneyInput";
 
 import {
   ShoppingCart,
@@ -155,10 +156,9 @@ export default function SalePageEnhanced() {
     return allProducts
       .filter(
         (p) =>
-          p.stock > 0 &&
-          (p.name.toLowerCase().includes(q) ||
-            (p.sku || "").toLowerCase().includes(q) ||
-            (p.barcode || "").toLowerCase().includes(q)),
+          p.name.toLowerCase().includes(q) ||
+          (p.sku || "").toLowerCase().includes(q) ||
+          (p.barcode || "").toLowerCase().includes(q),
       )
       .slice(0, 5);
   }, [searchQuery, allProducts]);
@@ -170,6 +170,10 @@ export default function SalePageEnhanced() {
   }, [lines]);
 
   const addLineFromProduct = (product) => {
+    if (!product.stock || product.stock <= 0) {
+      push("Sin stock disponible para agregar", "error");
+      return;
+    }
     setLines((prev) => {
       const existingIdx = prev.findIndex(
         (l) => l.productId === product.id && !l.discountType,
@@ -558,24 +562,40 @@ export default function SalePageEnhanced() {
                   {suggestions.map((p, i) => {
                     const active =
                       i === (suggestionIndex >= 0 ? suggestionIndex : 0);
+                    const outOfStock = !p.stock || p.stock <= 0;
                     return (
                       <button
                         key={p.id}
                         type="button"
                         role="option"
                         aria-selected={active}
+                        aria-disabled={outOfStock}
+                        disabled={outOfStock}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           addLineFromProduct(p);
                         }}
-                        className={`flex w-full items-center justify-between gap-2.5 border-b border-slate-100 px-3.5 py-2.5 text-left last:border-0 ${active ? "bg-teal-50" : "bg-white hover:bg-slate-50"}`}
+                        className={`flex w-full items-center justify-between gap-2.5 border-b border-slate-100 px-3.5 py-2.5 text-left last:border-0 ${
+                          outOfStock
+                            ? "cursor-not-allowed bg-white opacity-50"
+                            : active
+                              ? "bg-teal-50"
+                              : "bg-white hover:bg-slate-50"
+                        }`}
                       >
                         <div className="min-w-0">
                           <div className="truncate text-[14.5px] font-bold text-slate-900">
                             {p.name}
                           </div>
                           <div className="truncate text-xs text-slate-400">
-                            SKU {p.sku} · {p.stock} disp.
+                            SKU {p.sku} ·{" "}
+                            {outOfStock ? (
+                              <span className="font-bold text-red-500">
+                                Sin stock
+                              </span>
+                            ) : (
+                              `${p.stock} disp.`
+                            )}
                           </div>
                         </div>
                         <div className="shrink-0 whitespace-nowrap text-[14.5px] font-bold tabular-nums text-teal-700">
@@ -800,17 +820,13 @@ export default function SalePageEnhanced() {
                     <label className="mb-1.5 block text-sm font-bold text-slate-900">
                       Monto recibido <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={receivedAmount ? formatMoney(Number(receivedAmount)) : ""}
-                      onChange={(e) => {
-                        const numeric = String(e.target.value).replace(/[^\d]/g, "");
+                    <MoneyInput
+                      value={receivedAmount}
+                      onChange={(numeric) => {
                         setReceivedAmount(numeric);
                         if (saleErrors.monto)
                           setSaleErrors((er) => ({ ...er, monto: undefined }));
                       }}
-                      placeholder="0"
                       aria-invalid={!!saleErrors.monto}
                       className={`h-12 w-full max-w-[220px] rounded-lg border px-3.5 text-lg font-bold tabular-nums outline-none focus:ring-2 ${saleErrors.monto ? "border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-teal-500 focus:ring-teal-100"}`}
                     />

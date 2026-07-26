@@ -2,983 +2,664 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import "tailwindcss/tailwind.css";
-import Swal from "sweetalert2";
-import "sweetalert2/dist/sweetalert2.min.css";
-import { getProducts } from "@/services/products.service";
+import Link from "next/link";
+import { getDailyCloses } from "@/services/dailyCloses.service";
 import { getSales } from "@/services/sales.service";
-import { getOrders } from "@/services/orders.service";
+import { currency } from "@/utils/converts";
 
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Filler,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend,
-} from "chart.js";
-import { Bar, Line, Doughnut } from "react-chartjs-2";
-
-import { CircularProgressbar } from "react-circular-progressbar";
-import "react-circular-progressbar/dist/styles.css";
-
-import {
-  BarChart2,
-  PieChart,
-  TrendingUp,
-  DollarSign,
-  Rows4,
-  Activity,
-  Zap,
+  Download,
+  Printer,
+  Search,
+  AlertTriangle,
+  Info,
+  UserRound,
+  Hourglass,
+  Loader2,
 } from "lucide-react";
 
-/* register ChartJS components */
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Filler,
-  Title,
-  ChartTooltip,
-  Legend,
-);
-
 /*
-  ReportsPage.jsx
-  - Usa servicios: getSales(), getProducts(), getOrders()
-  - UI/UX consistent with previous pages: cards, clear microcopy, icons
-  - Notes: some calculations assume products array contains { id, name, price, stock, category }
+  ReportsPage
+  - Implementación del diseño "Reportes.dc.html" del proyecto de Claude Design
+    "ERP para tiendas y supermercados", portado a Tailwind y montado sobre el
+    shell de la app (sidebar + TopBar) en vez de la barra superior del mockup.
+  - El mockup corría sobre datos generados: 12 productos con ritmo sintético,
+    120 días de ventas hechas con un LCG, 3 fiados y porcentajes de medios de
+    pago escritos a mano. Aquí todo sale de los cierres diarios reales, y los
+    bloques que necesitan información por transacción —que el Excel nunca
+    guardó— muestran un estado de espera en vez de cifras inventadas. Se llenan
+    solos apenas se registren ventas una por una desde /sales.
+  - La gráfica es de barras en CSS, igual que el diseño: no necesita Chart.js.
 */
 
-export default function ReportsPage() {
-  const [sales, setSales] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [orders, setOrders] = useState([]);
+const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MONTH_LONG = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const DAY_SHORT = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+const DAY_LONG = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
-  // fetch data
+const RANGE_PRESETS = [
+  { key: "hoy", label: "Hoy", days: 1 },
+  { key: "7", label: "Últimos 7 días", days: 7 },
+  { key: "30", label: "Últimos 30 días", days: 30 },
+  { key: "mes", label: "Este mes", days: null },
+  { key: "custom", label: "Elegir fechas", days: null },
+];
+
+const parseISO = (s) => {
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+const iso = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const dayDiff = (a, b) => Math.round((a - b) / 86400000);
+
+const formatShort = (n) => {
+  const v = Math.abs(n);
+  if (v >= 1000000) return `$${(n / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (v >= 1000) return `$${Math.round(n / 1000)}k`;
+  return `$${Math.round(n)}`;
+};
+
+const aggregate = (rows) =>
+  rows.reduce(
+    (a, c) => ({
+      ventas: a.ventas + c.sales_total,
+      ganancia: a.ganancia + c.gain,
+      gasto: a.gasto + c.expenses_total,
+      compra: a.compra + c.purchases_total,
+    }),
+    { ventas: 0, ganancia: 0, gasto: 0, compra: 0 },
+  );
+
+export default function ReportsPage() {
+  const [closes, setCloses] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [rangeKey, setRangeKey] = useState("7");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [metric, setMetric] = useState("ventas");
+  const [selectedBarKey, setSelectedBarKey] = useState(null);
+  const [productSearch, setProductSearch] = useState("");
+
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
+    let alive = true;
+    (async () => {
       try {
-        const [sRes, pRes, oRes] = await Promise.all([
-          getSales(),
-          getProducts(),
-          getOrders(),
-        ]);
-        if (!mounted) return;
-        setSales(Array.isArray(sRes) ? sRes : []);
-        setProducts(Array.isArray(pRes) ? pRes : []);
-        setOrders(Array.isArray(oRes) ? oRes : []);
-      } catch (err) {
-        console.error("Error cargando datos:", err);
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: "No se pudieron cargar algunos datos.",
-        });
+        const [c, s] = await Promise.all([getDailyCloses(), getSales()]);
+        if (!alive) return;
+        setCloses([...c]);
+        setSales([...s]);
+        // El rango personalizado arranca en las dos últimas semanas con datos.
+        if (c.length) {
+          setCustomTo(c[0].date);
+          setCustomFrom(iso(addDays(parseISO(c[0].date), -13)));
+        }
       } finally {
-        console.log("final");
+        if (alive) setLoading(false);
       }
+    })();
+    return () => {
+      alive = false;
     };
-    load();
-    return () => (mounted = false);
   }, []);
 
-  // Helpers
-  const currency = (n) =>
-    typeof n === "number"
-      ? n.toLocaleString("es-CO", {
-          style: "currency",
-          currency: "COP",
-          minimumFractionDigits: 0,
-        })
-      : "-";
+  // Los períodos se anclan al último día con datos, no a la fecha del sistema:
+  // la contabilidad importada llega hasta diciembre de 2025 y, si se contara
+  // desde hoy, todos los rangos saldrían vacíos. Cuando ese día no es hoy, la
+  // página lo advierte arriba.
+  const refDate = useMemo(
+    () => (closes.length ? parseISO(closes[0].date) : new Date()),
+    [closes],
+  );
+  const isStale = useMemo(() => iso(refDate) !== iso(new Date()), [refDate]);
 
-  // Map product name/id to product object quickly
-  const productById = useMemo(() => {
-    const map = new Map();
-    products.forEach((p) => {
-      if (p.id != null) map.set(String(p.id), p);
-      if (p.name) map.set(String(p.name).toLowerCase(), p);
-    });
-    return map;
-  }, [products]);
-
-  // 1) Sales by category
-  const salesByCategory = useMemo(() => {
-    // For each sale, for each sold product entry attempt to map to product and take its category.
-    // sale.products expected: [{ product_id?, product?, quantity, sale_price }]
-    const map = {};
-    sales.forEach((sale) => {
-      (sale.products || []).forEach((it) => {
-        // try id then name
-        let cat = "Sin categoría";
-        if (it.product_id != null && productById.has(String(it.product_id))) {
-          cat = productById.get(String(it.product_id)).category || cat;
-        } else if (
-          it.product &&
-          productById.has(String(it.product).toLowerCase())
-        ) {
-          cat =
-            productById.get(String(it.product).toLowerCase()).category || cat;
-        }
-        // contribution approximated by sale_price * quantity
-        const revenue =
-          (Number(it.sale_price) || 0) * (Number(it.quantity) || 0);
-        map[cat] = (map[cat] || 0) + revenue;
-      });
-    });
-    // return array sorted desc
-    return Object.entries(map)
-      .map(([category, value]) => ({ category, value }))
-      .sort((a, b) => b.value - a.value);
-  }, [sales, productById]);
-
-  // 2) Inventory turnover ratio (COGS / Avg inventory value)
-  const inventoryMetrics = useMemo(() => {
-    // COGS approximate = sum(sale.total_amount - sale.gain)
-    const cogs = sales.reduce(
-      (acc, s) => acc + (Number(s.total_amount || 0) - Number(s.gain || 0)),
-      0,
-    );
-    // inventory value = sum(product.stock * product.price)
-    const inventoryValue = products.reduce(
-      (acc, p) => acc + Number(p.stock || 0) * Number(p.price || 0),
-      0,
-    );
-    const ratio = inventoryValue > 0 ? cogs / inventoryValue : null;
-    return { cogs, inventoryValue, ratio };
-  }, [sales, products]);
-
-  // 3) ATV (average transaction value)
-  const atv = useMemo(() => {
-    const total = sales.reduce(
-      (acc, s) => acc + Number(s.total_amount || 0),
-      0,
-    );
-    const count = sales.length || 1;
-    return total / count;
-  }, [sales]);
-
-  // 4) Slow-moving products (bottom 5 by sold quantity)
-  const slowMoving = useMemo(() => {
-    const sold = {};
-    sales.forEach((s) => {
-      (s.products || []).forEach((p) => {
-        const key =
-          p.product_id != null
-            ? String(p.product_id)
-            : (p.product || "").toLowerCase();
-        const name =
-          p.product ||
-          (productById.get(key) && productById.get(key).name) ||
-          "Desconocido";
-        sold[key] = sold[key] || { id: key, name, qty: 0 };
-        sold[key].qty += Number(p.quantity || 0);
-      });
-    });
-    // include products with zero sales
-    products.forEach((pr) => {
-      const key = pr.id != null ? String(pr.id) : (pr.name || "").toLowerCase();
-      if (!sold[key])
-        sold[key] = { id: key, name: pr.name, qty: 0, stock: pr.stock || 0 };
-    });
-    const arr = Object.values(sold).map((x) => ({
-      ...x,
-      stock: (productById.get(String(x.id)) || {}).stock || x.stock || 0,
-    }));
-    return arr.sort((a, b) => a.qty - b.qty).slice(0, 8); // bottom 8
-  }, [sales, products, productById]);
-
-  // 5) Order fulfillment rate (completed vs total)
-  const orderFulfillment = useMemo(() => {
-    if (!orders.length) return { completed: 0, pending: 0, rate: 0 };
-    // we assume orders may have status: 'completed' | 'pending' or boolean completed
-    const completed = orders.filter(
-      (o) => o.status === "completed" || o.completed === true,
-    ).length;
-    const pending = orders.length - completed;
-    const rate = orders.length ? (completed / orders.length) * 100 : 0;
-    return { completed, pending, rate: Number(rate.toFixed(2)) };
-  }, [orders]);
-
-  // 6) Sales Growth Rate: compare last 7 days vs previous 7 days
-  const salesGrowth = useMemo(() => {
-    if (!sales.length) return { rate: 0, current: 0, previous: 0 };
-    const now = new Date();
-    const endCurrent = new Date(now);
-    const startCurrent = new Date(now);
-    startCurrent.setDate(startCurrent.getDate() - 7);
-    const startPrev = new Date(startCurrent);
-    startPrev.setDate(startPrev.getDate() - 7);
-    const endPrev = new Date(startCurrent);
-    // helper
-    const sumBetween = (start, end) =>
-      sales.reduce((acc, s) => {
-        const d = new Date(s.sale_date || s.order_date || Date.now());
-        if (d >= start && d < end) return acc + Number(s.total_amount || 0);
-        return acc;
-      }, 0);
-    const currentSum = sumBetween(startCurrent, endCurrent);
-    const prevSum = sumBetween(startPrev, endPrev);
-    const rate =
-      prevSum > 0
-        ? ((currentSum - prevSum) / prevSum) * 100
-        : currentSum > 0
-          ? 100
-          : 0;
-    return {
-      rate: Number(rate.toFixed(2)),
-      current: currentSum,
-      previous: prevSum,
-    };
-  }, [sales]);
-
-  // 7) Margin by category / product (gain/total_amount)
-  const marginByCategory = useMemo(() => {
-    const map = {};
-    sales.forEach((s) => {
-      (s.products || []).forEach((it) => {
-        // find category
-        let cat = "Sin categoría";
-        if (it.product_id != null && productById.has(String(it.product_id)))
-          cat = productById.get(String(it.product_id)).category || cat;
-        else if (
-          it.product &&
-          productById.has(String(it.product).toLowerCase())
-        )
-          cat =
-            productById.get(String(it.product).toLowerCase()).category || cat;
-        // distribute gain proportionally by revenue of product within sale
-        const revenue =
-          (Number(it.sale_price) || 0) * (Number(it.quantity) || 0);
-        const saleGain = Number(s.gain || 0);
-        const saleRevenue = Number(s.total_amount || 0);
-        const allocatedGain =
-          saleRevenue > 0 ? (revenue / saleRevenue) * saleGain : 0;
-        map[cat] = map[cat] || { gain: 0, revenue: 0 };
-        map[cat].gain += allocatedGain;
-        map[cat].revenue += revenue;
-      });
-    });
-    return Object.entries(map)
-      .map(([category, v]) => ({
-        category,
-        marginPct: v.revenue > 0 ? (v.gain / v.revenue) * 100 : 0,
-        gain: v.gain,
-        revenue: v.revenue,
-      }))
-      .sort((a, b) => b.marginPct - a.marginPct);
-  }, [sales, productById]);
-
-  const marginByProduct = useMemo(() => {
-    const map = {};
-    sales.forEach((s) => {
-      (s.products || []).forEach((it) => {
-        const key =
-          it.product_id != null
-            ? String(it.product_id)
-            : (it.product || "").toLowerCase();
-        const name =
-          it.product ||
-          (productById.get(String(it.product_id)) || {}).name ||
-          "Desconocido";
-        const revenue =
-          (Number(it.sale_price) || 0) * (Number(it.quantity) || 0);
-        const saleGain = Number(s.gain || 0);
-        const saleRevenue = Number(s.total_amount || 0);
-        const allocatedGain =
-          saleRevenue > 0 ? (revenue / saleRevenue) * saleGain : 0;
-        map[key] = map[key] || { id: key, name, gain: 0, revenue: 0 };
-        map[key].gain += allocatedGain;
-        map[key].revenue += revenue;
-      });
-    });
-    return Object.values(map)
-      .map((p) => ({
-        ...p,
-        marginPct: p.revenue > 0 ? (p.gain / p.revenue) * 100 : 0,
-      }))
-      .sort((a, b) => b.gain - a.gain);
-  }, [sales, productById]);
-
-  // 8) Stock by category and days of stock remaining (stock / avg daily sales)
-  const stockByCategory = useMemo(() => {
-    // sum stock per category
-    const stockMap = {};
-    products.forEach((p) => {
-      const cat = p.category || "Sin categoría";
-      stockMap[cat] = stockMap[cat] || { stock: 0, value: 0 };
-      stockMap[cat].stock += Number(p.stock || 0);
-      stockMap[cat].value += Number(p.stock || 0) * Number(p.price || 0);
-    });
-    // compute avg daily sales per category (last 30 days)
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    const start = now - 30 * dayMs;
-    const dailySalesByCategory = {};
-    sales.forEach((s) => {
-      const d = new Date(s.sale_date || s.order_date || Date.now()).getTime();
-      if (d < start) return; // only last 30 days
-      (s.products || []).forEach((it) => {
-        let cat = "Sin categoría";
-        if (it.product_id != null && productById.has(String(it.product_id)))
-          cat = productById.get(String(it.product_id)).category || cat;
-        else if (
-          it.product &&
-          productById.has(String(it.product).toLowerCase())
-        )
-          cat =
-            productById.get(String(it.product).toLowerCase()).category || cat;
-        dailySalesByCategory[cat] = dailySalesByCategory[cat] || 0;
-        dailySalesByCategory[cat] += Number(it.quantity || 0);
-      });
-    });
-    // avg per day = sum / 30
-    const res = Object.entries(stockMap)
-      .map(([category, v]) => {
-        const avgDaily = (dailySalesByCategory[category] || 0) / 30;
-        const daysLeft = avgDaily > 0 ? v.stock / avgDaily : Infinity;
-        return {
-          category,
-          stock: v.stock,
-          value: v.value,
-          avgDaily: Number(avgDaily.toFixed(2)),
-          daysLeft: Number(isFinite(daysLeft) ? daysLeft.toFixed(1) : -1),
-        };
-      })
-      .sort((a, b) => b.stock - a.stock);
-    return res;
-  }, [products, sales, productById]);
-
-  // 9) Purchases vs Sales timeline (weekly totals last 12 weeks)
-  const purchasesVsSalesSeries = useMemo(() => {
-    // generate 12 weekly buckets ending today
-    const buckets = [];
-    const today = new Date();
-    // start Monday of 12 weeks ago
-    const msWeek = 7 * 24 * 60 * 60 * 1000;
-    for (let i = 11; i >= 0; i--) {
-      const end = new Date(today.getTime() - i * msWeek);
-      const label = `${end.toLocaleDateString()}`;
-      buckets.push({
-        label,
-        start: end.getTime() - msWeek,
-        end: end.getTime(),
-        sales: 0,
-        purchases: 0,
-      });
+  const { from, to, rangeError } = useMemo(() => {
+    if (rangeKey === "mes") {
+      return {
+        from: new Date(refDate.getFullYear(), refDate.getMonth(), 1),
+        to: refDate,
+        rangeError: null,
+      };
     }
-    // sum sales
-    sales.forEach((s) => {
-      const t = new Date(s.sale_date || Date.now()).getTime();
-      const b = buckets.find((bk) => t >= bk.start && t < bk.end);
-      if (b) b.sales += Number(s.total_amount || 0);
-    });
-    orders.forEach((o) => {
-      const t = new Date(o.order_date || Date.now()).getTime();
-      const b = buckets.find((bk) => t >= bk.start && t < bk.end);
-      if (b) b.purchases += Number(o.total_amount || 0);
-    });
-    return buckets;
-  }, [sales, orders]);
-
-  // 10) Sales forecast - simple moving average of last 14 days, project next 7 days
-  const salesForecast = useMemo(() => {
-    // aggregate daily totals
-    const dayMap = {};
-    sales.forEach((s) => {
-      const d = new Date(s.sale_date || Date.now());
-      const key = d.toISOString().slice(0, 10);
-      dayMap[key] = (dayMap[key] || 0) + Number(s.total_amount || 0);
-    });
-    const days = Object.keys(dayMap).sort();
-    // moving average window 7
-    const windowSize = 7;
-    const series = days.map((day, idx) => {
-      const windowDays = days.slice(Math.max(0, idx - windowSize + 1), idx + 1);
-      const avg =
-        windowDays.reduce((acc, w) => acc + dayMap[w], 0) / windowDays.length;
-      return { day, value: dayMap[day], ma: avg };
-    });
-    // project next 7 days using last MA
-    const lastMA = series.length ? series[series.length - 1].ma : 0;
-    const forecast = [];
-    for (let i = 1; i <= 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      forecast.push({ day: d.toISOString().slice(0, 10), forecast: lastMA });
-    }
-    return { series, forecast };
-  }, [sales]);
-
-  // 11) Top 5 most profitable products (by gain)
-  const topProfitProducts = useMemo(() => {
-    return marginByProduct.slice(0, 5);
-  }, [marginByProduct]);
-
-  // Chart datasets
-  const salesByCategoryBar = useMemo(() => {
-    const labels = salesByCategory.map((s) => s.category);
-    const data = salesByCategory.map((s) => s.value);
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Ventas (COP)",
-          data,
-          backgroundColor: "rgba(59,130,246,0.7)",
-        },
-      ],
-    };
-  }, [salesByCategory]);
-
-  const purchasesSalesLine = useMemo(() => {
-    const labels = purchasesVsSalesSeries.map((b) => b.label);
-    const salesData = purchasesVsSalesSeries.map((b) => b.sales);
-    const purchasesData = purchasesVsSalesSeries.map((b) => b.purchases);
-    return {
-      labels,
-      datasets: [
-        {
-          label: "Ventas",
-          data: salesData,
-          borderColor: "#0ea5e9",
-          tension: 0.3,
-          fill: false,
-        },
-        {
-          label: "Compras",
-          data: purchasesData,
-          borderColor: "#7c3aed",
-          tension: 0.3,
-          fill: false,
-        },
-      ],
-    };
-  }, [purchasesVsSalesSeries]);
-
-  const atvSeries = useMemo(() => {
-    // group by day for last 14 days
-    const map = {};
-    const now = new Date();
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      map[key] = { total: 0, count: 0 };
-    }
-    sales.forEach((s) => {
-      const key = new Date(s.sale_date || Date.now())
-        .toISOString()
-        .slice(0, 10);
-      if (map[key]) {
-        map[key].total += Number(s.total_amount || 0);
-        map[key].count += 1;
+    if (rangeKey === "custom") {
+      if (!customFrom || !customTo) return { from: refDate, to: refDate, rangeError: null };
+      const f = parseISO(customFrom);
+      const t = parseISO(customTo);
+      if (f > t) {
+        return { from: t, to: t, rangeError: 'La fecha "Desde" debe ser anterior a "Hasta".' };
       }
+      return { from: f, to: t, rangeError: null };
+    }
+    const preset = RANGE_PRESETS.find((r) => r.key === rangeKey);
+    const n = preset?.days ?? 7;
+    return { from: addDays(refDate, -(n - 1)), to: refDate, rangeError: null };
+  }, [rangeKey, customFrom, customTo, refDate]);
+
+  const inRange = useMemo(() => {
+    const f = iso(from);
+    const t = iso(to);
+    return closes
+      .filter((c) => c.date >= f && c.date <= t)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [closes, from, to]);
+
+  const prevInRange = useMemo(() => {
+    const span = Math.max(1, dayDiff(to, from) + 1);
+    const pTo = addDays(from, -1);
+    const pFrom = addDays(pTo, -(span - 1));
+    const f = iso(pFrom);
+    const t = iso(pTo);
+    return closes.filter((c) => c.date >= f && c.date <= t);
+  }, [closes, from, to]);
+
+  const cur = useMemo(() => aggregate(inRange), [inRange]);
+  const prev = useMemo(() => aggregate(prevInRange), [prevInRange]);
+
+  const span = Math.max(1, dayDiff(to, from) + 1);
+  const fmtD = (d) => `${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+  const rangeDescription =
+    span === 1
+      ? `${DAY_LONG[to.getDay()]}, ${to.getDate()} de ${MONTH_LONG[to.getMonth()]} de ${to.getFullYear()}`
+      : `Del ${fmtD(from)} al ${fmtD(to)} · ${span} días`;
+
+  const delta = (a, b) => {
+    if (b === 0) return a === 0 ? { label: "Sin cambio", dir: "flat" } : { label: "Nuevo", dir: "up" };
+    const pct = Math.round(((a - b) / b) * 100);
+    if (pct === 0) return { label: "Igual que antes", dir: "flat" };
+    return { label: `${pct > 0 ? "+" : ""}${pct}% vs. período anterior`, dir: pct > 0 ? "up" : "down" };
+  };
+
+  const margenPct = cur.ventas > 0 ? Math.round((cur.ganancia / cur.ventas) * 100) : 0;
+  const prevMargen = prev.ventas > 0 ? Math.round((prev.ganancia / prev.ventas) * 100) : 0;
+
+  const kpis = [
+    { label: "Vendiste", value: currency(cur.ventas), valueClass: "text-slate-900", d: delta(cur.ventas, prev.ventas) },
+    { label: "Ganaste", value: currency(cur.ganancia), valueClass: "text-emerald-600", d: delta(cur.ganancia, prev.ganancia) },
+    { label: "Gastaste", value: currency(cur.gasto), valueClass: "text-rose-600", d: delta(cur.gasto, prev.gasto) },
+    { label: "De cada $100 que vendes, ganas", value: `$${margenPct}`, valueClass: "text-slate-900", d: delta(margenPct, prevMargen) },
+  ];
+
+  // Barras por día; cuando el rango pasa de un mes se agrupan por semana.
+  const buckets = useMemo(() => {
+    if (inRange.length === 0) return [];
+    if (inRange.length > 31) {
+      const out = [];
+      for (let i = 0; i < inRange.length; i += 7) {
+        const chunk = inRange.slice(i, i + 7);
+        const first = parseISO(chunk[0].date);
+        const last = parseISO(chunk[chunk.length - 1].date);
+        out.push({
+          key: `w${i}`,
+          label: `${first.getDate()}-${last.getDate()} ${MONTH_SHORT[last.getMonth()]}`,
+          longLabel: `Semana del ${first.getDate()} al ${last.getDate()} de ${MONTH_LONG[last.getMonth()]}`,
+          ...aggregate(chunk),
+        });
+      }
+      return out;
+    }
+    return inRange.map((c) => {
+      const d = parseISO(c.date);
+      return {
+        key: c.date,
+        label: inRange.length > 14 ? String(d.getDate()) : DAY_SHORT[d.getDay()],
+        longLabel: `${DAY_LONG[d.getDay()]} ${d.getDate()} de ${MONTH_LONG[d.getMonth()]}`,
+        ventas: c.sales_total,
+        ganancia: c.gain,
+        gasto: c.expenses_total,
+        compra: c.purchases_total,
+      };
     });
-    const labels = Object.keys(map);
-    const values = labels.map((k) =>
-      map[k].count ? map[k].total / map[k].count : 0,
+  }, [inRange]);
+
+  const maxBucket = Math.max(1, ...buckets.map((b) => b[metric]));
+  const lastKey = buckets.length ? buckets[buckets.length - 1].key : null;
+  const selBucket = buckets.find((b) => b.key === selectedBarKey) ?? null;
+  const barMinWidth = buckets.length > 20 ? 22 : buckets.length > 10 ? 34 : 44;
+  const barGap = buckets.length > 20 ? "gap-1" : "gap-2.5";
+
+  const fiadoPendiente = useMemo(
+    () => sales.filter((s) => s.payment_method === "fiado" && !s.voided),
+    [sales],
+  );
+
+  const exportCsv = () => {
+    const head = "fecha,venta,ganancia,gasto,compra,entrada_caja,salida_caja";
+    const body = inRange
+      .map((c) =>
+        [
+          c.date,
+          c.sales_total,
+          c.gain,
+          c.expenses_total,
+          c.purchases_total,
+          c.cash_in ?? "",
+          c.cash_out ?? "",
+        ].join(","),
+      )
+      .join("\n");
+    const blob = new Blob([`${head}\n${body}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reporte_${iso(from)}_${iso(to)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Cargando reportes…
+      </div>
     );
-    return { labels, values };
-  }, [sales]);
+  }
 
-  /* small utility to show "n/a" properly
-  const safePct = (v) =>
-    v == null || Number.isNaN(v) ? "N/A" : `${(Number(v) * 100).toFixed(1)}%`;
-  */
-
-  // Render
   return (
-    <div className="min-h-screen bg-gradient-to-r from-slate-50 to-slate-100 p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-800">
-              Reportes y métricas
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Panel de análisis — decisiones claras para la tienda
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                Swal.fire({
-                  title: "Exportar",
-                  text: "Exportar este dashboard (PDF/CSV) en próximas iteraciones.",
-                  icon: "info",
-                });
-              }}
-              className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-            >
-              <DownloadIcon /> Exportar
-            </button>
-            <button
-              onClick={() => {
-                Swal.fire({
-                  title: "Ayuda rápida",
-                  html: "Lee: 1) Ventas por categoría para priorizar estantes. 2) Rotación para no inmovilizar capital.",
-                  icon: "info",
-                });
-              }}
-              className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm text-white"
-            >
-              <TrendingUp className="h-4 w-4" /> Ayuda
-            </button>
-          </div>
+    <div className="flex flex-col gap-4 pb-16">
+      {/* Encabezado */}
+      <div className="flex flex-wrap items-start justify-between gap-3.5">
+        <div>
+          <h1 className="text-[26px] font-extrabold text-slate-900">Reportes</h1>
+          <p className="mt-1 text-[15px] text-slate-500">{rangeDescription}</p>
         </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
-            <div className="rounded-md bg-blue-50 p-2 text-blue-600">
-              <DollarSign className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Ingresos totales</div>
-              <div className="text-xl font-bold text-slate-800">
-                {currency(
-                  sales.reduce((a, s) => a + Number(s.total_amount || 0), 0),
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
-            <div className="rounded-md bg-red-50 p-2 text-rose-600">
-              <Rows4 className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Costos (COGS)</div>
-              <div className="text-xl font-bold text-slate-800">
-                {currency(inventoryMetrics.cogs)}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
-            <div className="rounded-md bg-green-50 p-2 text-emerald-600">
-              <Zap className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Ganancia bruta</div>
-              <div className="text-xl font-bold text-slate-800">
-                {currency(sales.reduce((a, s) => a + Number(s.gain || 0), 0))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
-            <div className="rounded-md bg-indigo-50 p-2 text-indigo-600">
-              <Activity className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">ATV (valor medio)</div>
-              <div className="text-xl font-bold text-slate-800">
-                {currency(atv)}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow-sm">
-            <div className="w-20">
-              <CircularProgressbar
-                value={
-                  inventoryMetrics.ratio
-                    ? Math.min(inventoryMetrics.ratio * 10, 100)
-                    : 0
-                }
-                text={
-                  inventoryMetrics.ratio
-                    ? inventoryMetrics.ratio.toFixed(2)
-                    : "N/A"
-                }
-                styles={{
-                  path: { stroke: "#6366F1" },
-                  text: { fill: "#6366F1", fontSize: "14px" },
-                }}
-              />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">
-                Rotación inventario (ratio)
-              </div>
-              <div className="text-xl font-bold text-slate-800">
-                {inventoryMetrics.ratio
-                  ? inventoryMetrics.ratio.toFixed(2)
-                  : "N/A"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Row: Sales by Category (bar) + Order Fulfillment donut */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-white p-6 shadow-sm lg:col-span-2">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-md bg-blue-50 p-2 text-blue-600">
-                  <BarChart2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-800">
-                    Ventas por categoría
-                  </h3>
-                  <div className="text-xs text-slate-500">
-                    ¿Qué categorías generan más ingresos?
-                  </div>
-                </div>
-              </div>
-              <div className="text-sm text-slate-500">Último período</div>
-            </div>
-
-            {salesByCategory.length ? (
-              <Bar
-                data={salesByCategoryBar}
-                options={{
-                  indexAxis: "y",
-                  responsive: true,
-                  plugins: { legend: { display: false } },
-                }}
-              />
-            ) : (
-              <div className="py-12 text-center text-slate-500">
-                No hay datos para mostrar
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-md bg-indigo-50 p-2 text-indigo-600">
-                  <PieChart className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-800">
-                    Tasa cumplimiento de pedidos
-                  </h3>
-                  <div className="text-xs text-slate-500">
-                    Completados vs. pendientes
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center">
-              <div style={{ width: 180, height: 180 }}>
-                <Doughnut
-                  data={{
-                    labels: ["Completados", "Pendientes"],
-                    datasets: [
-                      {
-                        data: [
-                          orderFulfillment.completed,
-                          orderFulfillment.pending,
-                        ],
-                        backgroundColor: ["#10B981", "#F97316"],
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: { legend: { position: "bottom" } },
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <div className="text-sm text-slate-500">
-                Tasa:{" "}
-                <span className="font-semibold text-slate-800">
-                  {orderFulfillment.rate}%
-                </span>
-              </div>
-              <div className="mt-1 text-xs text-slate-400">
-                Completados: {orderFulfillment.completed} • Pendientes:{" "}
-                {orderFulfillment.pending}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Row: ATV trend + Purchases vs Sales dual-line */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="text-md mb-2 font-semibold text-slate-800">
-              Valor promedio por transacción (ATV)
-            </h4>
-            <Line
-              data={{
-                labels: atvSeries.labels,
-                datasets: [
-                  {
-                    label: "ATV",
-                    data: atvSeries.values,
-                    borderColor: "#06B6D4",
-                    backgroundColor: "rgba(6,182,212,0.1)",
-                    fill: true,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                plugins: { legend: { display: false } },
-              }}
-            />
-            <div className="mt-3 text-xs text-slate-500">
-              Promedio global:{" "}
-              <span className="font-medium text-slate-800">
-                {currency(atv)}
-              </span>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm lg:col-span-2">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-lg font-semibold text-slate-800">
-                Compras vs Ventas (últimas 12 semanas)
-              </div>
-              <div className="text-xs text-slate-500">Suma semanal</div>
-            </div>
-            <Line
-              data={purchasesSalesLine}
-              options={{
-                responsive: true,
-                plugins: { legend: { position: "top" } },
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Row: slow-moving + margins + stock by category */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="mb-3 text-lg font-semibold text-slate-800">
-              Productos de baja rotación
-            </h4>
-            {slowMoving.length ? (
-              <ul className="space-y-3">
-                {slowMoving.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-slate-800">
-                        {p.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Vendidos: {p.qty} • Stock: {p.stock ?? "—"}
-                      </div>
-                    </div>
-                    <div className="w-40">
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          style={{
-                            width: `${Math.min(100, (p.qty / 10) * 100)}%`,
-                          }}
-                          className="h-2 bg-rose-400"
-                        />
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-slate-500">No hay datos</div>
-            )}
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="mb-3 text-lg font-semibold text-slate-800">
-              Margen por categoría
-            </h4>
-            {marginByCategory.length ? (
-              <div className="space-y-3">
-                {marginByCategory.slice(0, 6).map((m) => (
-                  <div
-                    key={m.category}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="text-sm text-slate-800">{m.category}</div>
-                    <div
-                      className="text-sm font-semibold"
-                      style={{
-                        color: m.marginPct >= 0 ? "#059669" : "#DC2626",
-                      }}
-                    >
-                      {m.marginPct.toFixed(1)}%
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-slate-500">No hay datos</div>
-            )}
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="mb-3 text-lg font-semibold text-slate-800">
-              Stock por categoría
-            </h4>
-            {stockByCategory.length ? (
-              <div className="space-y-3">
-                {stockByCategory.slice(0, 6).map((c) => (
-                  <div
-                    key={c.category}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="text-sm text-slate-800">{c.category}</div>
-                    <div className="text-sm text-slate-500">
-                      {c.stock} uds • {c.avgDaily}/día •{" "}
-                      {c.daysLeft === -1 ? "∞" : `${c.daysLeft} días`}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-slate-500">No hay datos</div>
-            )}
-          </div>
-        </div>
-
-        {/* Row: Sales growth, forecast, top profitable */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="mb-2 text-lg font-semibold text-slate-800">
-              Crecimiento de ventas (últimos 7 días)
-            </h4>
-            <div className="text-3xl font-bold text-slate-800">
-              {salesGrowth.rate}%
-            </div>
-            <div className="mt-1 text-xs text-slate-500">
-              Actual: {currency(salesGrowth.current)} • Anterior:{" "}
-              {currency(salesGrowth.previous)}
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="mb-3 text-lg font-semibold text-slate-800">
-              Pronóstico básico (7 días)
-            </h4>
-            {salesForecast.series.length ? (
-              <Line
-                data={{
-                  labels: [
-                    ...salesForecast.series.map((s) => s.day),
-                    ...salesForecast.forecast.map((f) => f.day),
-                  ],
-                  datasets: [
-                    {
-                      label: "Histórico",
-                      data: salesForecast.series.map((s) => s.value),
-                      borderColor: "#06B6D4",
-                      tension: 0.3,
-                    },
-                    {
-                      label: "Pronóstico",
-                      data: Array(salesForecast.series.length)
-                        .fill(null)
-                        .concat(salesForecast.forecast.map((f) => f.forecast)),
-                      borderColor: "#F59E0B",
-                      borderDash: [6, 4],
-                      tension: 0.3,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  plugins: { legend: { position: "top" } },
-                }}
-              />
-            ) : (
-              <div className="text-slate-500">No hay datos suficientes</div>
-            )}
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <h4 className="mb-3 text-lg font-semibold text-slate-800">
-              Top 5 Productos más rentables
-            </h4>
-            {topProfitProducts.length ? (
-              <ol className="space-y-2">
-                {topProfitProducts.map((p, i) => (
-                  <li
-                    key={p.name}
-                    className="flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-sm font-medium text-slate-800">
-                        {i + 1}. {p.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Ganancia: {currency(p.gain)} • Margen:{" "}
-                        {p.marginPct.toFixed(1)}%
-                      </div>
-                    </div>
-                    <div className="text-sm font-semibold text-slate-800">
-                      {currency(p.gain)}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="text-slate-500">No hay datos</div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer microcopy */}
-        <div className="text-xs text-slate-400">
-          Nota: cálculos aproximados basados en los datos disponibles. Para
-          precisión total conecta los servicios reales y asegura que cada venta
-          incluya `product_id` y `sale_price` por línea.
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={exportCsv}
+            className="flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <Download className="h-[18px] w-[18px]" />
+            Descargar Excel
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex h-11 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <Printer className="h-[18px] w-[18px]" />
+            Imprimir
+          </button>
         </div>
       </div>
+
+      {isStale && (
+        <div className="flex gap-3 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900 ring-1 ring-blue-100">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+          <p>
+            Los períodos se cuentan desde el{" "}
+            <strong>
+              último día con datos ({fmtD(refDate)} de {refDate.getFullYear()})
+            </strong>
+            , no desde hoy. Es hasta donde llega la contabilidad importada del Excel.
+          </p>
+        </div>
+      )}
+
+      {/* Selector de período */}
+      <section className="rounded-xl border border-slate-100 bg-white p-3.5 shadow-sm">
+        <div className="mb-2.5 text-[13px] font-bold text-slate-500">
+          ¿Qué período quieres ver?
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {RANGE_PRESETS.map((r) => {
+            const active = rangeKey === r.key;
+            return (
+              <button
+                key={r.key}
+                onClick={() => {
+                  setRangeKey(r.key);
+                  setSelectedBarKey(null);
+                }}
+                className={`h-11 rounded-[10px] border-[1.5px] px-4 text-sm font-bold transition-colors ${
+                  active
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {r.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {rangeKey === "custom" && (
+          <div className="mt-3.5 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3.5">
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-bold text-slate-900">Desde</span>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => {
+                  setCustomFrom(e.target.value);
+                  setSelectedBarKey(null);
+                }}
+                className="h-11 rounded-[10px] border border-slate-200 px-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-bold text-slate-900">Hasta</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => {
+                  setCustomTo(e.target.value);
+                  setSelectedBarKey(null);
+                }}
+                className="h-11 rounded-[10px] border border-slate-200 px-3 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            {rangeError && (
+              <div className="pb-3 text-[12.5px] font-semibold text-red-600">{rangeError}</div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* KPIs */}
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+        {kpis.map((k) => (
+          <div key={k.label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div className="text-[13px] font-bold text-slate-500">{k.label}</div>
+            <div className={`mt-1.5 text-2xl font-extrabold tabular-nums ${k.valueClass}`}>
+              {k.value}
+            </div>
+            <DeltaChip d={k.d} />
+          </div>
+        ))}
+      </div>
+
+      {/* Gráfica de tendencia */}
+      <section className="rounded-xl border border-slate-100 bg-white p-[18px] shadow-sm">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-base font-bold text-slate-900">
+              {metric === "ventas" ? "Cuánto vendiste cada día" : "Cuánto ganaste cada día"}
+            </div>
+            <div className="mt-0.5 text-[13px] text-slate-500">
+              Toca una barra para ver el detalle de ese día
+            </div>
+          </div>
+          <div className="flex overflow-hidden rounded-[10px] border border-slate-200">
+            {[
+              { key: "ventas", label: "Ventas" },
+              { key: "ganancia", label: "Ganancia" },
+            ].map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setMetric(m.key)}
+                className={`h-10 px-4 text-[13.5px] font-bold transition-colors ${
+                  metric === m.key
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {buckets.length === 0 ? (
+          <EmptyRange />
+        ) : (
+          <div className={`flex h-[170px] items-end overflow-x-auto pb-0.5 ${barGap}`}>
+            {buckets.map((b) => {
+              const selected = selectedBarKey === b.key;
+              const isLast = b.key === lastKey;
+              const heightPx = Math.max(6, Math.round((b[metric] / maxBucket) * 122));
+              return (
+                <button
+                  key={b.key}
+                  onClick={() => setSelectedBarKey(selected ? null : b.key)}
+                  aria-label={`${b.longLabel}: ${currency(b[metric])}`}
+                  style={{ flex: `1 0 ${barMinWidth}px` }}
+                  className="flex h-full flex-col items-center justify-end gap-1.5"
+                >
+                  <div
+                    className={`whitespace-nowrap text-[10.5px] tabular-nums ${
+                      selected ? "font-bold text-blue-700" : "font-medium text-slate-400"
+                    }`}
+                  >
+                    {formatShort(b[metric])}
+                  </div>
+                  <div
+                    style={{ height: `${heightPx}px` }}
+                    className={`w-full max-w-[40px] rounded-b-sm rounded-t-[5px] ${
+                      selected ? "bg-blue-700" : isLast ? "bg-blue-600" : "bg-blue-200"
+                    }`}
+                  />
+                  <div
+                    className={`whitespace-nowrap text-[11.5px] font-bold ${
+                      selected || isLast ? "text-blue-700" : "text-slate-400"
+                    }`}
+                  >
+                    {b.label}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {selBucket && (
+          <div className="mt-4 flex flex-wrap items-center gap-3.5 rounded-[10px] bg-blue-50 p-3.5">
+            <div className="min-w-[180px] flex-1">
+              <div className="text-sm font-extrabold text-blue-700">{selBucket.longLabel}</div>
+              <div className="mt-1 text-[13px] text-slate-700">
+                {currency(selBucket.ventas)} vendidos · {currency(selBucket.ganancia)} de ganancia ·{" "}
+                {currency(selBucket.gasto)} de gasto · {currency(selBucket.compra)} en compras
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedBarKey(null)}
+              className="h-[38px] rounded-[9px] border border-blue-200 bg-white px-3.5 text-[13px] font-bold text-blue-700"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Rendimiento por producto */}
+      <section className="rounded-xl border border-slate-100 bg-white p-[18px] shadow-sm">
+        <div className="mb-3.5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-base font-bold text-slate-900">
+              ¿Qué se vendió y cuánto ganaste?
+            </div>
+            <div className="mt-0.5 text-[13px] text-slate-500">
+              Toca un producto para ver cómo se vendió día por día
+            </div>
+          </div>
+          <div className="relative min-w-[220px]">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              placeholder="Buscar producto..."
+              disabled
+              className="h-11 w-full rounded-[10px] border border-slate-200 pl-10 pr-3.5 text-[14.5px] disabled:cursor-not-allowed disabled:bg-slate-50"
+            />
+          </div>
+        </div>
+        <WaitingForData
+          title="Esperando datos para mostrar esta tabla"
+          detail="Para saber cuántas unidades salió cada producto y cuánto dejó, hacen falta ventas registradas una por una. El Excel solo guardaba el total del día, sin decir qué se vendió."
+          cta="Registrar una venta"
+        />
+      </section>
+
+      {/* Tarjetas de alertas */}
+      <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(290px,1fr))]">
+        <InsightCard
+          icon={AlertTriangle}
+          iconBg="bg-amber-100"
+          iconColor="text-amber-800"
+          title="Se te van a acabar pronto"
+          subtitle="Según lo que has vendido en este período"
+        >
+          <WaitingForData
+            compact
+            title="Esperando datos"
+            detail="Necesita el inventario cargado y ventas por producto para calcular cuánto te dura cada cosa."
+            cta="Cargar inventario"
+            href="/products"
+          />
+        </InsightCard>
+
+        <InsightCard
+          icon={Info}
+          iconBg="bg-slate-100"
+          iconColor="text-slate-600"
+          title="Plata quieta en la estantería"
+          subtitle="Tienes stock pero nadie los compró en este período"
+        >
+          <WaitingForData
+            compact
+            title="Esperando datos"
+            detail="Se calcula cruzando el stock con lo vendido. Hoy los 435 productos están en cero."
+            cta="Cargar inventario"
+            href="/products"
+          />
+        </InsightCard>
+
+        <InsightCard
+          icon={UserRound}
+          iconBg="bg-amber-100"
+          iconColor="text-amber-800"
+          title="Fiado por cobrar"
+          subtitle="Ventas a crédito que aún no te han pagado"
+        >
+          {fiadoPendiente.length > 0 ? (
+            <FiadoList rows={fiadoPendiente} />
+          ) : (
+            <WaitingForData
+              compact
+              title="Esperando datos"
+              detail="Aparece cuando registres una venta con método de pago «fiado» y el nombre del cliente."
+              cta="Registrar una venta"
+            />
+          )}
+        </InsightCard>
+      </div>
+
+      {/* Medios de pago */}
+      <section className="rounded-xl border border-slate-100 bg-white p-[18px] shadow-sm">
+        <div className="text-base font-bold text-slate-900">¿Cómo te pagaron?</div>
+        <div className="mb-4 mt-0.5 text-[13px] text-slate-500">
+          Útil para saber cuánta plata entró en efectivo a la caja
+        </div>
+        <WaitingForData
+          title="Esperando datos para mostrar esta gráfica"
+          detail="El método de pago se guarda en cada venta. El Excel no lo registraba, así que este corte empieza desde la primera venta que hagas en la aplicación."
+          cta="Registrar una venta"
+        />
+      </section>
     </div>
   );
 }
 
-/* Small icon component used in header button to avoid extra imports inline */
-function DownloadIcon() {
+function DeltaChip({ d }) {
+  const tone =
+    d.dir === "up"
+      ? "bg-emerald-50 text-emerald-700"
+      : d.dir === "down"
+        ? "bg-red-50 text-red-700"
+        : "bg-slate-100 text-slate-600";
   return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
+    <div className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${tone}`}>
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {d.dir === "up" && <polyline points="18 15 12 9 6 15" />}
+        {d.dir === "down" && <polyline points="6 9 12 15 18 9" />}
+        {d.dir === "flat" && <line x1="5" y1="12" x2="19" y2="12" />}
+      </svg>
+      {d.label}
+    </div>
+  );
+}
+
+function InsightCard({ icon: Icon, iconBg, iconColor, title, subtitle, children }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-white p-[18px] shadow-sm">
+      <div className="mb-1 flex items-center gap-2.5">
+        <div className={`flex h-8 w-8 flex-none items-center justify-center rounded-[9px] ${iconBg}`}>
+          <Icon className={`h-[17px] w-[17px] ${iconColor}`} />
+        </div>
+        <div className="text-[15px] font-bold text-slate-900">{title}</div>
+      </div>
+      <div className="mb-3 text-[13px] text-slate-500">{subtitle}</div>
+      {children}
+    </div>
+  );
+}
+
+function WaitingForData({ title, detail, cta, href = "/sales", compact }) {
+  return (
+    <div
+      className={`rounded-[10px] border border-dashed border-slate-200 bg-slate-50 text-center ${
+        compact ? "px-3 py-5" : "px-4 py-9"
+      }`}
     >
-      <path
-        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 10l5 5 5-5"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 15V3"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      <Hourglass className={`mx-auto text-slate-300 ${compact ? "h-5 w-5" : "h-7 w-7"}`} />
+      <div className={`mt-2 font-bold text-slate-700 ${compact ? "text-[13.5px]" : "text-[15px]"}`}>
+        {title}
+      </div>
+      <p className={`mx-auto mt-1 max-w-md text-slate-500 ${compact ? "text-[12.5px]" : "text-[13.5px]"}`}>
+        {detail}
+      </p>
+      {cta && (
+        <Link
+          href={href}
+          className="mt-3 inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-bold text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          {cta}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function FiadoList({ rows }) {
+  const total = rows.reduce((a, s) => a + s.total_amount, 0);
+  return (
+    <>
+      <div className="mb-3 text-[26px] font-extrabold tabular-nums text-amber-800">
+        {currency(total)}
+      </div>
+      <div className="flex flex-col gap-2">
+        {rows.map((s) => (
+          <div
+            key={s.id}
+            className="flex items-center justify-between gap-2.5 rounded-[9px] bg-amber-50 px-3 py-2.5"
+          >
+            <div className="text-sm font-bold text-slate-900">{s.client_name || "Sin nombre"}</div>
+            <div className="text-sm font-bold tabular-nums text-amber-800">
+              {currency(s.total_amount)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function EmptyRange() {
+  return (
+    <div className="py-14 text-center">
+      <div className="text-[15px] font-bold text-slate-900">No hay datos en este período</div>
+      <div className="mt-1 text-[13.5px] text-slate-500">Prueba con otro rango de fechas.</div>
+    </div>
   );
 }
