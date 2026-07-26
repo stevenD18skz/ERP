@@ -277,11 +277,12 @@ export default function ProductsPage() {
     [products],
   );
 
+  /* 
   const lowStockCount = useMemo(
     () => products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD).length,
     [products],
   );
-
+  */
   // filtering logic
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
