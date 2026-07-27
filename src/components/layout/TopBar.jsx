@@ -36,12 +36,12 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
           aria-label="Ir al inicio"
         >
           <img
-            src="/logo.png"
-            alt="Logo"
+            src="/Boxes_logo.png"
+            alt="Boxes"
             className="h-9 w-9 shrink-0 rounded-full object-cover"
           />
           <span className="hidden truncate text-sm font-semibold text-slate-800 sm:inline">
-            ERP Supermarket
+            Boxes
           </span>
         </button>
 
@@ -108,7 +108,7 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
                   Administrador
                 </div>
                 <div className="text-[11px] text-slate-400">
-                  admin@erp.local
+                  admin@boxes.local
                 </div>
               </div>
             </button>

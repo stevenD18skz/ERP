@@ -3,10 +3,14 @@ const Footer = () => {
     <footer className="border-t bg-white">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 md:grid-cols-3">
         <div>
-          <img src="/logo.png" alt="Logo" className="h-10 w-10 rounded-full" />
+          <img
+            src="/Boxes_logo.png"
+            alt="Boxes"
+            className="h-10 w-10 rounded-full"
+          />
           <p className="mt-3 text-sm text-slate-600">
-            ERP Supermarket — panel ligero para administrar tu tienda. Diseño
-            pensado para dueños: claro, directo y rápido.
+            Boxes · Everything in one box — panel ligero para administrar tu
+            tienda. Diseño pensado para dueños: claro, directo y rápido.
           </p>
           <div className="mt-3 text-xs text-slate-400">Versión 1.0</div>
         </div>
@@ -45,10 +49,10 @@ const Footer = () => {
             <div>
               Email:{" "}
               <a
-                href="mailto:soporte@erp.local"
+                href="mailto:soporte@boxes.local"
                 className="text-blue-600 hover:underline"
               >
-                soporte@erp.local
+                soporte@boxes.local
               </a>
             </div>
             <div>
@@ -69,7 +73,7 @@ const Footer = () => {
 
       <div className="border-t ">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 text-xs text-slate-500">
-          <div>© {new Date().getFullYear()} ERP Supermarket</div>
+          <div>© {new Date().getFullYear()} Boxes</div>
           <div>Hecho con ♥ — Simple & útil</div>
         </div>
       </div>

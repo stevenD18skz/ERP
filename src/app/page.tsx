@@ -26,9 +26,9 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "ERP Supermarket · El control de la tienda en un solo lugar",
+  title: "Boxes · Everything in one box",
   description:
-    "Sistema de administración para una tienda de barrio: catálogo, ventas, pedidos, gastos y reportes. Se puede probar con datos de ejemplo antes de usarlo.",
+    "Boxes — administración para una tienda de barrio: catálogo, ventas, pedidos, gastos y reportes. Se puede probar con datos de ejemplo antes de usarlo.",
 };
 
 type Modulo = {
@@ -136,12 +136,17 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:px-6">
           <img
-            src="/logo.png"
+            src="/Boxes_logo.png"
             alt=""
             className="h-9 w-9 rounded-full object-cover"
           />
-          <span className="text-sm font-semibold text-slate-800">
-            ERP Supermarket
+          <span className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-slate-800">
+              Boxes
+            </span>
+            <span className="hidden text-[11px] text-slate-500 sm:block">
+              Everything in one box
+            </span>
           </span>
 
           <nav className="ml-auto flex items-center gap-1 sm:gap-2">
@@ -471,7 +476,7 @@ export default function LandingPage() {
       {/* --------------------------------------------------------- pie --- */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-slate-500 md:flex-row md:items-center md:justify-between md:px-6">
-          <p>ERP Supermarket · sistema de administración para la tienda</p>
+          <p>Boxes · Everything in one box — administración para la tienda</p>
           <div className="flex gap-4">
             <Link
               href="/dashboard"

@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Manual de usuario · ERP Supermarket",
+  title: "Manual de usuario · Boxes",
   description:
     "Para qué sirve cada sección del sistema y cómo se hace cada tarea del día a día.",
 };

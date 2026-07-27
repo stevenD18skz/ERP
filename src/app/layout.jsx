@@ -2,10 +2,11 @@ import "@/index.css";
 import AppShell from "@/components/layout/AppShell";
 
 export const metadata = {
-  title: "ERP Supermarket",
-  description: "Panel de administración ERP Supermarket",
+  title: "Boxes · Everything in one box",
+  description: "Boxes — panel de administración para tu tienda",
   icons: {
-    icon: "/logo.png",
+    icon: "/Boxes_logo_vectorizado.svg",
+    shortcut: "/Boxes_logo.png",
   },
 };
 
