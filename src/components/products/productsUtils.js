@@ -51,9 +51,12 @@ export const FIELD_LABELS = {
 /* --- importación --- */
 
 // Devuelve el motivo del rechazo, o null si la fila sirve.
+//
+// El SKU no se exige: es opcional en toda la aplicación (ver
+// supabase/sql/08_products_sku_por_tienda.sql). Si viene, la base rechaza el
+// repetido dentro de la misma tienda.
 export const validateImportRow = (obj) => {
   if (!obj.name?.trim()) return "Falta el nombre";
-  if (!obj.sku?.trim()) return "Falta el SKU";
   if (
     obj.price === undefined ||
     obj.price === "" ||

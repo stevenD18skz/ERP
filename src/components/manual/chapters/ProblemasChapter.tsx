@@ -30,8 +30,12 @@ export default function ProblemasChapter({ numero }: { numero: number }) {
             "Se intentó vender más unidades de las que hay en inventario para ese producto.",
           ],
           [
-            '"El nombre es obligatorio" / "El SKU es obligatorio"',
-            "Faltan datos obligatorios al guardar un producto.",
+            '"El nombre es obligatorio"',
+            "Faltan datos obligatorios al guardar un producto. El SKU no es uno de ellos: se puede dejar vacío.",
+          ],
+          [
+            '"Ya tienes otro producto con ese SKU"',
+            "Ese código interno ya está en uso en tu tienda. Cámbialo o déjalo vacío. Los SKU de otras tiendas no cuentan: cada tienda lleva los suyos.",
           ],
           [
             'Fila con error al importar ("Falta el nombre", "Precio inválido", etc.)',

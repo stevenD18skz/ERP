@@ -42,7 +42,14 @@ export const invalidPayload = (details: Record<string, string>) =>
 const CONSTRAINT_MESSAGES: Record<string, string> = {
   daily_closes_tienda_date_key: "Ya existe un cierre para esa fecha",
   tiendas_nombre_lower_idx: "Ya existe una tienda con ese nombre",
-  products_sku_key: "Ya hay un producto con ese SKU",
+  // Es por tienda: ver supabase/sql/08_products_sku_por_tienda.sql. El nombre
+  // viejo (products_sku_key, único en toda la base) se deja mapeado por si
+  // alguien corre la app contra una base a la que no se le aplicó esa
+  // migración; el mensaje avisa qué falta en vez de acusar a un producto que
+  // no se puede ver.
+  products_tienda_sku_idx: "Ya tienes otro producto con ese SKU",
+  products_sku_key:
+    "Ese SKU ya existe en otra tienda. Falta correr supabase/sql/08_products_sku_por_tienda.sql en Supabase.",
   sales_fiado_needs_client:
     "Una venta a crédito necesita el nombre del cliente",
   sale_items_quantity_check:

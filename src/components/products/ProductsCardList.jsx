@@ -44,9 +44,11 @@ export default function ProductsCardList({
               <div className="truncate text-[16px] font-bold text-slate-900">
                 {p.name}
               </div>
-              <div className="truncate text-[12.5px] text-slate-400">
-                SKU {p.sku}
-              </div>
+              {p.sku ? (
+                <div className="truncate text-[12.5px] text-slate-400">
+                  SKU {p.sku}
+                </div>
+              ) : null}
               <span className="mt-1.5 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
                 {p.category || "Sin categoría"}
               </span>

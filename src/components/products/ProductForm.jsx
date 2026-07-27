@@ -63,6 +63,7 @@ export default function ProductForm({
   initial = null,
   prefill = null,
   barcodeOwner = () => null,
+  skuOwner = () => null,
   existingCategories = [],
   onClose,
   onSave,
@@ -185,7 +186,6 @@ export default function ProductForm({
     e.preventDefault();
     const nextErrors = {};
     if (!String(form.name).trim()) nextErrors.name = "El nombre es obligatorio";
-    if (!String(form.sku).trim()) nextErrors.sku = "El SKU es obligatorio";
     if (form.price === "" || Number(form.price) < 0)
       nextErrors.price = "Ingresa un precio válido";
     if (form.cost_price === "" || Number(form.cost_price) < 0)
@@ -197,7 +197,14 @@ export default function ProductForm({
     // cuál cobrar: agarra el primero que encuentra y nadie se entera.
     const clash = barcodeOwner(form.barcode, initial?.id);
     if (clash) {
-      nextErrors.barcode = `Ese código ya es de "${clash.name}" (SKU ${clash.sku})`;
+      nextErrors.barcode = `Ese código ya es de "${clash.name}"`;
+    }
+
+    // El SKU repetido lo rechaza la base igual, pero avisar acá lo pone debajo
+    // del campo que hay que corregir en vez de en un aviso al pie de pantalla.
+    const skuClash = skuOwner(form.sku, initial?.id);
+    if (skuClash) {
+      nextErrors.sku = `Ese SKU ya es de "${skuClash.name}"`;
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -224,10 +231,9 @@ export default function ProductForm({
   };
 
   const fieldClass = (key) =>
-    `mt-1 w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:ring-2 ${
-      errors[key]
-        ? "border-red-400 focus:border-red-400 focus:ring-red-100"
-        : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+    `mt-1 w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:ring-2 ${errors[key]
+      ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
     }`;
 
   return (
@@ -303,30 +309,55 @@ export default function ProductForm({
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              <span className="font-semibold text-slate-700">
-                SKU <span className="text-red-500">*</span>
+
+            {/* <label className="text-sm">
+              <span className="font-semibold text-slate-700">SKU</span>
+              <span className="ml-1.5 text-xs font-normal text-slate-400">
+                opcional
               </span>
               <input
                 value={form.sku}
                 onChange={setField("sku")}
                 placeholder="Ej. LAC-0012"
                 aria-invalid={!!errors.sku}
-                aria-describedby={errors.sku ? "error-sku" : undefined}
+                aria-describedby={errors.sku ? "error-sku" : "hint-sku"}
                 className={fieldClass("sku")}
               />
-              {errors.sku && (
+              {errors.sku ? (
                 <p
                   id="error-sku"
                   className="mt-1 text-xs font-semibold text-red-600"
                 >
                   {errors.sku}
                 </p>
+              ) : (
+                <p id="hint-sku" className="mt-1 text-xs text-slate-500">
+                  Tu código interno. Útil sobre todo para lo que no trae código
+                  de barras: granel, reempaque, hecho en casa.
+                </p>
               )}
-              {!errors.sku && lookupSource && !String(form.sku).trim() && (
-                <p className="mt-1 text-xs text-slate-500">
-                  Este lo pones tú: el SKU es tu código interno y ningún catálogo
-                  de afuera lo sabe.
+            </label>*/}
+
+            <label className="text-sm">
+              <span className="font-semibold text-slate-700">
+                Stock inicial <span className="text-red-500">*</span>
+              </span>
+              <input
+                type="number"
+                min="0"
+                value={form.stock}
+                onChange={setField("stock")}
+                placeholder="0"
+                aria-invalid={!!errors.stock}
+                aria-describedby={errors.stock ? "error-stock" : undefined}
+                className={`${fieldClass("stock")} sm:w-full`}
+              />
+              {errors.stock && (
+                <p
+                  id="error-stock"
+                  className="mt-1 text-xs font-semibold text-red-600"
+                >
+                  {errors.stock}
                 </p>
               )}
             </label>
@@ -362,11 +393,10 @@ export default function ProductForm({
                   placeholder="Opcional"
                   aria-invalid={!!errors.barcode}
                   aria-describedby={errors.barcode ? "error-barcode" : undefined}
-                  className={`w-full rounded-lg border px-3 py-2.5 font-mono text-sm outline-none focus:ring-2 ${
-                    errors.barcode
+                  className={`w-full rounded-lg border px-3 py-2.5 font-mono text-sm outline-none focus:ring-2 ${errors.barcode
                       ? "border-red-400 focus:border-red-400 focus:ring-red-100"
                       : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
-                  }`}
+                    }`}
                 />
                 <button
                   type="button"
@@ -479,29 +509,7 @@ export default function ProductForm({
             </div>
           )}
 
-          <label className="text-sm">
-            <span className="font-semibold text-slate-700">
-              Stock inicial <span className="text-red-500">*</span>
-            </span>
-            <input
-              type="number"
-              min="0"
-              value={form.stock}
-              onChange={setField("stock")}
-              placeholder="0"
-              aria-invalid={!!errors.stock}
-              aria-describedby={errors.stock ? "error-stock" : undefined}
-              className={`${fieldClass("stock")} sm:w-40`}
-            />
-            {errors.stock && (
-              <p
-                id="error-stock"
-                className="mt-1 text-xs font-semibold text-red-600"
-              >
-                {errors.stock}
-              </p>
-            )}
-          </label>
+
 
           <div>
             <span className="text-sm font-semibold text-slate-700">Foto</span>

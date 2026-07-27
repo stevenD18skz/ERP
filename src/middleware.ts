@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 import { SIM_COOKIE } from "@/lib/simulation/cookie";
 
-const PUBLIC_PAGES = new Set(["/", "/simulacion", "/login", "/signup"]);
+const PUBLIC_PAGES = new Set(["/", "/simulacion", "/login", "/signup", "/manual"]);
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/health"];
 
 function isPublic(pathname: string): boolean {

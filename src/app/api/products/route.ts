@@ -97,7 +97,11 @@ export async function POST(request: NextRequest) {
     const f = new Fields(body);
 
     const name = f.string("name", { required: true, max: 200 });
-    const sku = f.string("sku", { required: true, max: 60 });
+    // El SKU es opcional: en una tienda de barrio se busca por nombre y se
+    // cobra por código de barras. Sirve para lo que no trae código impreso
+    // (granel, reempaque) y para que el importador de CSV reconozca una fila
+    // ya cargada, así que se guarda si lo escriben y se deja vacío si no.
+    const sku = f.string("sku", { max: 60, allowEmpty: true });
     const price = f.number("price", { required: true, min: 0 });
     const costPrice = f.number("cost_price", { min: 0 });
     const barcode = f.string("barcode", { max: 60, allowEmpty: true });
@@ -122,7 +126,7 @@ export async function POST(request: NextRequest) {
       .insert({
         tienda_id: tiendaId,
         name,
-        sku,
+        sku: sku ?? "",
         price,
         cost_price: costPrice ?? 0,
         cost_is_estimated: estimated,

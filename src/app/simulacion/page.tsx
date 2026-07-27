@@ -12,12 +12,25 @@ import Link from "next/link";
 import { FlaskConical, AlertTriangle } from "lucide-react";
 
 import { isSimulationOn, startSimulation } from "@/lib/simulation/store";
+import { useSession } from "@/hooks/useSession";
 
 export default function SimulacionPage() {
   const router = useRouter();
+  const { tienda, loading } = useSession();
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    // Todavía no sabemos si hay sesión real: esperar antes de decidir, para
+    // no encender la simulación encima de una tienda ya autenticada.
+    if (loading) return;
+
+    // Si ya hay una sesión real, esa tienda manda: no tiene sentido mezclarla
+    // con datos inventados, así que se entra directo al dashboard real.
+    if (tienda) {
+      router.replace("/dashboard");
+      return;
+    }
+
     if (!isSimulationOn()) startSimulation();
 
     // Si el navegador tiene bloqueado el almacenamiento de la pestaña (modo
@@ -29,7 +42,7 @@ export default function SimulacionPage() {
     }
 
     router.replace("/dashboard");
-  }, [router]);
+  }, [router, tienda, loading]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">

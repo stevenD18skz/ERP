@@ -20,8 +20,9 @@ export default function ProductosChapter({ numero }: { numero: number }) {
             { campo: "Nombre", obligatorio: true },
             {
               campo: "SKU",
-              obligatorio: true,
-              notas: "Código interno del producto.",
+              obligatorio: false,
+              notas:
+                "Tu código interno. Útil para lo que no trae código de barras. No se puede repetir dentro de la misma tienda.",
             },
             { campo: "Código de barras", obligatorio: false },
             {
@@ -86,7 +87,7 @@ export default function ProductosChapter({ numero }: { numero: number }) {
               un punto de partida, se puede descargar la plantilla de ejemplo
               desde el mismo cuadro.
             </>,
-            "Arrastrar o elegir el archivo CSV. El sistema revisa cada fila y avisa cuáles están listas y cuáles tienen errores (nombre, SKU, precio, costo o stock inválidos).",
+            "Arrastrar o elegir el archivo CSV. El sistema revisa cada fila y avisa cuáles están listas y cuáles tienen errores (nombre, precio, costo o stock inválidos).",
             "Confirmar: las filas con errores no se importan; se pueden corregir en el archivo y volver a intentar.",
           ]}
         />

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useSimulation } from "@/hooks/useSimulation";
+import { useSession } from "@/hooks/useSession";
 import { restartSimulation, stopSimulation } from "@/lib/simulation/store";
 
 const menuItems = [
@@ -25,8 +26,6 @@ const menuItems = [
   { path: "/orders", label: "Pedidos", icon: ClipboardList },
   { path: "/expenses", label: "Gastos y caja", icon: Wallet },
   { path: "/summary", label: "Reportes", icon: BarChart3 },
-  { path: "/manual", label: "Manual", icon: BookOpen },
-  { path: "/settings", label: "Configuración", icon: Settings },
 ];
 
 // El logo, el nombre y el botón de colapsar viven en el TopBar; este
@@ -35,6 +34,7 @@ const SideBar = ({ isExpanded }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { active: isSimulating } = useSimulation();
+  const { tienda, logout } = useSession();
 
   // Igual que en useSimulation.ts: se recarga la página a propósito para que
   // todas las pantallas queden viendo los mismos datos reiniciados.
@@ -43,7 +43,14 @@ const SideBar = ({ isExpanded }) => {
     window.location.reload();
   };
 
+  // "Salir" tiene que cerrar lo que esté abierto de verdad: si hay sesión
+  // real, cerrarla en el servidor (logout ya redirige a /login); si es
+  // simulación, apagarla en la pestaña y volver al inicio.
   const handleExit = () => {
+    if (tienda) {
+      logout();
+      return;
+    }
     if (isSimulating) stopSimulation();
     router.push("/");
   };

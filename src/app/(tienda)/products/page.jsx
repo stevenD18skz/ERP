@@ -49,6 +49,15 @@ import {
     components/products y el filtrado en useProductFilters.
 */
 
+// La API ya devuelve el motivo real en español ("Ya tienes otro producto con
+// ese SKU", "El precio no puede ser negativo"...) y apiFetch lo pone en
+// err.message. Mostrar un genérico en su lugar obligaba a abrir la consola
+// para saber qué corregir.
+const errorText = (err, fallback) => {
+  const message = err instanceof Error ? err.message.trim() : "";
+  return message ? `${fallback}: ${message}` : fallback;
+};
+
 export default function ProductsPage() {
   const router = useRouter();
   const [products, setProducts] = useState([]);
@@ -85,7 +94,7 @@ export default function ProductsPage() {
       setProducts(res || []);
     } catch (err) {
       console.error(err);
-      push("No se pudo cargar productos", "error");
+      push(errorText(err, "No se pudo cargar productos"), "error");
     } finally {
       setLoading(false);
     }
@@ -165,7 +174,7 @@ export default function ProductsPage() {
     } catch (err) {
       console.error(err);
       setProducts(prev);
-      push("Error actualizando stock", "error");
+      push(errorText(err, "Error actualizando stock"), "error");
     }
   };
 
@@ -204,7 +213,7 @@ export default function ProductsPage() {
       } catch (err) {
         console.error(err);
         setProducts(prev);
-        push("Error actualizando producto", "error");
+        push(errorText(err, "Error actualizando producto"), "error");
         throw err;
       }
     } else {
@@ -220,7 +229,7 @@ export default function ProductsPage() {
       } catch (err) {
         console.error(err);
         setProducts((ps) => ps.filter((p) => p.id !== newProduct.id));
-        push("Error creando producto", "error");
+        push(errorText(err, "Error creando producto"), "error");
         throw err;
       }
     }
@@ -245,7 +254,7 @@ export default function ProductsPage() {
     } catch (err) {
       console.error(err);
       setProducts(prev);
-      push("Error eliminando producto", "error");
+      push(errorText(err, "Error eliminando producto"), "error");
     }
   };
 
@@ -261,7 +270,7 @@ export default function ProductsPage() {
     } catch (err) {
       console.error(err);
       setProducts(prev);
-      push("Error en eliminación masiva", "error");
+      push(errorText(err, "Error en eliminación masiva"), "error");
     }
   };
 
@@ -300,6 +309,20 @@ export default function ProductsPage() {
     return (
       products.find(
         (p) => (p.barcode || "").trim() === target && p.id !== exceptId,
+      ) ?? null
+    );
+  };
+
+  // El SKU también tiene que ser único, pero solo dentro de esta tienda: el
+  // catálogo cargado acá ya viene filtrado por tienda, así que buscar en él es
+  // exactamente lo que valida la base. Se compara sin mayúsculas ni espacios,
+  // igual que el índice de Postgres.
+  const skuOwner = (sku, exceptId) => {
+    const target = String(sku ?? "").trim().toLowerCase();
+    if (!target) return null;
+    return (
+      products.find(
+        (p) => (p.sku || "").trim().toLowerCase() === target && p.id !== exceptId,
       ) ?? null
     );
   };
@@ -519,6 +542,7 @@ export default function ProductsPage() {
           initial={editing}
           prefill={prefill}
           barcodeOwner={barcodeOwner}
+          skuOwner={skuOwner}
           existingCategories={filters.categories.filter((c) => c !== "All")}
           onClose={closeForm}
           onSave={async (p) => {

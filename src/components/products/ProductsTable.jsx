@@ -122,7 +122,13 @@ export default function ProductsTable({
                   <div className="font-bold text-slate-900">{p.name}</div>
                   <StockBadge stock={p.stock} />
                 </div>
-                <div className="text-[12.5px] text-slate-400">SKU {p.sku}</div>
+                {/* Sin SKU no se deja la línea vacía ni un "SKU —": el nombre
+                    sube y la fila se ve igual de completa. */}
+                {p.sku ? (
+                  <div className="text-[12.5px] text-slate-400">
+                    SKU {p.sku}
+                  </div>
+                ) : null}
               </td>
               <td className="px-2 py-2.5">
                 <span className="inline-block max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 align-bottom text-[12.5px] font-semibold text-slate-700">

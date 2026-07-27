@@ -15,7 +15,7 @@ export default function GlosarioChapter({ numero }: { numero: number }) {
         rows={[
           [
             "SKU",
-            "Código interno del producto. Lo pone quien carga el producto, no viene de una autoridad externa.",
+            "Código interno del producto. Lo pone quien carga el producto, no viene de una autoridad externa. Es opcional, y cada tienda lleva los suyos por aparte.",
           ],
           [
             "Costo estimado",
