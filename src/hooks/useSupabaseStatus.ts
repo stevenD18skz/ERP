@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isSupabaseConfigured, supabaseUrl } from "@/lib/supabaseClient";
+import {
+  isSupabaseConfigured,
+  supabaseAnonKey,
+  supabaseUrl,
+} from "@/lib/supabaseClient";
 
 export type SupabaseStatus = "connected" | "disconnected" | "checking";
 
@@ -28,6 +32,7 @@ export function useSupabaseStatus(): SupabaseStatus {
       try {
         const res = await fetch(`${supabaseUrl}/auth/v1/health`, {
           signal: controller.signal,
+          headers: { apikey: supabaseAnonKey },
         });
         if (!cancelled) setStatus(res.ok ? "connected" : "disconnected");
       } catch {

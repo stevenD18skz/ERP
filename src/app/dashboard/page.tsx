@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { currency } from "@/utils/converts";
+import { localDateKey } from "@/utils/dates";
 import { getProducts } from "@/services/products.service";
 import { getSales } from "@/services/sales.service";
 import { getOrders } from "@/services/orders.service";
@@ -36,14 +37,6 @@ function getGreeting(): string {
   if (hour < 12) return "Buenos días";
   if (hour < 19) return "Buenas tardes";
   return "Buenas noches";
-}
-
-// Fecha local en YYYY-MM-DD. No se usa toISOString porque convierte a UTC y en
-// Colombia (UTC-5) devolvería el día siguiente durante la tarde y la noche.
-function dayKey(date: Date): string {
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${m}-${d}`;
 }
 
 function pctDelta(current: number, previous: number): number {
@@ -689,7 +682,9 @@ export default function Home() {
     const byDate = new Map(dailyCloses.map((c) => [c.date, c]));
     const now = new Date();
     const dayAgo = (n: number) =>
-      dayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - n));
+      localDateKey(
+        new Date(now.getFullYear(), now.getMonth(), now.getDate() - n),
+      );
 
     const todayClose = byDate.get(dayAgo(0)) ?? null;
     const yesterdayClose = byDate.get(dayAgo(1)) ?? null;

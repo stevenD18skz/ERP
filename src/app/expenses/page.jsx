@@ -9,6 +9,7 @@ import {
   deleteExpense,
 } from "@/services/expenses.service";
 import { currency } from "@/utils/converts";
+import { localDateKey } from "@/utils/dates";
 
 import {
   Wallet,
@@ -68,7 +69,7 @@ const MONTHS = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDateKey();
 const formatDate = (iso) => {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;

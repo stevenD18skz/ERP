@@ -11,7 +11,12 @@ import {
   BarChart3,
   BookOpen,
   Settings,
+  RotateCcw,
+  LogOut,
 } from "lucide-react";
+
+import { useSimulation } from "@/hooks/useSimulation";
+import { restartSimulation, stopSimulation } from "@/lib/simulation/store";
 
 const menuItems = [
   { path: "/dashboard", label: "Inicio", icon: Home },
@@ -29,16 +34,29 @@ const menuItems = [
 const SideBar = ({ isExpanded }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { active: isSimulating } = useSimulation();
+
+  // Igual que en useSimulation.ts: se recarga la página a propósito para que
+  // todas las pantallas queden viendo los mismos datos reiniciados.
+  const handleRestart = () => {
+    restartSimulation();
+    window.location.reload();
+  };
+
+  const handleExit = () => {
+    if (isSimulating) stopSimulation();
+    router.push("/");
+  };
 
   return (
     <aside
-      className={`fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] border-r border-slate-200 bg-white shadow-sm transition-all duration-300 ${
+      className={`fixed left-0 top-16 z-30 flex h-[calc(100vh-4rem)] flex-col border-r border-slate-200 bg-white shadow-sm transition-all duration-300 ${
         isExpanded ? "w-48" : "w-16"
       }`}
       aria-label="Navegación principal"
     >
       <nav
-        className="flex h-full flex-col gap-1 overflow-y-auto p-2"
+        className="flex flex-1 flex-col gap-1 overflow-y-auto p-2"
         aria-label="Secciones"
       >
         {menuItems.map((it) => {
@@ -69,6 +87,44 @@ const SideBar = ({ isExpanded }) => {
           );
         })}
       </nav>
+
+      <div className="shrink-0 space-y-1 border-t border-slate-200 p-2">
+        {isSimulating && (
+          <button
+            type="button"
+            onClick={handleRestart}
+            title={!isExpanded ? "Reiniciar datos" : undefined}
+            className={`flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-amber-800 transition-colors duration-150 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+              isExpanded ? "justify-start" : "justify-center"
+            }`}
+          >
+            <RotateCcw className="h-[18px] w-[18px] shrink-0 text-amber-600" />
+            {isExpanded && (
+              <span className="truncate text-sm font-medium">
+                Reiniciar datos
+              </span>
+            )}
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={handleExit}
+          title={isSimulating ? "Salir de la simulación" : "Salir"}
+          className={`flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            isSimulating
+              ? "text-amber-800 hover:bg-amber-50"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          } ${isExpanded ? "justify-start" : "justify-center"}`}
+        >
+          <LogOut
+            className={`h-[18px] w-[18px] shrink-0 ${isSimulating ? "text-amber-600" : "text-slate-400"}`}
+          />
+          {isExpanded && (
+            <span className="truncate text-sm font-medium">Salir</span>
+          )}
+        </button>
+      </div>
     </aside>
   );
 };

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Bell, CircleUserRound, LogOut, Menu } from "lucide-react";
 import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
+import SimulationChip from "@/components/simulation/SimulationChip";
 
 const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
   const router = useRouter();
@@ -49,6 +50,7 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
 
         {/* Derecha: acciones */}
         <div className="flex shrink-0 items-center gap-2">
+          <SimulationChip />
           <SupabaseStatusChip />
 
           {/* Búsqueda */}
