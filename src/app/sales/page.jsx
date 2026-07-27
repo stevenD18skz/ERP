@@ -11,6 +11,7 @@ import {
 import { currency, formatMoney } from "@/utils/converts";
 import DailyCloseMode from "@/components/sales/DailyCloseMode";
 import MoneyInput from "@/components/ui/MoneyInput";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 
 import {
   ShoppingCart,
@@ -32,6 +33,7 @@ import {
   Info,
   Loader2,
   Printer,
+  ScanLine,
 } from "lucide-react";
 
 /*
@@ -42,8 +44,11 @@ import {
     transferencia/fiado), recibo de éxito y anulación de ventas con
     devolución real de stock.
   - No se implementó el escaneo de código con cámara (mismo criterio que en
-    Productos): simularlo habría sido fingir una función que no existe. El
-    buscador ya empareja por código de barras si se escribe/pega.
+    Productos): simularlo habría sido fingir una función que no existe. Sí
+    hay soporte para lectores que funcionan como teclado (apps como Barcode
+    to PC, o un lector USB físico): ver useBarcodeScanner más abajo. El
+    buscador de todas formas empareja por código de barras si se escribe o
+    se pega a mano.
 */
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -169,11 +174,16 @@ export default function SalePageEnhanced() {
     return { total, cost, gain: total - cost };
   }, [lines]);
 
+  // Devuelve true si el producto quedó agregado (o su cantidad aumentó), y
+  // false si no había stock. El llamador decide qué feedback extra dar: el
+  // buscador manual no necesita nada más, pero el escáner de código sí
+  // avisa cada resultado porque quien escanea no está mirando el carrito.
   const addLineFromProduct = (product) => {
     if (!product.stock || product.stock <= 0) {
       push("Sin stock disponible para agregar", "error");
-      return;
+      return false;
     }
+    let added = true;
     setLines((prev) => {
       const existingIdx = prev.findIndex(
         (l) => l.productId === product.id && !l.discountType,
@@ -183,6 +193,7 @@ export default function SalePageEnhanced() {
         const nextQty = Math.min(existing.quantity + 1, product.stock);
         if (nextQty === existing.quantity) {
           push("Sin más stock disponible", "info");
+          added = false;
         }
         const next = prev.slice();
         next[existingIdx] = { ...existing, quantity: nextQty };
@@ -209,9 +220,38 @@ export default function SalePageEnhanced() {
     });
     setSearchQuery("");
     setSuggestionIndex(-1);
+    return added;
   };
 
+  // Callback del lector de código de barras (celular con Barcode to PC, o un
+  // lector USB el día de mañana: al hook le da igual). Busca coincidencia
+  // exacta por código de barras y avisa siempre el resultado, porque quien
+  // escanea suele estar mirando la mercancía, no la pantalla.
+  const handleBarcodeScan = (code) => {
+    const match = allProducts.find(
+      (p) => (p.barcode || "").trim() === code.trim(),
+    );
+    if (!match) {
+      push(`Ningún producto tiene el código ${code}`, "error");
+      return;
+    }
+    if (addLineFromProduct(match)) {
+      push(`${match.name} agregado por código de barras`, "success");
+    }
+  };
+
+  const { scanning: barcodeScanning } = useBarcodeScanner({
+    onScan: handleBarcodeScan,
+    enabled: mode === "transaccion" && !receiptOpen && !voidConfirmId,
+  });
+
   const handleSearchKeyDown = (e) => {
+    // useBarcodeScanner ya resolvió este Enter (llegó a document en fase de
+    // captura, antes que a este input) y canceló el evento con
+    // preventDefault(). Si se sigue de largo aquí, el buscador agregaría el
+    // producto otra vez por su cuenta, ahora por coincidencia difusa en vez
+    // de por el código exacto.
+    if (e.defaultPrevented) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSuggestionIndex((i) =>
@@ -554,6 +594,12 @@ export default function SalePageEnhanced() {
                 aria-expanded={suggestions.length > 0}
                 className="h-[46px] w-full rounded-lg border border-slate-200 pl-10 pr-3 text-[15px] outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
               />
+              {barcodeScanning && (
+                <span className="pointer-events-none absolute right-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1.5 text-xs font-medium text-teal-600">
+                  <ScanLine className="h-4 w-4 animate-pulse" aria-hidden />
+                  Leyendo código…
+                </span>
+              )}
               {suggestions.length > 0 && (
                 <div
                   role="listbox"
