@@ -71,13 +71,22 @@ const CATALOGO: Array<[string, string, string, number, number, number, boolean]>
   ["CUI-001", "Shampoo Savital 550ml",      "Cuidado personal",   16900, 13200,  6, false],
 ];
 
+// Códigos de barras reales, para poder probar el lector con productos que
+// de verdad existen. El resto del catálogo sigue usando el generador.
+const BARCODES_REALES: Record<string, string> = {
+  "GRA-001": "7702511000014", // Arroz Diana 500g
+  "LAC-001": "7702001042050", // Leche Entera 1L
+};
+
 function buildProducts(hoy: Date): Product[] {
   return CATALOGO.map(
     ([sku, name, category, price, cost, stock, costoReal], i) => ({
       id: `sim-p-${String(i + 1).padStart(2, "0")}`,
       name,
       sku,
-      barcode: `770${String(1000000 + i * 7919).slice(0, 7)}`,
+      barcode:
+        BARCODES_REALES[sku] ??
+        `770${String(1000000 + i * 7919).slice(0, 7)}`,
       photo: null,
       price,
       cost_price: cost,

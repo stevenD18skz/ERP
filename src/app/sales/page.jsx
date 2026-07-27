@@ -10,30 +10,31 @@ import {
 } from "@/services/sales.service";
 import { currency, formatMoney } from "@/utils/converts";
 import DailyCloseMode from "@/components/sales/DailyCloseMode";
+import SalesHistoryMode from "@/components/sales/SalesHistoryMode";
+import ModeSwitcher from "@/components/sales/ModeSwitcher";
+import ProductSearchBar from "@/components/sales/ProductSearchBar";
+import CartLines from "@/components/sales/CartLines";
+import ToastStack from "@/components/sales/ToastStack";
+import {
+  METHOD_LABELS,
+  QUICK_CASH,
+  lineCost,
+  lineSubtotal,
+  uid,
+} from "@/components/sales/salesUtils";
 import MoneyInput from "@/components/ui/MoneyInput";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useToasts } from "@/hooks/useToasts";
 
 import {
-  ShoppingCart,
-  CalendarDays,
-  Search,
-  Minus,
-  Plus,
-  Trash2,
-  X,
-  Percent,
-  DollarSign,
   Banknote,
   CreditCard,
   ArrowLeftRight,
   UserRound,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
-  Info,
   Loader2,
   Printer,
-  ScanLine,
 } from "lucide-react";
 
 /*
@@ -49,42 +50,14 @@ import {
     to PC, o un lector USB físico): ver useBarcodeScanner más abajo. El
     buscador de todas formas empareja por código de barras si se escribe o
     se pega a mano.
+  - Esta página coordina el estado; el dibujo vive en los componentes de
+    components/sales y los cálculos compartidos en salesUtils.
 */
-
-const uid = () => Math.random().toString(36).slice(2, 9);
-const QUICK_CASH = [5000, 10000, 20000, 50000];
-const METHOD_LABELS = {
-  efectivo: "Efectivo",
-  tarjeta: "Tarjeta",
-  transferencia: "Transferencia",
-  fiado: "Fiado",
-};
-
-const lineBase = (l) => l.unitPrice * l.quantity;
-const lineDiscountAmount = (l) => {
-  if (!l.discountType || !l.discountValue) return 0;
-  const base = lineBase(l);
-  return l.discountType === "pct"
-    ? base * (l.discountValue / 100)
-    : Math.min(l.discountValue, base);
-};
-const lineSubtotal = (l) => lineBase(l) - lineDiscountAmount(l);
-const lineCost = (l) => l.cost * l.quantity;
-
-function useToasts() {
-  const [toasts, setToasts] = useState([]);
-  const push = (text, type = "info") => {
-    const id = uid();
-    setToasts((s) => [...s, { id, text, type }]);
-    setTimeout(() => setToasts((s) => s.filter((t) => t.id !== id)), 4000);
-  };
-  const dismiss = (id) => setToasts((s) => s.filter((t) => t.id !== id));
-  return { toasts, push, dismiss };
-}
 
 export default function SalePageEnhanced() {
   // modo de captura: "transaccion" registra venta por venta con carrito;
-  // "cierre" anota un único total al final del día, como se llevaba en el Excel.
+  // "cierre" anota un único total al final del día, como se llevaba en el
+  // Excel; "historial" sólo consulta lo ya registrado.
   const [mode, setMode] = useState("transaccion");
 
   // data
@@ -178,7 +151,16 @@ export default function SalePageEnhanced() {
   // false si no había stock. El llamador decide qué feedback extra dar: el
   // buscador manual no necesita nada más, pero el escáner de código sí
   // avisa cada resultado porque quien escanea no está mirando el carrito.
-  const addLineFromProduct = (product) => {
+  //
+  // focusQty controla a dónde va el foco después de agregar. Por defecto va
+  // al campo de cantidad, para que el buscador manual permita editarla al
+  // toque. El escaneo por código de barras pasa focusQty=false: si el foco
+  // quedara en el input de cantidad (con su contenido seleccionado), el
+  // siguiente escaneo del mismo producto escribiría sus dígitos ahí encima
+  // -reemplazando la cantidad por el código de barras- antes de que
+  // useBarcodeScanner llegue a procesar el Enter, y el valor gigante
+  // resultante terminaba recortado al stock máximo. Ver useBarcodeScanner.ts.
+  const addLineFromProduct = (product, { focusQty = true } = {}) => {
     if (!product.stock || product.stock <= 0) {
       push("Sin stock disponible para agregar", "error");
       return false;
@@ -197,11 +179,13 @@ export default function SalePageEnhanced() {
         }
         const next = prev.slice();
         next[existingIdx] = { ...existing, quantity: nextQty };
-        setFocusTarget({ type: "qty", key: existing._key });
+        if (focusQty) setFocusTarget({ type: "qty", key: existing._key });
+        else setFocusTarget({ type: "search" });
         return next;
       }
       const key = uid();
-      setFocusTarget({ type: "qty", key });
+      if (focusQty) setFocusTarget({ type: "qty", key });
+      else setFocusTarget({ type: "search" });
       return [
         ...prev,
         {
@@ -235,7 +219,7 @@ export default function SalePageEnhanced() {
       push(`Ningún producto tiene el código ${code}`, "error");
       return;
     }
-    if (addLineFromProduct(match)) {
+    if (addLineFromProduct(match, { focusQty: false })) {
       push(`${match.name} agregado por código de barras`, "success");
     }
   };
@@ -269,6 +253,11 @@ export default function SalePageEnhanced() {
       setSearchQuery("");
       setSuggestionIndex(-1);
     }
+  };
+
+  const handleQueryChange = (value) => {
+    setSearchQuery(value);
+    setSuggestionIndex(-1);
   };
 
   const changeQty = (key, raw) => {
@@ -325,6 +314,19 @@ export default function SalePageEnhanced() {
     setDiscountEditingKey(null);
     setDiscountDraftValue("");
   };
+
+  // El botón que abre el editor sigue comentado dentro de CartLines; el estado
+  // se conserva completo para reactivarlo sin volver a armarlo.
+  const discountProps = {
+    editingKey: discountEditingKey,
+    draftType: discountDraftType,
+    onDraftTypeChange: setDiscountDraftType,
+    draftValue: discountDraftValue,
+    onDraftValueChange: setDiscountDraftValue,
+    onCancel: cancelDiscount,
+    onApply: applyDiscount,
+  };
+
   const setPayment = (m) => {
     setPaymentMethod(m);
     setSaleErrors({});
@@ -545,274 +547,40 @@ export default function SalePageEnhanced() {
 
   return (
     <>
-      {/* Selector de modo de captura */}
-      <div className="mb-4 flex w-fit rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-100">
-        {[
-          { key: "transaccion", label: "Venta por venta", icon: ShoppingCart },
-          { key: "cierre", label: "Cierre del día", icon: CalendarDays },
-        ].map((m) => (
-          <button
-            key={m.key}
-            onClick={() => setMode(m.key)}
-            aria-pressed={mode === m.key}
-            className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              mode === m.key
-                ? "bg-teal-600 text-white"
-                : "text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <m.icon className="h-4 w-4" />
-            {m.label}
-          </button>
-        ))}
-      </div>
+      <ModeSwitcher mode={mode} onChange={setMode} />
 
       {mode === "cierre" ? (
         <DailyCloseMode onNotify={push} />
+      ) : mode === "historial" ? (
+        <SalesHistoryMode
+          sales={sales}
+          loading={loadingSales}
+          onVoid={requestVoid}
+        />
       ) : (
       <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-3">
+          <ProductSearchBar
+            inputRef={searchInputRef}
+            query={searchQuery}
+            onQueryChange={handleQueryChange}
+            onKeyDown={handleSearchKeyDown}
+            suggestions={suggestions}
+            suggestionIndex={suggestionIndex}
+            onPick={addLineFromProduct}
+            scanning={barcodeScanning}
+          />
 
-
-          {/* Buscador */}
-          <div className="relative rounded-xl bg-white p-3.5 shadow-sm ring-1 ring-slate-100">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSuggestionIndex(-1);
-                }}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Buscar producto por nombre, SKU o código..."
-                aria-label="Buscar producto"
-                role="combobox"
-                aria-expanded={suggestions.length > 0}
-                className="h-[46px] w-full rounded-lg border border-slate-200 pl-10 pr-3 text-[15px] outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-              />
-              {barcodeScanning && (
-                <span className="pointer-events-none absolute right-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1.5 text-xs font-medium text-teal-600">
-                  <ScanLine className="h-4 w-4 animate-pulse" aria-hidden />
-                  Leyendo código…
-                </span>
-              )}
-              {suggestions.length > 0 && (
-                <div
-                  role="listbox"
-                  className="absolute left-0 right-0 top-[52px] z-10 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl"
-                >
-                  {suggestions.map((p, i) => {
-                    const active =
-                      i === (suggestionIndex >= 0 ? suggestionIndex : 0);
-                    const outOfStock = !p.stock || p.stock <= 0;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        role="option"
-                        aria-selected={active}
-                        aria-disabled={outOfStock}
-                        disabled={outOfStock}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          addLineFromProduct(p);
-                        }}
-                        className={`flex w-full items-center justify-between gap-2.5 border-b border-slate-100 px-3.5 py-2.5 text-left last:border-0 ${
-                          outOfStock
-                            ? "cursor-not-allowed bg-white opacity-50"
-                            : active
-                              ? "bg-teal-50"
-                              : "bg-white hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate text-[14.5px] font-bold text-slate-900">
-                            {p.name}
-                          </div>
-                          <div className="truncate text-xs text-slate-400">
-                            SKU {p.sku} ·{" "}
-                            {outOfStock ? (
-                              <span className="font-bold text-red-500">
-                                Sin stock
-                              </span>
-                            ) : (
-                              `${p.stock} disp.`
-                            )}
-                          </div>
-                        </div>
-                        <div className="shrink-0 whitespace-nowrap text-[14.5px] font-bold tabular-nums text-teal-700">
-                          {currency(p.price)}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Carrito vacío */}
-          {lines.length === 0 && (
-            <div className="flex flex-col items-center gap-2.5 rounded-xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-                <ShoppingCart className="h-6 w-6 text-slate-400" />
-              </div>
-              <p className="text-[16px] font-bold text-slate-900">
-                Aún no agregas productos
-              </p>
-              <p className="text-sm text-slate-500">
-                Busca por nombre, SKU o código de barras.
-              </p>
-            </div>
-          )}
-
-          {/* Líneas del carrito */}
-          {lines.length > 0 && (
-            <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-slate-100">
-              {lines.map((line) => {
-                const hasDiscount = !!line.discountType && line.discountValue > 0;
-                return (
-                  <div
-                    key={line._key}
-                    className="border-b border-slate-100 p-3 last:border-0"
-                  >
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <div className="min-w-[140px] flex-1">
-                        <div className="text-[18px] font-bold text-slate-900">
-                          {line.name}
-                        </div>
-                        <div className="mt-0.5 text-xs text-slate-400">
-                          SKU {line.sku}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          aria-label="Restar"
-                          onClick={() => stepQty(line._key, -1)}
-                          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-                        >
-                          <Minus className="h-3.5 w-3.5" />
-                        </button>
-                        <input
-                          ref={(el) => (qtyRefs.current[line._key] = el)}
-                          type="number"
-                          min="1"
-                          value={line.quantity}
-                          onChange={(e) => changeQty(line._key, e.target.value)}
-                          onKeyDown={handleQtyKeyDown}
-                          aria-label={`Cantidad de ${line.name}`}
-                          className="no-spinner h-[30px] w-12 rounded-md border border-slate-200 text-center text-sm font-bold tabular-nums text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                        />
-                        <button
-                          type="button"
-                          aria-label="Sumar"
-                          onClick={() => stepQty(line._key, 1)}
-                          className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-
-                      <div className="w-[110px] shrink-0 text-right">
-                        <div className="text-[15px] font-bold tabular-nums text-slate-900">
-                          {currency(lineSubtotal(line))}
-                        </div>
-                        {hasDiscount && (
-                          <div className="text-xs tabular-nums text-slate-400 line-through">
-                            {currency(lineBase(line))}
-                          </div>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        aria-label={`Quitar ${line.name}`}
-                        onClick={() => removeLine(line._key)}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-700 hover:bg-red-100"
-                      >
-                        <Trash2 className="h-[15px] w-[15px]" />
-                      </button>
-                    </div>
-                    {/* 
-                    <div className="mt-2 pl-0.5">
-                      {hasDiscount ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                          Descuento {discountLabel}
-                          <button
-                            type="button"
-                            aria-label="Quitar descuento"
-                            onClick={() => removeDiscount(line._key)}
-                            className="text-slate-500 hover:text-slate-700"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openDiscount(line._key)}
-                          className="text-[12.5px] font-bold text-teal-700 underline hover:text-teal-800"
-                        >
-                          Agregar descuento
-                        </button>
-                      )}
-                    </div>
-                    */}
-
-                    {discountEditingKey === line._key && (
-                      <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-2.5">
-                        <div className="flex overflow-hidden rounded-md border border-slate-200">
-                          <button
-                            type="button"
-                            onClick={() => setDiscountDraftType("pct")}
-                            className={`flex h-[34px] items-center gap-1 px-3 text-[13px] font-bold ${discountDraftType === "pct" ? "bg-teal-600 text-white" : "bg-white text-slate-700"}`}
-                          >
-                            <Percent className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDiscountDraftType("amount")}
-                            className={`flex h-[34px] items-center gap-1 px-3 text-[13px] font-bold ${discountDraftType === "amount" ? "bg-teal-600 text-white" : "bg-white text-slate-700"}`}
-                          >
-                            <DollarSign className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          value={discountDraftValue}
-                          onChange={(e) => setDiscountDraftValue(e.target.value)}
-                          placeholder="0"
-                          autoFocus
-                          className="h-[34px] w-24 rounded-md border border-slate-200 px-2.5 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                        />
-                        <button
-                          type="button"
-                          onClick={cancelDiscount}
-                          className="h-[34px] rounded-md border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-700 hover:bg-slate-50"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={applyDiscount}
-                          className="h-[34px] rounded-md bg-teal-600 px-3.5 text-[13px] font-bold text-white hover:bg-teal-700"
-                        >
-                          Aplicar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <CartLines
+            lines={lines}
+            qtyRefs={qtyRefs}
+            onQtyChange={changeQty}
+            onQtyStep={stepQty}
+            onQtyKeyDown={handleQtyKeyDown}
+            onRemove={removeLine}
+            discount={discountProps}
+          />
 
           {/* Pago */}
           {lines.length > 0 && (
@@ -857,11 +625,7 @@ export default function SalePageEnhanced() {
               </div>
 
               {paymentMethod === "efectivo" && (
-
-
                 <div className="flex  justify-between">
-
-
                   <div>
                     <label className="mb-1.5 block text-sm font-bold text-slate-900">
                       Monto recibido <span className="text-red-500">*</span>
@@ -876,7 +640,6 @@ export default function SalePageEnhanced() {
                       aria-invalid={!!saleErrors.monto}
                       className={`h-12 w-full max-w-[220px] rounded-lg border px-3.5 text-lg font-bold tabular-nums outline-none focus:ring-2 ${saleErrors.monto ? "border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-teal-500 focus:ring-teal-100"}`}
                     />
-
 
                     {saleErrors.monto && (
                       <div className="mt-1.5 text-xs font-semibold text-red-600">
@@ -903,10 +666,7 @@ export default function SalePageEnhanced() {
                         Monto exacto
                       </button>
                     </div>
-
-
                   </div>
-
 
                   <div
                     className={`mt-4 flex items-center justify-between rounded-lg p-3.5 ${vueltoInsufficient ? "bg-red-50" : "bg-teal-50"}`}
@@ -929,12 +689,7 @@ export default function SalePageEnhanced() {
                       )}
                     </div>
                   </div>
-
-
                 </div>
-
-
-
               )}
 
               {(paymentMethod === "tarjeta" ||
@@ -1024,8 +779,17 @@ export default function SalePageEnhanced() {
           </div>
 
           <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
-            <div className="mb-3 text-[13px] font-bold uppercase tracking-wide text-slate-500">
-              Historial reciente
+            <div className="mb-3 flex items-baseline justify-between gap-2">
+              <div className="text-[13px] font-bold uppercase tracking-wide text-slate-500">
+                Historial reciente
+              </div>
+              <button
+                type="button"
+                onClick={() => setMode("historial")}
+                className="text-[12.5px] font-bold text-teal-700 underline hover:text-teal-800"
+              >
+                Ver todo
+              </button>
             </div>
             <div className="flex flex-col gap-2.5">
               {loadingSales ? (
@@ -1059,17 +823,11 @@ export default function SalePageEnhanced() {
                       </div>
                     </div>
 
-
-
-
                     <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
-
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11.5px] font-bold text-slate-700">
                           {METHOD_LABELS[sale.payment_method] || sale.payment_method}
                         </span>
-
-
 
                         {sale.client_name && (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
@@ -1094,9 +852,6 @@ export default function SalePageEnhanced() {
                         </button>
                       )}
                     </div>
-
-
-
                   </div>
                 ))
               )}
@@ -1187,43 +942,7 @@ export default function SalePageEnhanced() {
         </div>
       )}
 
-      {/* Toasts */}
-      <div
-        aria-live="polite"
-        role="status"
-        className="fixed inset-x-0 bottom-6 z-[70] flex flex-col items-center gap-2 px-4"
-      >
-        {toasts.map((t) => {
-          const Icon =
-            t.type === "error"
-              ? XCircle
-              : t.type === "success"
-                ? CheckCircle2
-                : Info;
-          const iconColor =
-            t.type === "error"
-              ? "text-red-400"
-              : t.type === "success"
-                ? "text-emerald-400"
-                : "text-teal-300";
-          return (
-            <div
-              key={t.id}
-              className="flex w-full max-w-md animate-fade-slide-up items-center gap-3 rounded-xl bg-slate-900 px-4 py-3.5 text-white shadow-xl"
-            >
-              <Icon className={`h-[18px] w-[18px] shrink-0 ${iconColor}`} />
-              <span className="flex-1 text-sm font-medium">{t.text}</span>
-              <button
-                onClick={() => dismiss(t.id)}
-                aria-label="Cerrar notificación"
-                className="shrink-0 text-slate-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          );
-        })}
-      </div>
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
     </>
   );
 }

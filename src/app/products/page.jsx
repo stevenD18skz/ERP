@@ -1110,6 +1110,9 @@ export default function ProductsPage() {
                     onClick={toggleSort}
                     className="w-24"
                   />
+                  <th className="w-32 px-2 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    Código de barras
+                  </th>
                   <SortHeader
                     label="Costo"
                     sortKey="cost_price"
@@ -1183,6 +1186,11 @@ export default function ProductsPage() {
                       <span className="inline-block max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 text-[12.5px] font-semibold text-slate-700 align-bottom">
                         {p.category || "Sin categoría"}
                       </span>
+                    </td>
+                    <td className="px-2 py-2.5 font-mono text-[12.5px] text-slate-600">
+                      {p.barcode || (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </td>
                     <td className="px-2 py-2.5 text-right tabular-nums">
                       {isCostEstimated(p) ? (
