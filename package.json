@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "import:excel": "node scripts/import-excel/index.mjs"
+    "import:excel": "node scripts/import-excel/index.mjs",
+    "sql:generate": "node scripts/generate-sql/index.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

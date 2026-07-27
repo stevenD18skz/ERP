@@ -1,67 +1,53 @@
-import { dailyCloses } from "../lib/mockDb";
+// Cierre diario: un día completo del negocio en una sola fila, que es como
+// venía la contabilidad en el Excel. Solo puede haber un cierre por fecha.
 
-export const getDailyCloses = async () => {
-  try {
-    const response = dailyCloses;
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching daily closes");
-  }
-};
+import { collection, commit } from "../lib/dataSource";
+
+const all = () => collection("dailyCloses");
+
+const sameId = (a, b) => String(a) === String(b);
+
+export const getDailyCloses = async () => [...all()];
 
 export const getDailyCloseByDate = async (date) => {
-  try {
-    const response = dailyCloses.find((close) => close.date === date);
-    if (!response) {
-      throw new Error("Daily close not found");
-    }
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching daily close");
-  }
+  const close = all().find((c) => c.date === date);
+  if (!close) throw new Error("Daily close not found");
+  return close;
 };
 
 export const createDailyClose = async (close) => {
-  try {
-    if (dailyCloses.some((item) => item.date === close.date)) {
-      throw new Error("Ya existe un cierre para esa fecha");
-    }
-    dailyCloses.unshift({
-      id: `dc-${close.date}`,
-      cash_in: null,
-      cash_out: null,
-      source: "app",
-      ...close,
-    });
-    dailyCloses.sort((a, b) => b.date.localeCompare(a.date));
-    return { message: "Daily close created" };
-  } catch (error) {
-    throw new Error(error.message || "Error creating daily close");
+  const closes = all();
+  if (closes.some((item) => item.date === close.date)) {
+    throw new Error("Ya existe un cierre para esa fecha");
   }
+
+  const created = {
+    id: `dc-${close.date}`,
+    cash_in: null,
+    cash_out: null,
+    source: "app",
+    ...close,
+  };
+
+  closes.unshift(created);
+  closes.sort((a, b) => b.date.localeCompare(a.date));
+  commit("dailyCloses");
+  return created;
 };
 
-export const updateDailyClose = async (id, close) => {
-  try {
-    const response = dailyCloses.find((item) => item.id === id);
-    if (!response) {
-      throw new Error("Daily close not found");
-    }
-    Object.assign(response, close);
-    return response;
-  } catch (error) {
-    throw new Error(error.message || "Error updating daily close");
-  }
+export const updateDailyClose = async (id, changes) => {
+  const close = all().find((c) => sameId(c.id, id));
+  if (!close) throw new Error("Daily close not found");
+  Object.assign(close, changes);
+  commit("dailyCloses");
+  return close;
 };
 
 export const deleteDailyClose = async (id) => {
-  try {
-    const response = dailyCloses.find((item) => item.id === id);
-    if (!response) {
-      throw new Error("Daily close not found");
-    }
-    dailyCloses.splice(dailyCloses.indexOf(response), 1);
-    return { message: "Daily close deleted" };
-  } catch (error) {
-    throw new Error(error.message || "Error deleting daily close");
-  }
+  const closes = all();
+  const index = closes.findIndex((c) => sameId(c.id, id));
+  if (index === -1) throw new Error("Daily close not found");
+  closes.splice(index, 1);
+  commit("dailyCloses");
+  return { message: "Daily close deleted" };
 };

@@ -1,0 +1,140 @@
+// De la fila de Supabase a la forma que ya usan las pantallas.
+//
+// La API devuelve exactamente los tipos de src/types (Product, Sale, Order,
+// Expense, DailyClose), los mismos que hoy entrega el mock. Así, cuando se
+// conecte el front, cambiar los servicios por llamadas a /api no obliga a
+// tocar ni un componente.
+//
+// Lo que la base tiene de más (updated_at, voided_at, line_total, received_at)
+// no sale por aquí a propósito: si en algún momento hace falta en pantalla, se
+// agrega primero al tipo de src/types y después acá.
+
+import type {
+  Product,
+  Sale,
+  SaleProductLine,
+  Order,
+  OrderProductLine,
+  Expense,
+  DailyClose,
+} from "@/types";
+import type {
+  ProductRow,
+  SaleRow,
+  SaleItemRow,
+  OrderRow,
+  OrderItemRow,
+  ExpenseRow,
+  DailyCloseRow,
+  ProductCategoryRow,
+} from "@/types/database";
+
+const n = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const nOrNull = (value: unknown): number | null =>
+  value === null || value === undefined ? null : n(value);
+
+export function toProduct(row: ProductRow): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    sku: row.sku,
+    barcode: row.barcode ?? "",
+    photo: row.photo ?? null,
+    price: n(row.price),
+    cost_price: n(row.cost_price),
+    cost_is_estimated: Boolean(row.cost_is_estimated),
+    stock: n(row.stock),
+    category: row.category,
+    description: row.description ?? "",
+    created_at: row.created_at,
+  };
+}
+
+export function toSaleLine(row: SaleItemRow): SaleProductLine {
+  return {
+    product_id: row.product_id ?? "",
+    product: row.product_name,
+    quantity: n(row.quantity),
+    sale_price: n(row.sale_price),
+    discount_type: row.discount_type ?? null,
+    discount_value: n(row.discount_value),
+  };
+}
+
+export function toSale(row: SaleRow): Sale {
+  return {
+    id: row.id,
+    sale_date: row.sale_date,
+    total_amount: n(row.total_amount),
+    gain: n(row.gain),
+    payment_method: row.payment_method,
+    client_name: row.client_name ?? null,
+    voided: Boolean(row.voided),
+    products: (row.items ?? []).map(toSaleLine),
+  };
+}
+
+export function toOrderLine(row: OrderItemRow): OrderProductLine {
+  return {
+    product_id: row.product_id ?? "",
+    product: row.product_name,
+    quantity: n(row.quantity),
+    unit_cost: n(row.unit_cost),
+  };
+}
+
+export function toOrder(row: OrderRow): Order {
+  return {
+    id: row.id,
+    order_date: row.order_date,
+    supplier: row.supplier,
+    expected_delivery: row.expected_delivery ?? null,
+    notes: row.notes ?? "",
+    total_amount: n(row.total_amount),
+    status: row.status,
+    attachment: row.attachment ?? null,
+    products: (row.items ?? []).map(toOrderLine),
+  };
+}
+
+export function toExpense(row: ExpenseRow): Expense {
+  return {
+    id: row.id,
+    date: row.date,
+    kind: row.kind,
+    amount: n(row.amount),
+    concept: row.concept ?? "",
+    notes: row.notes ?? "",
+  };
+}
+
+export function toDailyClose(row: DailyCloseRow): DailyClose {
+  return {
+    id: row.id,
+    date: row.date,
+    sales_total: n(row.sales_total),
+    gain: n(row.gain),
+    expenses_total: n(row.expenses_total),
+    purchases_total: n(row.purchases_total),
+    cash_in: nOrNull(row.cash_in),
+    cash_out: nOrNull(row.cash_out),
+    source: row.source,
+  };
+}
+
+export function toCategory(row: ProductCategoryRow) {
+  return {
+    category: row.category,
+    product_count: n(row.product_count),
+    stock_units: n(row.stock_units),
+    stock_value_cost: n(row.stock_value_cost),
+  };
+}
+
+// Columnas que hay que pedirle a PostgREST para armar cada forma.
+export const SALE_SELECT = "*, items:sale_items(*)";
+export const ORDER_SELECT = "*, items:order_items(*)";

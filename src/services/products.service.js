@@ -1,57 +1,59 @@
-import { products } from "../lib/mockDb";
+// Catálogo de productos.
+//
+// Los datos salen de dataSource, que decide solo si la aplicación está usando
+// los datos del negocio o los de la simulación. Este archivo no tiene que
+// saber en cuál de los dos está.
+
+import { collection, commit } from "../lib/dataSource";
+
+const all = () => collection("products");
+
+const sameId = (a, b) => String(a) === String(b);
 
 export const getProducts = async () => {
-  try {
-    const response = products;
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching products");
-  }
+  // Copia del arreglo (no de los objetos): React necesita una referencia nueva
+  // para volver a pintar, pero editar un producto debe seguir tocando el
+  // original guardado.
+  return [...all()];
 };
 
 export const getProductById = async (id) => {
-  try {
-    const response = products.find((product) => product.id === id);
-    if (!response) {
-      throw new Error("Product not found");
-    }
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching product");
-  }
+  const product = all().find((p) => sameId(p.id, id));
+  if (!product) throw new Error("Product not found");
+  return product;
 };
 
 export const createProduct = async (product) => {
-  try {
-    const response = products.push(product);
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error creating product");
-  }
+  const products = all();
+  const created = {
+    id: `p${Date.now()}`,
+    created_at: new Date().toISOString(),
+    barcode: "",
+    photo: null,
+    stock: 0,
+    category: "Sin categoría",
+    description: "",
+    cost_is_estimated: false,
+    ...product,
+  };
+  products.push(created);
+  commit("products");
+  return created;
 };
 
-export const updateProduct = async (id, product) => {
-  try {
-    const response = products.find((product) => product.id === id);
-    if (!response) {
-      throw new Error("Product not found");
-    }
-    Object.assign(response, product);
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error updating product");
-  }
+export const updateProduct = async (id, changes) => {
+  const product = all().find((p) => sameId(p.id, id));
+  if (!product) throw new Error("Product not found");
+  Object.assign(product, changes);
+  commit("products");
+  return product;
 };
 
 export const deleteProduct = async (id) => {
-  try {
-    const response = products.find((product) => product.id === id);
-    if (!response) {
-      throw new Error("Product not found");
-    }
-    products.splice(products.indexOf(response), 1);
-    return { message: "Product deleted" };
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error deleting product");
-  }
+  const products = all();
+  const index = products.findIndex((p) => sameId(p.id, id));
+  if (index === -1) throw new Error("Product not found");
+  products.splice(index, 1);
+  commit("products");
+  return { message: "Product deleted" };
 };

@@ -1,85 +1,71 @@
-import { sales, products } from "../lib/mockDb";
+// Ventas registradas una por una desde la aplicación.
+//
+// createSaleWithDetails arma la venta completa: guarda el encabezado y resuelve
+// el nombre y el precio de cada producto contra el catálogo, para que la venta
+// quede con el nombre que tenía el producto el día que se vendió.
 
-export const getSales = async () => {
-  try {
-    const response = sales;
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching sales");
-  }
-};
+import { collection, commit } from "../lib/dataSource";
+
+const all = () => collection("sales");
+
+const sameId = (a, b) => String(a) === String(b);
+
+export const getSales = async () => [...all()];
 
 export const getSaleById = async (id) => {
-  try {
-    const response = sales.find((sale) => sale.id === id);
-    if (!response) {
-      throw new Error("Sale not found");
-    }
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching sale");
-  }
+  const sale = all().find((s) => sameId(s.id, id));
+  if (!sale) throw new Error("Sale not found");
+  return sale;
 };
 
 export const createSale = async (sale) => {
-  try {
-    const response = sales.push(sale);
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error creating sale");
-  }
+  all().unshift(sale);
+  commit("sales");
+  return sale;
 };
 
 export const createSaleWithDetails = async (sale, saleProducts) => {
-  const detailedProducts = saleProducts.map((p) => {
-    const product = products.find(
-      (prod) => String(prod.id) === String(p.product_id),
-    );
+  const products = collection("products");
+
+  const detailedProducts = saleProducts.map((line) => {
+    const product = products.find((p) => sameId(p.id, line.product_id));
     return {
-      product_id: p.product_id,
-      product: product ? product.name : `Producto #${p.product_id}`,
-      quantity: p.quantity,
-      sale_price: p.sale_price ?? product?.price ?? 0,
-      discount_type: p.discount_type ?? null,
-      discount_value: p.discount_value ?? 0,
+      product_id: line.product_id,
+      product: product ? product.name : `Producto #${line.product_id}`,
+      quantity: line.quantity,
+      sale_price: line.sale_price ?? product?.price ?? 0,
+      discount_type: line.discount_type ?? null,
+      discount_value: line.discount_value ?? 0,
     };
   });
-  sales.unshift({
+
+  const created = {
     id: `s${Date.now()}`,
     payment_method: "efectivo",
     client_name: null,
     voided: false,
     ...sale,
     products: detailedProducts,
-  });
-  return Promise.resolve();
+  };
+
+  all().unshift(created);
+  commit("sales");
+  return created;
 };
 
-export const updateSale = async (id, sale) => {
-  try {
-    const response = sales.find((sale) => sale.id === id);
-    if (!response) {
-      throw new Error("Sale not found");
-    }
-    sales.splice(sales.indexOf(response), 1, {
-      ...response,
-      ...sale,
-    });
-    return { message: "Sale updated" };
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error updating sale");
-  }
+export const updateSale = async (id, changes) => {
+  const sale = all().find((s) => sameId(s.id, id));
+  if (!sale) throw new Error("Sale not found");
+  Object.assign(sale, changes);
+  commit("sales");
+  return sale;
 };
 
 export const deleteSale = async (id) => {
-  try {
-    const response = sales.find((sale) => sale.id === id);
-    if (!response) {
-      throw new Error("Sale not found");
-    }
-    sales.splice(sales.indexOf(response), 1);
-    return { message: "Sale deleted" };
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error deleting sale");
-  }
+  const sales = all();
+  const index = sales.findIndex((s) => sameId(s.id, id));
+  if (index === -1) throw new Error("Sale not found");
+  sales.splice(index, 1);
+  commit("sales");
+  return { message: "Sale deleted" };
 };

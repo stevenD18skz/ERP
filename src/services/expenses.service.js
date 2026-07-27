@@ -1,63 +1,45 @@
-import { expenses } from "../lib/mockDb";
+// Gastos del negocio y movimientos de caja (entradas y salidas).
 
-export const getExpenses = async () => {
-  try {
-    const response = expenses;
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching expenses");
-  }
-};
+import { collection, commit } from "../lib/dataSource";
+
+const all = () => collection("expenses");
+
+const sameId = (a, b) => String(a) === String(b);
+
+export const getExpenses = async () => [...all()];
 
 export const getExpenseById = async (id) => {
-  try {
-    const response = expenses.find((expense) => expense.id === id);
-    if (!response) {
-      throw new Error("Expense not found");
-    }
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error fetching expense");
-  }
+  const expense = all().find((e) => sameId(e.id, id));
+  if (!expense) throw new Error("Expense not found");
+  return expense;
 };
 
 export const createExpense = async (expense) => {
-  try {
-    expenses.unshift({
-      id: `x${Date.now()}`,
-      kind: "gasto",
-      concept: "",
-      notes: "",
-      ...expense,
-    });
-    return { message: "Expense created" };
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error creating expense");
-  }
+  const created = {
+    id: `x${Date.now()}`,
+    kind: "gasto",
+    concept: "",
+    notes: "",
+    ...expense,
+  };
+  all().unshift(created);
+  commit("expenses");
+  return created;
 };
 
-export const updateExpense = async (id, expense) => {
-  try {
-    const response = expenses.find((item) => item.id === id);
-    if (!response) {
-      throw new Error("Expense not found");
-    }
-    Object.assign(response, expense);
-    return response;
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error updating expense");
-  }
+export const updateExpense = async (id, changes) => {
+  const expense = all().find((e) => sameId(e.id, id));
+  if (!expense) throw new Error("Expense not found");
+  Object.assign(expense, changes);
+  commit("expenses");
+  return expense;
 };
 
 export const deleteExpense = async (id) => {
-  try {
-    const response = expenses.find((item) => item.id === id);
-    if (!response) {
-      throw new Error("Expense not found");
-    }
-    expenses.splice(expenses.indexOf(response), 1);
-    return { message: "Expense deleted" };
-  } catch (error) {
-    throw new Error(error.response?.data?.error || "Error deleting expense");
-  }
+  const expenses = all();
+  const index = expenses.findIndex((e) => sameId(e.id, id));
+  if (index === -1) throw new Error("Expense not found");
+  expenses.splice(index, 1);
+  commit("expenses");
+  return { message: "Expense deleted" };
 };
