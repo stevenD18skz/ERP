@@ -195,18 +195,15 @@ export default function SalesHistoryMode({ sales, loading, onVoid }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {visible.map((sale) => {
-                    const open = expandedId === sale.id;
-                    return (
-                      <SaleRows
-                        key={sale.id}
-                        sale={sale}
-                        open={open}
-                        onToggle={() => toggleDetail(sale.id)}
-                        onVoid={onVoid}
-                      />
-                    );
-                  })}
+                  {visible.map((sale) => (
+                    <SaleRows
+                      key={sale.id}
+                      sale={sale}
+                      open={expandedId === sale.id}
+                      onToggle={() => toggleDetail(sale.id)}
+                      onVoid={onVoid}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>

@@ -14,6 +14,7 @@ import SalesHistoryMode from "@/components/sales/SalesHistoryMode";
 import ModeSwitcher from "@/components/sales/ModeSwitcher";
 import ProductSearchBar from "@/components/sales/ProductSearchBar";
 import CartLines from "@/components/sales/CartLines";
+import RecentSales from "@/components/sales/RecentSales";
 import ToastStack from "@/components/sales/ToastStack";
 import {
   METHOD_LABELS,
@@ -778,85 +779,12 @@ export default function SalePageEnhanced() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
-            <div className="mb-3 flex items-baseline justify-between gap-2">
-              <div className="text-[13px] font-bold uppercase tracking-wide text-slate-500">
-                Historial reciente
-              </div>
-              <button
-                type="button"
-                onClick={() => setMode("historial")}
-                className="text-[12.5px] font-bold text-teal-700 underline hover:text-teal-800"
-              >
-                Ver todo
-              </button>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {loadingSales ? (
-                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="rounded-lg bg-slate-50 p-3">
-                    <div className="h-3.5 w-2/3 animate-pulse rounded bg-slate-200 motion-reduce:animate-none" />
-                    <div className="mt-2 h-3 w-1/3 animate-pulse rounded bg-slate-200 motion-reduce:animate-none" />
-                  </div>
-                ))
-              ) : sales.length === 0 ? (
-                <p className="py-4 text-center text-sm text-slate-400">
-                  Aún no hay ventas registradas.
-                </p>
-              ) : (
-                sales.slice(0, 8).map((sale) => (
-                  <div
-                    key={sale.id}
-                    className={`rounded-lg bg-slate-50 p-3 ${sale.voided ? "opacity-60" : ""}`}
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div
-                        className={`text-[14.5px] font-bold tabular-nums text-slate-900 ${sale.voided ? "line-through" : ""}`}
-                      >
-                        {currency(sale.total_amount)}
-                      </div>
-                      <div className="shrink-0 whitespace-nowrap text-xs text-slate-400">
-                        {new Date(sale.sale_date).toLocaleTimeString("es-CO", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11.5px] font-bold text-slate-700">
-                          {METHOD_LABELS[sale.payment_method] || sale.payment_method}
-                        </span>
-
-                        {sale.client_name && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
-                            {sale.client_name}
-                          </span>
-                        )}
-                      </div>
-
-                      {sale.voided && (
-                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11.5px] font-bold text-red-700">
-                          Anulada
-                        </span>
-                      )}
-
-                      {!sale.voided && (
-                        <button
-                          type="button"
-                          onClick={() => requestVoid(sale.id)}
-                          className="mt-2 text-[12.5px] font-bold text-red-700 underline hover:text-red-800"
-                        >
-                          Anular venta
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          <RecentSales
+            sales={sales}
+            loading={loadingSales}
+            onVoid={requestVoid}
+            onSeeAll={() => setMode("historial")}
+          />
         </div>
       </div>
       )}

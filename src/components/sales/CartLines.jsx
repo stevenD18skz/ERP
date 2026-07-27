@@ -8,7 +8,7 @@ import {
   ShoppingCart,
   Trash2,
 } from "lucide-react";
-import { currency } from "@/utils/converts";
+import { currency, formatMoney } from "@/utils/converts";
 import { lineBase, lineSubtotal } from "./salesUtils";
 
 export function CartEmptyState() {
@@ -96,6 +96,15 @@ function CartLine({ line, qtyRefs, onQtyChange, onQtyStep, onQtyKeyDown, onRemov
             {line.name}
           </div>
           <div className="mt-0.5 text-xs text-slate-400">SKU {line.sku}</div>
+        </div>
+
+        {/* Valor unitario: el subtotal de la derecha ya viene multiplicado, así
+            que sin esto no hay forma de ver a cómo se está cobrando cada uno. */}
+        <div className="shrink-0 whitespace-nowrap text-xs text-slate-400">
+          V.U:{" "}
+          <span className="text-[13px] font-semibold tabular-nums text-slate-600">
+            {formatMoney(line.unitPrice) || "0"}
+          </span>
         </div>
 
         <div className="flex items-center gap-1.5">
