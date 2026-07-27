@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StoreIcon, Loader2 } from "lucide-react";
 
+import { isSimulationOn, stopSimulation } from "@/lib/simulation/store";
+
 export default function SignupPage() {
   const router = useRouter();
   const [nombre, setNombre] = useState("");
@@ -35,6 +37,10 @@ export default function SignupPage() {
         setError(body?.error?.message || "No se pudo crear la tienda");
         return;
       }
+      // Misma razón que en /login: una tienda nueva real no debe quedar
+      // tapada por una simulación que haya quedado encendida en la pestaña.
+      if (isSimulationOn()) stopSimulation();
+
       router.replace("/dashboard");
       router.refresh();
     } catch {

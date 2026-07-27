@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Store, Loader2 } from "lucide-react";
 
+import { isSimulationOn, stopSimulation } from "@/lib/simulation/store";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,6 +30,11 @@ function LoginForm() {
         setError(body?.error?.message || "No se pudo iniciar sesión");
         return;
       }
+      // Si esta pestaña había quedado con la simulación encendida, un login
+      // real debe ganarle: si no, la cookie/sessionStorage de simulación
+      // siguen mandando y el dashboard sigue mostrando datos de mentira.
+      if (isSimulationOn()) stopSimulation();
+
       const from = searchParams.get("from");
       router.replace(from && from.startsWith("/") ? from : "/dashboard");
       router.refresh();
