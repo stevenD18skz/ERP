@@ -6,7 +6,9 @@
 //  - línea de una venta ya guardada: { product, quantity, sale_price,
 //    discount_type, discount_value } — viene del servicio y usa snake_case.
 
-export const uid = () => Math.random().toString(36).slice(2, 9);
+import { currency } from "@/utils/converts";
+
+export { uid } from "@/utils/id";
 
 export const QUICK_CASH = [5000, 10000, 20000, 50000];
 
@@ -66,3 +68,49 @@ export const formatSaleDate = (date) =>
 // Los ids generados por el servicio son `s<timestamp>`; para mostrarlos como
 // folio de factura basta con los últimos dígitos.
 export const saleFolio = (sale) => `#${String(sale.id).slice(-6)}`;
+
+/* --- recibo impreso --- */
+
+// Sale a 300px de ancho porque está pensado para una impresora térmica de
+// tirilla, no para una hoja carta.
+export const buildReceiptHTML = (data) => {
+  const rows = data.items
+    .map(
+      (it) =>
+        `<tr><td>${it.name}</td><td style="text-align:center">${it.quantity}</td><td style="text-align:right">${currency(it.subtotal)}</td></tr>`,
+    )
+    .join("");
+
+  // La última línea depende de cómo se pagó: en efectivo importa el vuelto, en
+  // fiado a nombre de quién quedó, y en tarjeta o transferencia basta con
+  // dejar constancia del medio.
+  const noteLine =
+    data.method === "efectivo"
+      ? `<tr><td colspan="2">Vuelto</td><td style="text-align:right">${currency(Math.max(0, data.vuelto || 0))}</td></tr>`
+      : data.method === "fiado"
+        ? `<tr><td colspan="3">Fiado a nombre de ${data.cliente || "-"}</td></tr>`
+        : `<tr><td colspan="3">Pagado con ${METHOD_LABELS[data.method]}</td></tr>`;
+
+  return `<html><head><meta charset="utf-8"><title>Recibo</title>
+      <style>
+        body{font-family:system-ui,-apple-system,Roboto,'Helvetica Neue',Arial;width:300px;margin:0 auto;padding:16px;color:#111}
+        h2{font-size:16px;margin:0 0 4px}
+        table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+        th,td{padding:4px 0}
+        th{text-align:left;border-bottom:1px solid #ccc}
+        tfoot td{border-top:1px solid #ccc;font-weight:bold;padding-top:6px}
+        .muted{color:#666;font-size:11px}
+      </style></head><body>
+      <h2>Recibo de venta</h2>
+      <div class="muted">${new Date().toLocaleString("es-CO")}</div>
+      <table>
+        <thead><tr><th>Producto</th><th>Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td colspan="2">Total</td><td style="text-align:right">${currency(data.total)}</td></tr>
+          ${noteLine}
+        </tfoot>
+      </table>
+      <p class="muted" style="margin-top:16px;text-align:center">¡Gracias por su compra!</p>
+      </body></html>`;
+};

@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-const uid = () => Math.random().toString(36).slice(2, 9);
+import { uid } from "@/utils/id";
 
 // Avisos efímeros abajo de la pantalla. Los timers se guardan para poder
 // limpiarlos al desmontar: sin eso, un setTimeout pendiente intenta actualizar

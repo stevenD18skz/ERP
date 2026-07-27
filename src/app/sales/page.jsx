@@ -8,35 +8,27 @@ import {
   createSaleWithDetails,
   updateSale,
 } from "@/services/sales.service";
-import { currency, formatMoney } from "@/utils/converts";
-import DailyCloseMode from "@/components/sales/DailyCloseMode";
-import SalesHistoryMode from "@/components/sales/SalesHistoryMode";
-import ModeSwitcher from "@/components/sales/ModeSwitcher";
-import ProductSearchBar from "@/components/sales/ProductSearchBar";
+import { openPrintWindow } from "@/utils/print";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useToasts } from "@/hooks/useToasts";
+
+import ToastStack from "@/components/ui/ToastStack";
 import CartLines from "@/components/sales/CartLines";
+import DailyCloseMode from "@/components/sales/DailyCloseMode";
+import ModeSwitcher from "@/components/sales/ModeSwitcher";
+import PaymentPanel from "@/components/sales/PaymentPanel";
+import ProductSearchBar from "@/components/sales/ProductSearchBar";
+import ReceiptModal from "@/components/sales/ReceiptModal";
 import RecentSales from "@/components/sales/RecentSales";
-import ToastStack from "@/components/sales/ToastStack";
+import SalesHistoryMode from "@/components/sales/SalesHistoryMode";
+import TodayTotalsCard from "@/components/sales/TodayTotalsCard";
+import VoidSaleDialog from "@/components/sales/VoidSaleDialog";
 import {
-  METHOD_LABELS,
-  QUICK_CASH,
+  buildReceiptHTML,
   lineCost,
   lineSubtotal,
   uid,
 } from "@/components/sales/salesUtils";
-import MoneyInput from "@/components/ui/MoneyInput";
-import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
-import { useToasts } from "@/hooks/useToasts";
-
-import {
-  Banknote,
-  CreditCard,
-  ArrowLeftRight,
-  UserRound,
-  AlertTriangle,
-  CheckCircle2,
-  Loader2,
-  Printer,
-} from "lucide-react";
 
 /*
   SalePageEnhanced
@@ -85,7 +77,6 @@ export default function SalePageEnhanced() {
   const [confirming, setConfirming] = useState(false);
 
   // recibo / anulación
-  const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptData, setReceiptData] = useState(null);
   const [voidConfirmId, setVoidConfirmId] = useState(null);
   const [voiding, setVoiding] = useState(false);
@@ -227,7 +218,7 @@ export default function SalePageEnhanced() {
 
   const { scanning: barcodeScanning } = useBarcodeScanner({
     onScan: handleBarcodeScan,
-    enabled: mode === "transaccion" && !receiptOpen && !voidConfirmId,
+    enabled: mode === "transaccion" && !receiptData && !voidConfirmId,
   });
 
   const handleSearchKeyDown = (e) => {
@@ -332,24 +323,32 @@ export default function SalePageEnhanced() {
     setPaymentMethod(m);
     setSaleErrors({});
   };
+  const changeReceivedAmount = (numeric) => {
+    setReceivedAmount(numeric);
+    if (saleErrors.monto)
+      setSaleErrors((er) => ({ ...er, monto: undefined }));
+  };
+  const changeClientName = (value) => {
+    setClientName(value);
+    if (saleErrors.cliente)
+      setSaleErrors((er) => ({ ...er, cliente: undefined }));
+  };
   const addQuickCash = (amount) =>
     setReceivedAmount((r) => String((parseFloat(r) || 0) + amount));
   const setExactAmount = () =>
     setReceivedAmount(String(Math.ceil(totals.total)));
 
-  const receivedNum = parseFloat(receivedAmount);
-  const vuelto = (Number.isNaN(receivedNum) ? 0 : receivedNum) - totals.total;
-  const vueltoInsufficient =
-    receivedAmount !== "" &&
-    (Number.isNaN(receivedNum) || receivedNum < totals.total);
-
-  const cancelSale = () => {
+  const resetSaleDraft = () => {
     setLines([]);
     setSearchQuery("");
     setReceivedAmount("");
     setClientName("");
     setPaymentMethod("efectivo");
     setSaleErrors({});
+  };
+
+  const cancelSale = () => {
+    resetSaleDraft();
     push("Venta cancelada", "info");
   };
 
@@ -407,12 +406,9 @@ export default function SalePageEnhanced() {
           const current = allProducts.find(
             (p) => String(p.id) === String(l.productId),
           );
-          const newStock = Math.max(
-            0,
-            (current?.stock ?? l.stock) - l.quantity,
-          );
-          return updateProduct(l.productId, { stock: newStock }).catch(
-            (err) => console.error("No se pudo sincronizar el stock:", err),
+          const newStock = Math.max(0, (current?.stock ?? l.stock) - l.quantity);
+          return updateProduct(l.productId, { stock: newStock }).catch((err) =>
+            console.error("No se pudo sincronizar el stock:", err),
           );
         }),
       );
@@ -431,14 +427,8 @@ export default function SalePageEnhanced() {
         vuelto: paymentMethod === "efectivo" ? recibido - total : null,
         items: receiptItems,
       });
-      setReceiptOpen(true);
 
-      setLines([]);
-      setSearchQuery("");
-      setReceivedAmount("");
-      setClientName("");
-      setPaymentMethod("efectivo");
-      setSaleErrors({});
+      resetSaleDraft();
     } catch (err) {
       console.error("Error creating sale:", err);
       push("Error registrando venta. Intenta de nuevo.", "error");
@@ -449,53 +439,16 @@ export default function SalePageEnhanced() {
 
   const printReceipt = (data) => {
     if (!data) return;
-    const rows = data.items
-      .map(
-        (it) =>
-          `<tr><td>${it.name}</td><td style="text-align:center">${it.quantity}</td><td style="text-align:right">${currency(it.subtotal)}</td></tr>`,
-      )
-      .join("");
-    const noteLine =
-      data.method === "efectivo"
-        ? `<tr><td colspan="2">Vuelto</td><td style="text-align:right">${currency(Math.max(0, data.vuelto || 0))}</td></tr>`
-        : data.method === "fiado"
-          ? `<tr><td colspan="3">Fiado a nombre de ${data.cliente || "-"}</td></tr>`
-          : `<tr><td colspan="3">Pagado con ${METHOD_LABELS[data.method]}</td></tr>`;
-    const html = `<html><head><meta charset="utf-8"><title>Recibo</title>
-      <style>
-        body{font-family:system-ui,-apple-system,Roboto,'Helvetica Neue',Arial;width:300px;margin:0 auto;padding:16px;color:#111}
-        h2{font-size:16px;margin:0 0 4px}
-        table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
-        th,td{padding:4px 0}
-        th{text-align:left;border-bottom:1px solid #ccc}
-        tfoot td{border-top:1px solid #ccc;font-weight:bold;padding-top:6px}
-        .muted{color:#666;font-size:11px}
-      </style></head><body>
-      <h2>Recibo de venta</h2>
-      <div class="muted">${new Date().toLocaleString("es-CO")}</div>
-      <table>
-        <thead><tr><th>Producto</th><th>Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot>
-          <tr><td colspan="2">Total</td><td style="text-align:right">${currency(data.total)}</td></tr>
-          ${noteLine}
-        </tfoot>
-      </table>
-      <p class="muted" style="margin-top:16px;text-align:center">¡Gracias por su compra!</p>
-      </body></html>`;
-
-    const w = window.open("", "_blank", "noopener,noreferrer");
-    if (!w) {
+    if (!openPrintWindow(buildReceiptHTML(data))) {
       push("Permite las ventanas emergentes para imprimir el recibo", "error");
-      return;
     }
-    w.document.write(html);
-    w.document.close();
-    setTimeout(() => w.print(), 300);
   };
 
   const requestVoid = (id) => setVoidConfirmId(id);
   const cancelVoidRequest = () => setVoidConfirmId(null);
+
+  // Anular no borra la venta: la marca y devuelve al inventario lo que se
+  // había descontado al registrarla.
   const confirmVoidSale = async () => {
     const sale = sales.find((s) => s.id === voidConfirmId);
     if (!sale) {
@@ -559,334 +512,80 @@ export default function SalePageEnhanced() {
           onVoid={requestVoid}
         />
       ) : (
-      <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-4">
-        {/* MAIN */}
-        <div className="flex flex-col gap-4 lg:col-span-3">
-          <ProductSearchBar
-            inputRef={searchInputRef}
-            query={searchQuery}
-            onQueryChange={handleQueryChange}
-            onKeyDown={handleSearchKeyDown}
-            suggestions={suggestions}
-            suggestionIndex={suggestionIndex}
-            onPick={addLineFromProduct}
-            scanning={barcodeScanning}
-          />
+        <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {/* MAIN */}
+          <div className="flex flex-col gap-4 lg:col-span-3">
+            <ProductSearchBar
+              inputRef={searchInputRef}
+              query={searchQuery}
+              onQueryChange={handleQueryChange}
+              onKeyDown={handleSearchKeyDown}
+              suggestions={suggestions}
+              suggestionIndex={suggestionIndex}
+              onPick={addLineFromProduct}
+              scanning={barcodeScanning}
+            />
 
-          <CartLines
-            lines={lines}
-            qtyRefs={qtyRefs}
-            onQtyChange={changeQty}
-            onQtyStep={stepQty}
-            onQtyKeyDown={handleQtyKeyDown}
-            onRemove={removeLine}
-            discount={discountProps}
-          />
+            <CartLines
+              lines={lines}
+              qtyRefs={qtyRefs}
+              onQtyChange={changeQty}
+              onQtyStep={stepQty}
+              onQtyKeyDown={handleQtyKeyDown}
+              onRemove={removeLine}
+              discount={discountProps}
+            />
 
-          {/* Pago */}
-          {lines.length > 0 && (
-            <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
-              <div className="mb-4 flex items-baseline justify-between">
-                <div className="text-[22px] font-bold text-slate-900">
-                  Total a cobrar
-                </div>
-                <div className="text-[28px] font-extrabold tabular-nums text-slate-900">
-                  {currency(totals.total)}
-                </div>
-              </div>
-
-              <div className="mb-2.5 text-[13px] font-bold uppercase tracking-wide text-slate-500">
-                Método de pago
-              </div>
-              <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <PaymentMethodButton
-                  active={paymentMethod === "efectivo"}
-                  onClick={() => setPayment("efectivo")}
-                  icon={Banknote}
-                  label="Efectivo"
-                />
-                <PaymentMethodButton
-                  active={paymentMethod === "tarjeta"}
-                  onClick={() => setPayment("tarjeta")}
-                  icon={CreditCard}
-                  label="Tarjeta"
-                />
-                <PaymentMethodButton
-                  active={paymentMethod === "transferencia"}
-                  onClick={() => setPayment("transferencia")}
-                  icon={ArrowLeftRight}
-                  label="Transferencia"
-                />
-                <PaymentMethodButton
-                  active={paymentMethod === "fiado"}
-                  onClick={() => setPayment("fiado")}
-                  icon={UserRound}
-                  label="Fiado"
-                />
-              </div>
-
-              {paymentMethod === "efectivo" && (
-                <div className="flex  justify-between">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-bold text-slate-900">
-                      Monto recibido <span className="text-red-500">*</span>
-                    </label>
-                    <MoneyInput
-                      value={receivedAmount}
-                      onChange={(numeric) => {
-                        setReceivedAmount(numeric);
-                        if (saleErrors.monto)
-                          setSaleErrors((er) => ({ ...er, monto: undefined }));
-                      }}
-                      aria-invalid={!!saleErrors.monto}
-                      className={`h-12 w-full max-w-[220px] rounded-lg border px-3.5 text-lg font-bold tabular-nums outline-none focus:ring-2 ${saleErrors.monto ? "border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-teal-500 focus:ring-teal-100"}`}
-                    />
-
-                    {saleErrors.monto && (
-                      <div className="mt-1.5 text-xs font-semibold text-red-600">
-                        {saleErrors.monto}
-                      </div>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {QUICK_CASH.map((amount) => (
-                        <button
-                          key={amount}
-                          type="button"
-                          onClick={() => addQuickCash(amount)}
-                          className="h-[38px] rounded-full bg-teal-50 px-3.5 text-[13.5px] font-bold text-teal-800 hover:bg-teal-100"
-                        >
-                          +{formatMoney(amount)}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={setExactAmount}
-                        className="h-[38px] rounded-full border-[1.5px] border-teal-600 bg-white px-3.5 text-[13.5px] font-bold text-teal-700 hover:bg-teal-50"
-                      >
-                        Monto exacto
-                      </button>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`mt-4 flex items-center justify-between rounded-lg p-3.5 ${vueltoInsufficient ? "bg-red-50" : "bg-teal-50"}`}
-                  >
-                    <div
-                      className={`flex items-center gap-2 text-sm font-bold mr-4 ${vueltoInsufficient ? "text-red-700" : "text-teal-800"}`}
-                    >
-                      {vueltoInsufficient && (
-                        <AlertTriangle className="h-[17px] w-[17px]" />
-                      )}
-                      {vueltoInsufficient ? "Falta por cobrar" : "Vuelto"}
-                    </div>
-                    <div
-                      className={`text-xl font-extrabold tabular-nums ${vueltoInsufficient ? "text-red-700" : "text-teal-800"}`}
-                    >
-                      {currency(
-                        vueltoInsufficient
-                          ? totals.total - (Number.isNaN(receivedNum) ? 0 : receivedNum)
-                          : vuelto,
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {(paymentMethod === "tarjeta" ||
-                paymentMethod === "transferencia") && (
-                  <div className="flex items-center gap-2.5 rounded-lg bg-teal-50 p-3.5 text-sm font-medium text-teal-800">
-                    <CheckCircle2 className="h-[18px] w-[18px] shrink-0" />
-                    {paymentMethod === "tarjeta"
-                      ? "Confirma cuando el pago con tarjeta se acredite en el datáfono."
-                      : "Confirma cuando veas la transferencia (Nequi, Daviplata u otra) en tu cuenta."}
-                  </div>
-                )}
-
-              {paymentMethod === "fiado" && (
-                <div>
-                  <label className="mb-1.5 block text-sm font-bold text-slate-900">
-                    Nombre del cliente <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={clientName}
-                    onChange={(e) => {
-                      setClientName(e.target.value);
-                      if (saleErrors.cliente)
-                        setSaleErrors((er) => ({ ...er, cliente: undefined }));
-                    }}
-                    placeholder="Ej. Don Roberto"
-                    aria-invalid={!!saleErrors.cliente}
-                    className={`h-[46px] w-full max-w-xs rounded-lg border px-3.5 text-[15px] outline-none focus:ring-2 ${saleErrors.cliente ? "border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-teal-500 focus:ring-teal-100"}`}
-                  />
-                  {saleErrors.cliente && (
-                    <div className="mt-1.5 text-xs font-semibold text-red-600">
-                      {saleErrors.cliente}
-                    </div>
-                  )}
-                  <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-[13.5px] font-semibold text-amber-800">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    Esta venta quedará pendiente de cobro a nombre del cliente.
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-5 flex gap-2.5">
-                <button
-                  type="button"
-                  onClick={cancelSale}
-                  disabled={confirming}
-                  className="h-[50px] flex-1 rounded-lg border border-slate-200 text-[15px] font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancelar venta
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmSale}
-                  disabled={confirming}
-                  className="flex h-[50px] flex-[2] items-center justify-center gap-2 rounded-lg bg-teal-600 text-[15px] font-bold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {confirming && <Loader2 className="h-[18px] w-[18px] animate-spin" />}
-                  {confirming ? "Registrando..." : "Registrar venta"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* SIDEBAR */}
-        <div className="flex flex-col gap-4">
-          <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
-            <div className="mb-3 text-[13px] font-bold uppercase tracking-wide text-slate-500">
-              Ventas de hoy
-            </div>
-            <div className="flex gap-4">
-              <div>
-                <div className="text-2xl font-extrabold tabular-nums text-slate-900">
-                  {currency(todayTotal)}
-                </div>
-                <div className="mt-0.5 text-xs text-slate-400">
-                  Total vendido
-                </div>
-              </div>
-              <div>
-                <div className="text-2xl font-extrabold tabular-nums text-teal-600">
-                  {todaySales.length}
-                </div>
-                <div className="mt-0.5 text-xs text-slate-400">Ventas</div>
-              </div>
-            </div>
+            {lines.length > 0 && (
+              <PaymentPanel
+                total={totals.total}
+                paymentMethod={paymentMethod}
+                onPaymentMethodChange={setPayment}
+                receivedAmount={receivedAmount}
+                onReceivedAmountChange={changeReceivedAmount}
+                onQuickCash={addQuickCash}
+                onExactAmount={setExactAmount}
+                clientName={clientName}
+                onClientNameChange={changeClientName}
+                errors={saleErrors}
+                confirming={confirming}
+                onCancel={cancelSale}
+                onConfirm={confirmSale}
+              />
+            )}
           </div>
 
-          <RecentSales
-            sales={sales}
-            loading={loadingSales}
-            onVoid={requestVoid}
-            onSeeAll={() => setMode("historial")}
-          />
+          {/* SIDEBAR */}
+          <div className="flex flex-col gap-4">
+            <TodayTotalsCard total={todayTotal} count={todaySales.length} />
+
+            <RecentSales
+              sales={sales}
+              loading={loadingSales}
+              onVoid={requestVoid}
+              onSeeAll={() => setMode("historial")}
+            />
+          </div>
         </div>
-      </div>
       )}
 
       {voidConfirmId && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4"
-          onClick={cancelVoidRequest}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-sm flex-col gap-3.5 rounded-2xl bg-white p-6 shadow-2xl"
-          >
-            <div className="text-lg font-extrabold text-slate-900">
-              ¿Anular esta venta?
-            </div>
-            <p className="text-sm leading-relaxed text-slate-500">
-              El stock vendido se devolverá al inventario. Esta acción no se
-              puede deshacer.
-            </p>
-            <div className="mt-1 flex gap-2.5">
-              <button
-                type="button"
-                onClick={cancelVoidRequest}
-                disabled={voiding}
-                className="h-[46px] flex-1 rounded-lg border border-slate-200 text-[14.5px] font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmVoidSale}
-                disabled={voiding}
-                className="flex h-[46px] flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 text-[14.5px] font-bold text-white hover:bg-red-700 disabled:opacity-70"
-              >
-                {voiding && <Loader2 className="h-4 w-4 animate-spin" />}
-                Anular venta
-              </button>
-            </div>
-          </div>
-        </div>
+        <VoidSaleDialog
+          voiding={voiding}
+          onClose={cancelVoidRequest}
+          onConfirm={confirmVoidSale}
+        />
       )}
 
-      {receiptOpen && receiptData && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
-          <div className="flex w-full max-w-md flex-col items-center gap-3.5 rounded-2xl bg-white p-7 text-center shadow-2xl">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-50">
-              <CheckCircle2 className="h-7 w-7 text-teal-600" />
-            </div>
-            <div className="text-lg font-extrabold text-slate-900">
-              Venta registrada
-            </div>
-            <div className="text-[30px] font-extrabold tabular-nums text-slate-900">
-              {currency(receiptData.total)}
-            </div>
-            <div className="text-sm text-slate-500">
-              {receiptData.method === "efectivo"
-                ? `Vuelto: ${currency(Math.max(0, receiptData.vuelto || 0))}`
-                : receiptData.method === "fiado"
-                  ? `Fiado a nombre de ${receiptData.cliente}`
-                  : `Pagado con ${METHOD_LABELS[receiptData.method]}`}
-            </div>
-            <div className="mt-1.5 flex w-full gap-2.5">
-              <button
-                type="button"
-                onClick={() => printReceipt(receiptData)}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 text-[14.5px] font-bold text-slate-700 hover:bg-slate-50"
-              >
-                <Printer className="h-4 w-4" /> Imprimir recibo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setReceiptOpen(false);
-                  setReceiptData(null);
-                }}
-                className="h-12 flex-1 rounded-lg bg-teal-600 text-[14.5px] font-bold text-white hover:bg-teal-700"
-              >
-                Nueva venta
-              </button>
-            </div>
-          </div>
-        </div>
+      {receiptData && (
+        <ReceiptModal
+          data={receiptData}
+          onPrint={printReceipt}
+          onClose={() => setReceiptData(null)}
+        />
       )}
 
       <ToastStack toasts={toasts} onDismiss={dismiss} />
     </>
-  );
-}
-
-function PaymentMethodButton({ active, onClick, icon: Icon, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex h-12 items-center justify-center gap-2 rounded-lg border-[1.5px] px-2 text-sm font-bold transition-colors ${active
-        ? "border-teal-600 bg-teal-600 text-white"
-        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-        }`}
-    >
-      <Icon className="h-[18px] w-[18px] shrink-0" />
-      {label}
-    </button>
   );
 }
