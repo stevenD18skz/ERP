@@ -15,6 +15,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest, notFound } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { Fields, requireUuidParam } from "@/lib/api/validate";
 import { toOrder, ORDER_SELECT } from "@/lib/api/mappers";
 import type { OrderRow } from "@/types/database";
@@ -26,6 +27,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del pedido");
 
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest, context: Context) {
     const db = getSupabaseAdmin();
     const { error } = await db.rpc("receive_order", {
       p_order_id: id,
+      p_tienda_id: tiendaId,
       p_adjust_stock: adjustStock ?? true,
       p_update_cost: updateCost ?? false,
     });
@@ -57,6 +60,7 @@ export async function POST(request: NextRequest, context: Context) {
       .from("orders")
       .select(ORDER_SELECT)
       .eq("id", id)
+      .eq("tienda_id", tiendaId)
       .maybeSingle();
     if (readError) throw fromPostgrest(readError, "la lectura del pedido");
     if (!data) throw notFound("No existe un pedido con ese identificador");

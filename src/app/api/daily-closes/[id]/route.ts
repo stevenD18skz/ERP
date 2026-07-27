@@ -11,6 +11,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest, notFound, badRequest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import {
   Fields,
   readJson,
@@ -38,8 +39,9 @@ function resolveKey(id: string): { column: "id" | "date"; value: string } {
   );
 }
 
-export async function GET(_request: NextRequest, context: Context) {
+export async function GET(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     const key = resolveKey(id);
 
@@ -48,6 +50,7 @@ export async function GET(_request: NextRequest, context: Context) {
       .from("daily_closes")
       .select("*")
       .eq(key.column, key.value)
+      .eq("tienda_id", tiendaId)
       .maybeSingle();
     if (error) throw fromPostgrest(error, "la consulta del cierre diario");
     if (!data) throw notFound("No hay un cierre para ese día");
@@ -58,6 +61,7 @@ export async function GET(_request: NextRequest, context: Context) {
 
 export async function PATCH(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     const key = resolveKey(id);
 
@@ -82,6 +86,7 @@ export async function PATCH(request: NextRequest, context: Context) {
       .from("daily_closes")
       .update(patch)
       .eq(key.column, key.value)
+      .eq("tienda_id", tiendaId)
       .select("*")
       .maybeSingle();
     if (error) throw fromPostgrest(error, "la actualización del cierre diario");
@@ -91,8 +96,9 @@ export async function PATCH(request: NextRequest, context: Context) {
   });
 }
 
-export async function DELETE(_request: NextRequest, context: Context) {
+export async function DELETE(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     const key = resolveKey(id);
 
@@ -101,6 +107,7 @@ export async function DELETE(_request: NextRequest, context: Context) {
       .from("daily_closes")
       .delete()
       .eq(key.column, key.value)
+      .eq("tienda_id", tiendaId)
       .select("id")
       .maybeSingle();
     if (error) throw fromPostgrest(error, "el borrado del cierre diario");

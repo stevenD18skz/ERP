@@ -6,6 +6,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok, created, listMeta } from "@/lib/api/http";
 import { fromPostgrest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { Fields, readJson } from "@/lib/api/validate";
 import {
   parseListQuery,
@@ -31,6 +32,7 @@ const SORTABLE = [
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { q, sort, ascending, page, limit, offset, rangeEnd, params } =
       parseListQuery(request, {
         sortable: SORTABLE,
@@ -39,7 +41,10 @@ export async function GET(request: NextRequest) {
       });
 
     const db = getSupabaseAdmin();
-    let query = db.from("products").select("*", { count: "exact" });
+    let query = db
+      .from("products")
+      .select("*", { count: "exact" })
+      .eq("tienda_id", tiendaId);
 
     if (q) {
       query = query.or(
@@ -87,6 +92,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const body = await readJson(request);
     const f = new Fields(body);
 
@@ -97,7 +103,7 @@ export async function POST(request: NextRequest) {
     const barcode = f.string("barcode", { max: 60, allowEmpty: true });
     const photo = f.string("photo", { nullable: true, max: 2000 });
     const stock = f.number("stock", { min: 0 });
-    const category = f.string("category", { max: 120 });
+    const category = f.string("category", { max: 120, allowEmpty: true });
     const description = f.string("description", {
       allowEmpty: true,
       max: 4000,
@@ -114,6 +120,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await db
       .from("products")
       .insert({
+        tienda_id: tiendaId,
         name,
         sku,
         price,

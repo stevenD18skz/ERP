@@ -10,18 +10,21 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { toCategory } from "@/lib/api/mappers";
 import type { ProductCategoryRow } from "@/types/database";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const db = getSupabaseAdmin();
     const { data, error } = await db
       .from("v_product_categories")
       .select("*")
+      .eq("tienda_id", tiendaId)
       .order("category", { ascending: true });
     if (error) throw fromPostgrest(error, "el listado de categorías");
 

@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest, notFound } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import {
   Fields,
   readJson,
@@ -22,8 +23,9 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ id: string }> };
 
-export async function GET(_request: NextRequest, context: Context) {
+export async function GET(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del producto");
 
@@ -32,6 +34,7 @@ export async function GET(_request: NextRequest, context: Context) {
       .from("products")
       .select("*")
       .eq("id", id)
+      .eq("tienda_id", tiendaId)
       .maybeSingle();
     if (error) throw fromPostgrest(error, "la consulta del producto");
     if (!data) throw notFound("No existe un producto con ese identificador");
@@ -42,6 +45,7 @@ export async function GET(_request: NextRequest, context: Context) {
 
 export async function PATCH(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del producto");
 
@@ -57,7 +61,7 @@ export async function PATCH(request: NextRequest, context: Context) {
       barcode: f.string("barcode", { max: 60, allowEmpty: true }),
       photo: f.string("photo", { nullable: true, max: 2000 }),
       stock: f.number("stock"),
-      category: f.string("category", { max: 120 }),
+      category: f.string("category", { max: 120, allowEmpty: true }),
       description: f.string("description", { allowEmpty: true, max: 4000 }),
     });
     f.check();
@@ -76,6 +80,7 @@ export async function PATCH(request: NextRequest, context: Context) {
       .from("products")
       .update(patch)
       .eq("id", id)
+      .eq("tienda_id", tiendaId)
       .select("*")
       .maybeSingle();
     if (error) throw fromPostgrest(error, "la actualización del producto");
@@ -85,8 +90,9 @@ export async function PATCH(request: NextRequest, context: Context) {
   });
 }
 
-export async function DELETE(_request: NextRequest, context: Context) {
+export async function DELETE(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del producto");
 
@@ -97,6 +103,7 @@ export async function DELETE(_request: NextRequest, context: Context) {
       .from("products")
       .delete()
       .eq("id", id)
+      .eq("tienda_id", tiendaId)
       .select("id")
       .maybeSingle();
     if (error) throw fromPostgrest(error, "el borrado del producto");

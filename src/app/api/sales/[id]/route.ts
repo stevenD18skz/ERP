@@ -11,6 +11,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest, notFound, badRequest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import {
   Fields,
   readJson,
@@ -32,29 +33,36 @@ const PAYMENT_METHODS = [
 
 type Context = { params: Promise<{ id: string }> };
 
-async function readSale(db: ReturnType<typeof getSupabaseAdmin>, id: string) {
+async function readSale(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  id: string,
+  tiendaId: string,
+) {
   const { data, error } = await db
     .from("sales")
     .select(SALE_SELECT)
     .eq("id", id)
+    .eq("tienda_id", tiendaId)
     .maybeSingle();
   if (error) throw fromPostgrest(error, "la consulta de la venta");
   if (!data) throw notFound("No existe una venta con ese identificador");
   return data as SaleRow;
 }
 
-export async function GET(_request: NextRequest, context: Context) {
+export async function GET(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador de la venta");
 
     const db = getSupabaseAdmin();
-    return ok(toSale(await readSale(db, id)));
+    return ok(toSale(await readSale(db, id, tiendaId)));
   });
 }
 
 export async function PATCH(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador de la venta");
 
@@ -77,7 +85,7 @@ export async function PATCH(request: NextRequest, context: Context) {
     }
 
     const db = getSupabaseAdmin();
-    const current = await readSale(db, id);
+    const current = await readSale(db, id, tiendaId);
 
     if (voided === false && current.voided) {
       throw badRequest(
@@ -86,7 +94,11 @@ export async function PATCH(request: NextRequest, context: Context) {
     }
 
     if (Object.keys(patch).length > 0) {
-      const { error } = await db.from("sales").update(patch).eq("id", id);
+      const { error } = await db
+        .from("sales")
+        .update(patch)
+        .eq("id", id)
+        .eq("tienda_id", tiendaId);
       if (error) throw fromPostgrest(error, "la actualización de la venta");
     }
 
@@ -95,17 +107,19 @@ export async function PATCH(request: NextRequest, context: Context) {
     if (voided === true && !current.voided) {
       const { error } = await db.rpc("void_sale", {
         p_sale_id: id,
+        p_tienda_id: tiendaId,
         p_restore_stock: restoreStock ?? true,
       });
       if (error) throw fromPostgrest(error, "la anulación de la venta");
     }
 
-    return ok(toSale(await readSale(db, id)));
+    return ok(toSale(await readSale(db, id, tiendaId)));
   });
 }
 
-export async function DELETE(_request: NextRequest, context: Context) {
+export async function DELETE(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador de la venta");
 
@@ -115,6 +129,7 @@ export async function DELETE(_request: NextRequest, context: Context) {
       .from("sales")
       .delete()
       .eq("id", id)
+      .eq("tienda_id", tiendaId)
       .select("id")
       .maybeSingle();
     if (error) throw fromPostgrest(error, "el borrado de la venta");

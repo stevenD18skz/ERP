@@ -11,6 +11,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest, notFound, badRequest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import {
   Fields,
   readJson,
@@ -27,29 +28,36 @@ const STATUSES = ["pendiente", "recibido", "cancelado"] as const;
 
 type Context = { params: Promise<{ id: string }> };
 
-async function readOrder(db: ReturnType<typeof getSupabaseAdmin>, id: string) {
+async function readOrder(
+  db: ReturnType<typeof getSupabaseAdmin>,
+  id: string,
+  tiendaId: string,
+) {
   const { data, error } = await db
     .from("orders")
     .select(ORDER_SELECT)
     .eq("id", id)
+    .eq("tienda_id", tiendaId)
     .maybeSingle();
   if (error) throw fromPostgrest(error, "la consulta del pedido");
   if (!data) throw notFound("No existe un pedido con ese identificador");
   return data as OrderRow;
 }
 
-export async function GET(_request: NextRequest, context: Context) {
+export async function GET(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del pedido");
 
     const db = getSupabaseAdmin();
-    return ok(toOrder(await readOrder(db, id)));
+    return ok(toOrder(await readOrder(db, id, tiendaId)));
   });
 }
 
 export async function PATCH(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del pedido");
 
@@ -73,10 +81,14 @@ export async function PATCH(request: NextRequest, context: Context) {
     }
 
     const db = getSupabaseAdmin();
-    const current = await readOrder(db, id);
+    const current = await readOrder(db, id, tiendaId);
 
     if (Object.keys(patch).length > 0) {
-      const { error } = await db.from("orders").update(patch).eq("id", id);
+      const { error } = await db
+        .from("orders")
+        .update(patch)
+        .eq("id", id)
+        .eq("tienda_id", tiendaId);
       if (error) throw fromPostgrest(error, "la actualización del pedido");
     }
 
@@ -84,6 +96,7 @@ export async function PATCH(request: NextRequest, context: Context) {
       if (status === "recibido") {
         const { error } = await db.rpc("receive_order", {
           p_order_id: id,
+          p_tienda_id: tiendaId,
           p_adjust_stock: adjustStock ?? true,
           p_update_cost: updateCost ?? false,
         });
@@ -91,6 +104,7 @@ export async function PATCH(request: NextRequest, context: Context) {
       } else if (status === "cancelado") {
         const { error } = await db.rpc("cancel_order", {
           p_order_id: id,
+          p_tienda_id: tiendaId,
           p_adjust_stock: adjustStock ?? true,
         });
         if (error) throw fromPostgrest(error, "la cancelación del pedido");
@@ -105,29 +119,35 @@ export async function PATCH(request: NextRequest, context: Context) {
         const { error } = await db
           .from("orders")
           .update({ status })
-          .eq("id", id);
+          .eq("id", id)
+          .eq("tienda_id", tiendaId);
         if (error) throw fromPostgrest(error, "el cambio de estado del pedido");
       }
     }
 
-    return ok(toOrder(await readOrder(db, id)));
+    return ok(toOrder(await readOrder(db, id, tiendaId)));
   });
 }
 
-export async function DELETE(_request: NextRequest, context: Context) {
+export async function DELETE(request: NextRequest, context: Context) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { id } = await context.params;
     requireUuidParam(id, "El identificador del pedido");
 
     const db = getSupabaseAdmin();
-    const current = await readOrder(db, id);
+    const current = await readOrder(db, id, tiendaId);
     if (current.status === "recibido") {
       throw badRequest(
         "Un pedido recibido no se puede borrar: su mercancía ya está contada en el inventario. Cancelarlo primero.",
       );
     }
 
-    const { error } = await db.from("orders").delete().eq("id", id);
+    const { error } = await db
+      .from("orders")
+      .delete()
+      .eq("id", id)
+      .eq("tienda_id", tiendaId);
     if (error) throw fromPostgrest(error, "el borrado del pedido");
 
     return ok({ id, deleted: true });

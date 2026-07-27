@@ -15,6 +15,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok } from "@/lib/api/http";
 import { fromPostgrest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { dateParam } from "@/lib/api/query";
 
 export const runtime = "nodejs";
@@ -22,12 +23,14 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const params = new URL(request.url).searchParams;
     const from = dateParam(params.get("from"), "from");
     const to = dateParam(params.get("to"), "to");
 
     const db = getSupabaseAdmin();
     const { data, error } = await db.rpc("get_summary", {
+      p_tienda_id: tiendaId,
       p_from: from,
       p_to: to,
     });

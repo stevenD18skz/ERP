@@ -32,12 +32,16 @@ export const notFound = (message = "No se encontró el recurso") =>
 export const conflict = (message: string, details?: unknown) =>
   new ApiError(409, message, "conflict", details);
 
+export const unauthorized = (message = "No autenticado") =>
+  new ApiError(401, message, "unauthenticated");
+
 export const invalidPayload = (details: Record<string, string>) =>
   new ApiError(422, "Hay campos con errores", "invalid_payload", details);
 
 // Restricciones de la base traducidas a algo que entienda quien usa la app.
 const CONSTRAINT_MESSAGES: Record<string, string> = {
-  daily_closes_date_key: "Ya existe un cierre para esa fecha",
+  daily_closes_tienda_date_key: "Ya existe un cierre para esa fecha",
+  tiendas_nombre_lower_idx: "Ya existe una tienda con ese nombre",
   products_sku_key: "Ya hay un producto con ese SKU",
   sales_fiado_needs_client:
     "Una venta a crédito necesita el nombre del cliente",

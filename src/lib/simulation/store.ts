@@ -8,11 +8,23 @@
 // La base de datos de la tienda no se toca nunca desde aquí.
 
 import { buildSimulationData, type SimulationData } from "./mockUpSimulacion";
+import { SIM_COOKIE } from "./cookie";
 
 export type CollectionName = keyof SimulationData;
 
 const FLAG_KEY = "erp-simulacion";
 const DATA_KEY = "erp-simulacion-datos";
+
+// sessionStorage no lo puede leer el servidor. middleware.ts necesita saber
+// que la simulación está encendida para no exigirle login a una pantalla que
+// nunca va a tocar datos reales, y la única forma de avisarle es una cookie.
+// Sin Max-Age: es de sesión, se borra sola al cerrar el navegador.
+function setSimCookie(on: boolean): void {
+  if (typeof document === "undefined") return;
+  document.cookie = on
+    ? `${SIM_COOKIE}=1; path=/; SameSite=Lax`
+    : `${SIM_COOKIE}=; path=/; Max-Age=0; SameSite=Lax`;
+}
 
 // Si cambia la forma de los datos de ejemplo, subir esto: las simulaciones
 // viejas que sigan abiertas se vuelven a sembrar solas en vez de romperse.
@@ -92,6 +104,7 @@ export function startSimulation(): void {
   }
   cache = null;
   seed();
+  setSimCookie(true);
   notify();
 }
 
@@ -114,6 +127,7 @@ export function stopSimulation(): void {
       // Nada que hacer: igual quedó limpia la copia en memoria.
     }
   }
+  setSimCookie(false);
   notify();
 }
 

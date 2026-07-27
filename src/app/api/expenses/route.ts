@@ -14,6 +14,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok, created, listMeta } from "@/lib/api/http";
 import { fromPostgrest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { Fields, readJson } from "@/lib/api/validate";
 import { parseListQuery, enumParam, todayInBogota } from "@/lib/api/query";
 import { toExpense } from "@/lib/api/mappers";
@@ -27,6 +28,7 @@ const KINDS = ["gasto", "entrada", "salida"] as const;
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const {
       sort,
       ascending,
@@ -45,7 +47,10 @@ export async function GET(request: NextRequest) {
     });
 
     const db = getSupabaseAdmin();
-    let query = db.from("expenses").select("*", { count: "exact" });
+    let query = db
+      .from("expenses")
+      .select("*", { count: "exact" })
+      .eq("tienda_id", tiendaId);
 
     if (from) query = query.gte("date", from);
     if (to) query = query.lte("date", to);
@@ -73,6 +78,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const body = await readJson(request);
     const f = new Fields(body);
 
@@ -87,6 +93,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await db
       .from("expenses")
       .insert({
+        tienda_id: tiendaId,
         date: date ?? todayInBogota(),
         kind: kind ?? "gasto",
         amount,

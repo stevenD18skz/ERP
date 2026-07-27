@@ -9,7 +9,7 @@ import TopBar from "./TopBar";
 
 // Rutas que se muestran sin el marco de la aplicación (sin barra lateral ni
 // barra superior): la página pública y la pantalla de paso a la simulación.
-const BARE_ROUTES = ["/", "/simulacion"];
+const BARE_ROUTES = ["/", "/simulacion", "/login", "/signup"];
 
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);

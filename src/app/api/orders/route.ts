@@ -12,6 +12,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok, created, listMeta } from "@/lib/api/http";
 import { fromPostgrest, badRequest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { Fields, readJson } from "@/lib/api/validate";
 import {
   parseListQuery,
@@ -38,6 +39,7 @@ const STATUSES = ["pendiente", "recibido", "cancelado"] as const;
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const {
       sort,
       ascending,
@@ -56,7 +58,10 @@ export async function GET(request: NextRequest) {
     });
 
     const db = getSupabaseAdmin();
-    let query = db.from("orders").select(ORDER_SELECT, { count: "exact" });
+    let query = db
+      .from("orders")
+      .select(ORDER_SELECT, { count: "exact" })
+      .eq("tienda_id", tiendaId);
 
     const { startUtc, endUtc } = dayRangeToUtc(from, to);
     if (startUtc) query = query.gte("order_date", startUtc);
@@ -88,6 +93,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const body = await readJson(request);
 
     const header =
@@ -141,6 +147,7 @@ export async function POST(request: NextRequest) {
         attachment: attachment ?? null,
       },
       p_items: items,
+      p_tienda_id: tiendaId,
     });
     if (rpcError) throw fromPostgrest(rpcError, "la creación del pedido");
 
@@ -151,6 +158,7 @@ export async function POST(request: NextRequest) {
       .from("orders")
       .select(ORDER_SELECT)
       .eq("id", orderRow.id)
+      .eq("tienda_id", tiendaId)
       .single();
     if (error)
       throw fromPostgrest(error, "la lectura del pedido recién creado");

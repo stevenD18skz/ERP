@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { Search, Bell, CircleUserRound, LogOut, Menu } from "lucide-react";
 import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 import SimulationChip from "@/components/simulation/SimulationChip";
+import { useSession } from "@/hooks/useSession";
 
 const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
   const router = useRouter();
+  const { tienda, logout } = useSession();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
   const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
@@ -107,10 +109,10 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
               <CircleUserRound className="h-6 w-6 text-slate-500" />
               <div className="hidden text-left sm:block">
                 <div className="text-xs font-medium text-slate-700">
-                  Administrador
+                  {tienda?.dueno ?? "..."}
                 </div>
                 <div className="text-[11px] text-slate-400">
-                  admin@boxes.local
+                  {tienda?.nombre ?? ""}
                 </div>
               </div>
             </button>
@@ -120,16 +122,7 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
                 <button
                   onClick={() => {
                     setUserOpen(false);
-                    router.push("/profile");
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  Perfil
-                </button>
-                <button
-                  onClick={() => {
-                    setUserOpen(false);
-                    alert("Cerrar sesión placeholder");
+                    logout();
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                 >

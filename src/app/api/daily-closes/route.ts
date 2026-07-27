@@ -13,6 +13,7 @@ import type { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok, created, listMeta } from "@/lib/api/http";
 import { fromPostgrest } from "@/lib/api/errors";
+import { requireTiendaId } from "@/lib/api/auth";
 import { Fields, readJson } from "@/lib/api/validate";
 import { parseListQuery, enumParam, todayInBogota } from "@/lib/api/query";
 import { toDailyClose } from "@/lib/api/mappers";
@@ -37,6 +38,7 @@ const GAIN_RATE = 0.19;
 
 export async function GET(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const { sort, ascending, page, limit, offset, rangeEnd, from, to, params } =
       parseListQuery(request, {
         sortable: SORTABLE,
@@ -45,7 +47,10 @@ export async function GET(request: NextRequest) {
       });
 
     const db = getSupabaseAdmin();
-    let query = db.from("daily_closes").select("*", { count: "exact" });
+    let query = db
+      .from("daily_closes")
+      .select("*", { count: "exact" })
+      .eq("tienda_id", tiendaId);
 
     if (from) query = query.gte("date", from);
     if (to) query = query.lte("date", to);
@@ -67,6 +72,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   return handle(async () => {
+    const tiendaId = requireTiendaId(request);
     const body = await readJson(request);
     const f = new Fields(body);
 
@@ -84,6 +90,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await db
       .from("daily_closes")
       .insert({
+        tienda_id: tiendaId,
         date: date ?? todayInBogota(),
         sales_total: salesTotal,
         gain: gain ?? Math.round((salesTotal ?? 0) * GAIN_RATE),
