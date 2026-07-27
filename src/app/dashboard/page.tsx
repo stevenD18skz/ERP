@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -20,7 +20,10 @@ import {
 } from "lucide-react";
 
 import { currency } from "@/utils/converts";
-import { products, orders, sales, dailyCloses } from "@/lib/mockDb";
+import { getProducts } from "@/services/products.service";
+import { getSales } from "@/services/sales.service";
+import { getOrders } from "@/services/orders.service";
+import { getDailyCloses } from "@/services/dailyCloses.service";
 import type { Product } from "@/types/product";
 import type { Sale } from "@/types/sale";
 import type { Order } from "@/types/order";
@@ -49,8 +52,18 @@ function pctDelta(current: number, previous: number): number {
 }
 
 const MONTH_LONG = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
 ];
 
 // "2025-12-31" -> "31 de diciembre de 2025"
@@ -130,14 +143,16 @@ const QuickAction = ({
 }) => (
   <Link
     href={href}
-    className={`group flex items-center gap-3 rounded-xl p-4 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${primary
-      ? "bg-blue-600 text-white hover:bg-blue-700"
-      : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-      }`}
+    className={`group flex items-center gap-3 rounded-xl p-4 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+      primary
+        ? "bg-blue-600 text-white hover:bg-blue-700"
+        : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+    }`}
   >
     <span
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${primary ? "bg-white/15" : accent
-        }`}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
+        primary ? "bg-white/15" : accent
+      }`}
     >
       <Icon className="h-5 w-5" aria-hidden />
     </span>
@@ -157,10 +172,9 @@ const DeltaBadge = ({ pct }: { pct: number }) => {
   const Icon = positive ? TrendingUp : TrendingDown;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${positive
-        ? "bg-emerald-50 text-emerald-700"
-        : "bg-red-50 text-red-700"
-        }`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
+        positive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+      }`}
     >
       <Icon className="h-3 w-3" aria-hidden />
       {positive ? "+" : ""}
@@ -190,14 +204,18 @@ const TrendCard = ({
 }) => (
   <div className="flex flex-col rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
     <div className="flex items-start justify-between gap-2">
-      <span className="text-sm font-medium leading-snug text-slate-500">{label}</span>
+      <span className="text-sm font-medium leading-snug text-slate-500">
+        {label}
+      </span>
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${accent}`}
       >
         <Icon className="h-4 w-4" aria-hidden />
       </span>
     </div>
-    <div className={`mt-2 text-2xl font-bold tabular-nums ${valueColor}`}>{value}</div>
+    <div className={`mt-2 text-2xl font-bold tabular-nums ${valueColor}`}>
+      {value}
+    </div>
     <div className="mt-2">
       {hint ? (
         <span className="text-xs text-slate-400">{hint}</span>
@@ -207,9 +225,6 @@ const TrendCard = ({
     </div>
   </div>
 );
-
-
-
 
 const TopProductsHome = ({ items }: { items: Product[] }) => (
   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
@@ -251,9 +266,7 @@ const TopProductsHome = ({ items }: { items: Product[] }) => (
 
 const RecentActivity = ({ items }: { items: ActivityItem[] }) => (
   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
-    <h3 className="text-sm font-semibold text-slate-700">
-      Actividad reciente
-    </h3>
+    <h3 className="text-sm font-semibold text-slate-700">Actividad reciente</h3>
     {items.length === 0 ? (
       <p className="mt-3 text-sm text-slate-400">Sin actividad todavía.</p>
     ) : (
@@ -358,8 +371,8 @@ const DayMoneyDonut = ({
             Todavía no hay movimiento de hoy
           </p>
           <p className="mt-1 max-w-sm text-sm text-slate-500">
-            Apenas registres la primera venta o cierres el día, aquí ves en qué se
-            fue la plata.
+            Apenas registres la primera venta o cierres el día, aquí ves en qué
+            se fue la plata.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <Link
@@ -428,7 +441,14 @@ const DayMoneyDonut = ({
             aria-label="Reparto de la venta del día"
           >
             <g transform="rotate(-90 94 94)">
-              <circle cx="94" cy="94" r={R} fill="none" stroke="#f1f5f9" strokeWidth="26" />
+              <circle
+                cx="94"
+                cy="94"
+                r={R}
+                fill="none"
+                stroke="#f1f5f9"
+                strokeWidth="26"
+              />
               {parts.map((p) => {
                 const frac = day.ventas > 0 ? p.value / day.ventas : 0;
                 const dash = frac * C;
@@ -462,7 +482,8 @@ const DayMoneyDonut = ({
               {currency(Math.max(0, day.neto))}
             </span>
             <span className="text-xs font-semibold tabular-nums text-slate-400">
-              {Math.round((Math.max(0, day.neto) / day.ventas) * 100)}% de la venta
+              {Math.round((Math.max(0, day.neto) / day.ventas) * 100)}% de la
+              venta
             </span>
           </div>
         </div>
@@ -475,7 +496,9 @@ const DayMoneyDonut = ({
               <div key={p.key}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${p.dot}`} />
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${p.dot}`}
+                    />
                     <span className="truncate text-sm font-semibold text-slate-700">
                       {p.label}
                     </span>
@@ -513,7 +536,8 @@ const DayMoneyDonut = ({
         <span className="font-bold tabular-nums text-slate-600">
           {currency(day.compra)}
         </span>{" "}
-        en mercancía. Va aparte: es inversión en inventario, no un costo del día.
+        en mercancía. Va aparte: es inversión en inventario, no un costo del
+        día.
       </p>
     </DonutCard>
   );
@@ -531,10 +555,18 @@ function shortDate(isoDate: string): string {
     porque el Excel nunca guardó ventas individuales. Los cierres diarios sí son
     el registro real del negocio, así que este bloque siempre tiene qué mostrar.
 */
-const RecentCloses = ({ items, todayIso }: { items: DailyClose[]; todayIso: string }) => (
+const RecentCloses = ({
+  items,
+  todayIso,
+}: {
+  items: DailyClose[];
+  todayIso: string;
+}) => (
   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
     <div className="flex items-baseline justify-between gap-3">
-      <h3 className="text-sm font-semibold text-slate-700">Últimos cierres diarios</h3>
+      <h3 className="text-sm font-semibold text-slate-700">
+        Últimos cierres diarios
+      </h3>
       <Link
         href="/summary"
         className="text-xs font-semibold text-blue-600 hover:text-blue-700"
@@ -605,9 +637,37 @@ const RecentCloses = ({ items, todayIso }: { items: DailyClose[]; todayIso: stri
 );
 
 export default function Home() {
+  // Los datos se piden en el cliente y no se importan directo del mock: así
+  // esta pantalla también funciona con los datos de la simulación, que viven
+  // en la pestaña del navegador y el servidor no puede ver.
+  const [products, setProducts] = useState<Product[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [dailyCloses, setDailyCloses] = useState<DailyClose[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [p, s, o, c] = await Promise.all([
+        getProducts(),
+        getSales(),
+        getOrders(),
+        getDailyCloses(),
+      ]);
+      if (cancelled) return;
+      setProducts(p);
+      setSales(s);
+      setOrders(o);
+      setDailyCloses(c);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const lowStockCount = useMemo(
     () => products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD).length,
-    [],
+    [products],
   );
 
   // Inicio siempre habla de HOY, la fecha real del sistema. Si el día todavía
@@ -638,11 +698,14 @@ export default function Home() {
     // registro: si no se anotó nada, ese día no vendió nada que sepamos.
     const windowAvg = (offset: number) => {
       let sum = 0;
-      for (let i = offset; i < offset + 7; i++) sum += byDate.get(dayAgo(i))?.sales_total ?? 0;
+      for (let i = offset; i < offset + 7; i++)
+        sum += byDate.get(dayAgo(i))?.sales_total ?? 0;
       return sum / 7;
     };
 
-    const ordered = [...dailyCloses].sort((a, b) => b.date.localeCompare(a.date));
+    const ordered = [...dailyCloses].sort((a, b) =>
+      b.date.localeCompare(a.date),
+    );
 
     const breakdown: DayBreakdown | null = todayClose
       ? {
@@ -659,7 +722,10 @@ export default function Home() {
     return {
       hasToday: !!todayClose,
       ventasHoy: todayClose?.sales_total ?? 0,
-      ventasDelta: pctDelta(todayClose?.sales_total ?? 0, yesterdayClose?.sales_total ?? 0),
+      ventasDelta: pctDelta(
+        todayClose?.sales_total ?? 0,
+        yesterdayClose?.sales_total ?? 0,
+      ),
       gananciaHoy: todayClose?.gain ?? 0,
       gananciaDelta: pctDelta(todayClose?.gain ?? 0, yesterdayClose?.gain ?? 0),
       promedioSemana: windowAvg(0),
@@ -669,7 +735,7 @@ export default function Home() {
       recentCloses: ordered.slice(0, 7),
       todayIso: dayAgo(0),
     };
-  }, []);
+  }, [dailyCloses]);
 
   const topProductsHome = useMemo(
     () =>
@@ -677,12 +743,12 @@ export default function Home() {
         .slice()
         .sort((a, b) => b.stock - a.stock)
         .slice(0, 5),
-    [],
+    [products],
   );
 
   const activity = useMemo(
     () => buildActivity(products, sales, orders),
-    [],
+    [products, sales, orders],
   );
 
   const today = useMemo(
@@ -762,7 +828,9 @@ export default function Home() {
             <div className="mt-2 text-2xl font-bold tabular-nums text-amber-600">
               {lowStockCount}
             </div>
-            <div className="mt-2 text-xs text-slate-400">productos por revisar</div>
+            <div className="mt-2 text-xs text-slate-400">
+              productos por revisar
+            </div>
           </Link>
         </section>
 
@@ -776,7 +844,10 @@ export default function Home() {
             <DayMoneyDonut day={dayBreakdown} lastRecorded={lastRecorded} />
           </section>
 
-          <section aria-label="Acciones rápidas" className="flex flex-col gap-4">
+          <section
+            aria-label="Acciones rápidas"
+            className="flex flex-col gap-4"
+          >
             <h2 className="sr-only">Acciones rápidas</h2>
             <QuickAction
               href="/sales"

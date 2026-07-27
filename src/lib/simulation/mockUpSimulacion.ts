@@ -43,46 +43,52 @@ const at = (base: Date, days: number, hour: number, minute: number): string => {
 
 // --- Catálogo --------------------------------------------------------------
 // [sku, nombre, categoría, precio, costo, stock, costo real?]
+// Se deja en forma de tabla (una línea por producto) para poder leerlo y
+// editarlo de un vistazo; por eso el prettier-ignore.
+// prettier-ignore
 const CATALOGO: Array<[string, string, string, number, number, number, boolean]> = [
-  ["GRA-001", "Arroz Diana 500g", "Granos y abarrotes", 2800, 2100, 48, true],
-  ["GRA-002", "Fríjol Cargamanto 500g", "Granos y abarrotes", 6500, 5100, 10, true],
-  ["GRA-003", "Azúcar Manuelita 1kg", "Granos y abarrotes", 4900, 3900, 30, false],
-  ["GRA-004", "Panela Cuadrada 500g", "Granos y abarrotes", 3200, 2400, 25, false],
-  ["ACE-001", "Aceite Girasol 1000ml", "Aceites", 12900, 9800, 14, true],
-  ["LAC-001", "Leche Entera 1L", "Lácteos y huevos", 4300, 3500, 36, true],
-  ["LAC-002", "Huevos AA x30", "Lácteos y huevos", 18500, 15200, 9, true],
-  ["LAC-003", "Queso Campesino 500g", "Lácteos y huevos", 14200, 11400, 7, false],
-  ["PAN-001", "Pan Tajado Bimbo", "Panadería", 6800, 5400, 12, true],
-  ["PAN-002", "Arepas Doñarepa x5", "Panadería", 4600, 3600, 11, false],
-  ["BEB-001", "Coca-Cola 1.5L", "Bebidas", 5600, 4400, 24, true],
-  ["BEB-002", "Agua Cristal 600ml", "Bebidas", 2000, 1400, 60, true],
-  ["BEB-003", "Cerveza Águila 330ml", "Bebidas", 3500, 2700, 72, true],
-  ["BEB-004", "Café Sello Rojo 250g", "Bebidas", 9900, 7900, 18, false],
-  ["MEC-001", "Papas Margarita 105g", "Mecato", 5400, 4200, 20, false],
-  ["MEC-002", "Galletas Festival x12", "Mecato", 4800, 3700, 15, false],
-  ["ENL-001", "Atún Van Camps", "Enlatados", 6200, 4900, 22, true],
-  ["CAR-001", "Salchichas Zenú x5", "Carnes frías", 8900, 7100, 0, true],
-  ["ASE-001", "Detergente Fab 900g", "Aseo del hogar", 11400, 9100, 8, true],
-  ["ASE-002", "Jabón Rey x3", "Aseo del hogar", 4200, 3200, 26, false],
-  ["ASE-003", "Papel Higiénico Familia x4", "Aseo del hogar", 9800, 7600, 16, true],
-  ["CUI-001", "Shampoo Savital 550ml", "Cuidado personal", 16900, 13200, 6, false],
+  ["GRA-001", "Arroz Diana 500g",           "Granos y abarrotes",  2800,  2100, 48, true],
+  ["GRA-002", "Fríjol Cargamanto 500g",     "Granos y abarrotes",  6500,  5100, 10, true],
+  ["GRA-003", "Azúcar Manuelita 1kg",       "Granos y abarrotes",  4900,  3900, 30, false],
+  ["GRA-004", "Panela Cuadrada 500g",       "Granos y abarrotes",  3200,  2400, 25, false],
+  ["ACE-001", "Aceite Girasol 1000ml",      "Aceites",            12900,  9800, 14, true],
+  ["LAC-001", "Leche Entera 1L",            "Lácteos y huevos",    4300,  3500, 36, true],
+  ["LAC-002", "Huevos AA x30",              "Lácteos y huevos",   18500, 15200,  9, true],
+  ["LAC-003", "Queso Campesino 500g",       "Lácteos y huevos",   14200, 11400,  7, false],
+  ["PAN-001", "Pan Tajado Bimbo",           "Panadería",           6800,  5400, 12, true],
+  ["PAN-002", "Arepas Doñarepa x5",         "Panadería",           4600,  3600, 11, false],
+  ["BEB-001", "Coca-Cola 1.5L",             "Bebidas",             5600,  4400, 24, true],
+  ["BEB-002", "Agua Cristal 600ml",         "Bebidas",             2000,  1400, 60, true],
+  ["BEB-003", "Cerveza Águila 330ml",       "Bebidas",             3500,  2700, 72, true],
+  ["BEB-004", "Café Sello Rojo 250g",       "Bebidas",             9900,  7900, 18, false],
+  ["MEC-001", "Papas Margarita 105g",       "Mecato",              5400,  4200, 20, false],
+  ["MEC-002", "Galletas Festival x12",      "Mecato",              4800,  3700, 15, false],
+  ["ENL-001", "Atún Van Camps",             "Enlatados",           6200,  4900, 22, true],
+  ["CAR-001", "Salchichas Zenú x5",         "Carnes frías",        8900,  7100,  0, true],
+  ["ASE-001", "Detergente Fab 900g",        "Aseo del hogar",     11400,  9100,  8, true],
+  ["ASE-002", "Jabón Rey x3",               "Aseo del hogar",      4200,  3200, 26, false],
+  ["ASE-003", "Papel Higiénico Familia x4", "Aseo del hogar",      9800,  7600, 16, true],
+  ["CUI-001", "Shampoo Savital 550ml",      "Cuidado personal",   16900, 13200,  6, false],
 ];
 
 function buildProducts(hoy: Date): Product[] {
-  return CATALOGO.map(([sku, name, category, price, cost, stock, costoReal], i) => ({
-    id: `sim-p-${String(i + 1).padStart(2, "0")}`,
-    name,
-    sku,
-    barcode: `770${String(1000000 + i * 7919).slice(0, 7)}`,
-    photo: null,
-    price,
-    cost_price: cost,
-    cost_is_estimated: !costoReal,
-    stock,
-    category,
-    description: "Producto de ejemplo del modo simulación. No existe en la tienda.",
-    created_at: at(hoy, 60, 8, 0),
-  }));
+  return CATALOGO.map(
+    ([sku, name, category, price, cost, stock, costoReal], i) => ({
+      id: `sim-p-${String(i + 1).padStart(2, "0")}`,
+      name,
+      sku,
+      barcode: `770${String(1000000 + i * 7919).slice(0, 7)}`,
+      photo: null,
+      price,
+      cost_price: cost,
+      cost_is_estimated: !costoReal,
+      stock,
+      category,
+      description:
+        "Producto de ejemplo del modo simulación. No existe en la tienda.",
+      created_at: at(hoy, 60, 8, 0),
+    }),
+  );
 }
 
 // --- Ventas ----------------------------------------------------------------
@@ -151,7 +157,12 @@ const VENTAS: VentaDemo[] = [
     payment_method: "tarjeta",
     lineas: [
       { sku: "CUI-001", quantity: 1 },
-      { sku: "MEC-001", quantity: 2, discount_type: "amount", discount_value: 800 },
+      {
+        sku: "MEC-001",
+        quantity: 2,
+        discount_type: "amount",
+        discount_value: 800,
+      },
     ],
   },
   {
@@ -298,7 +309,9 @@ function buildOrders(hoy: Date, products: Product[]): Order[] {
       order_date: at(hoy, pedido.hace, 7, 30),
       supplier: pedido.supplier,
       expected_delivery:
-        pedido.entregaEnDias === null ? null : dayKey(daysAgo(hoy, -pedido.entregaEnDias)),
+        pedido.entregaEnDias === null
+          ? null
+          : dayKey(daysAgo(hoy, -pedido.entregaEnDias)),
       notes: pedido.notes,
       total_amount: total,
       status: pedido.status,

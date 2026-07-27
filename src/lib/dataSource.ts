@@ -21,7 +21,9 @@ export type { CollectionName };
 const business = { products, sales, orders, expenses, dailyCloses };
 
 /** El arreglo vivo de una colección. Se puede mutar en el sitio. */
-export function collection<K extends CollectionName>(name: K): (typeof business)[K] {
+export function collection<K extends CollectionName>(
+  name: K,
+): (typeof business)[K] {
   if (isSimulationOn()) {
     return simulationCollection(name) as (typeof business)[K];
   }

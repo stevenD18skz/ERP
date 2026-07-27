@@ -9,16 +9,18 @@ import {
   ClipboardList,
   Wallet,
   BarChart3,
+  BookOpen,
   Settings,
 } from "lucide-react";
 
 const menuItems = [
-  { path: "/", label: "Inicio", icon: Home },
+  { path: "/dashboard", label: "Inicio", icon: Home },
   { path: "/products", label: "Productos", icon: Box },
   { path: "/sales", label: "Ventas", icon: ShoppingCart },
   { path: "/orders", label: "Pedidos", icon: ClipboardList },
   { path: "/expenses", label: "Gastos y caja", icon: Wallet },
   { path: "/summary", label: "Reportes", icon: BarChart3 },
+  { path: "/manual", label: "Manual", icon: BookOpen },
   { path: "/settings", label: "Configuración", icon: Settings },
 ];
 

@@ -31,7 +31,7 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
         </button>
 
         <button
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/dashboard")}
           className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           aria-label="Ir al inicio"
         >

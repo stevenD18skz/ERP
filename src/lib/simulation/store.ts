@@ -130,7 +130,9 @@ export function simulationStartedAt(): string | null {
 }
 
 /** El arreglo vivo de una colección. Los servicios lo mutan en el sitio. */
-export function simulationCollection<K extends CollectionName>(name: K): SimulationData[K] {
+export function simulationCollection<K extends CollectionName>(
+  name: K,
+): SimulationData[K] {
   return load()[name];
 }
 
