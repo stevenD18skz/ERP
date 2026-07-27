@@ -8,8 +8,10 @@ import {
   updateProduct,
   deleteProduct,
 } from "@/services/products.service";
+import { lookupBarcode } from "@/services/barcode.service";
 import { currency } from "@/utils/converts";
 import MoneyInput from "@/components/ui/MoneyInput";
+import BarcodeScanModal from "@/components/products/BarcodeScanModal";
 import {
   PlusCircle,
   Edit3,
@@ -38,6 +40,9 @@ import {
   Check,
   Loader2,
   DollarSign,
+  ScanLine,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
 /*
@@ -214,6 +219,11 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
+  // registro por código de barras: el modal de escaneo y lo que ese escaneo
+  // dejó listo para el formulario (null cuando se abre el formulario vacío)
+  const [scanOpen, setScanOpen] = useState(false);
+  const [prefill, setPrefill] = useState(null);
+
   // import modal state
   const [importOpen, setImportOpen] = useState(false);
   const [importStep, setImportStep] = useState(1);
@@ -268,14 +278,16 @@ export default function ProductsPage() {
       if (e.key !== "Escape") return;
       if (confirm) setConfirm(null);
       else if (importOpen) setImportOpen(false);
+      else if (scanOpen) setScanOpen(false);
       else if (showForm) {
         setShowForm(false);
         setEditing(null);
+        setPrefill(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [confirm, showForm, importOpen]);
+  }, [confirm, showForm, importOpen, scanOpen]);
 
   const categories = useMemo(
     () => [
@@ -637,6 +649,62 @@ export default function ProductsPage() {
     }
   };
 
+  // --- Registro por código de barras ---
+  // El catálogo propio se revisa antes de salir a preguntar afuera: dos
+  // productos con el mismo código dejarían al lector de Ventas sin saber cuál
+  // cobrar, y eso es peor que no registrar nada.
+  const findByBarcode = (code) => {
+    const target = String(code).trim();
+    return products.find((p) => (p.barcode || "").trim() === target) ?? null;
+  };
+
+  // Lo mismo pero para el formulario, donde el código también se puede escribir
+  // a mano y hay que dejar que un producto conserve el suyo al editarlo.
+  const barcodeOwner = (code, exceptId) => {
+    const target = String(code ?? "").trim();
+    if (!target) return null;
+    return (
+      products.find(
+        (p) => (p.barcode || "").trim() === target && p.id !== exceptId,
+      ) ?? null
+    );
+  };
+
+  // Lo que trajo la consulta pasa al formulario como propuesta, no como hecho:
+  // queda marcado en pantalla y quien registra lo confirma antes de guardar.
+  const openScannedForm = (found) => {
+    const values = {};
+    for (const [key, value] of Object.entries({
+      barcode: found.barcode,
+      name: found.name,
+      category: found.category,
+      description: found.description,
+      photo: found.photo,
+    })) {
+      if (value) values[key] = value;
+    }
+    setScanOpen(false);
+    setEditing(null);
+    setPrefill({ values, source: found.source });
+    setShowForm(true);
+  };
+
+  // Sin ficha pública, pero el código escaneado sirve igual: se arrastra al
+  // formulario para no tener que volver a pasar el lector.
+  const openManualForm = (barcode) => {
+    setScanOpen(false);
+    setEditing(null);
+    setPrefill(barcode ? { values: { barcode }, source: null } : null);
+    setShowForm(true);
+  };
+
+  const openExistingFromScan = (product) => {
+    setScanOpen(false);
+    setPrefill(null);
+    setEditing(product);
+    setShowForm(true);
+  };
+
   // --- Importar CSV ---
   const parseCSV = (text) => {
     const rows = [];
@@ -816,8 +884,16 @@ export default function ProductsPage() {
               Imprimir
             </button>
             <button
+              onClick={() => setScanOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <ScanLine className="h-4 w-4" />
+              Escanear código
+            </button>
+            <button
               onClick={() => {
                 setEditing(null);
+                setPrefill(null);
                 setShowForm(true);
               }}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -1462,18 +1538,32 @@ export default function ProductsPage() {
       </div>
 
       {/* Modals & dialogs */}
+      {scanOpen && (
+        <BarcodeScanModal
+          findByBarcode={findByBarcode}
+          onClose={() => setScanOpen(false)}
+          onUse={openScannedForm}
+          onManual={openManualForm}
+          onEditExisting={openExistingFromScan}
+        />
+      )}
+
       {showForm && (
         <ProductForm
           initial={editing}
+          prefill={prefill}
+          barcodeOwner={barcodeOwner}
           existingCategories={categories.filter((c) => c !== "All")}
           onClose={() => {
             setShowForm(false);
             setEditing(null);
+            setPrefill(null);
           }}
           onSave={async (p) => {
             await handleSave(p);
             setShowForm(false);
             setEditing(null);
+            setPrefill(null);
           }}
         />
       )}
@@ -1602,7 +1692,71 @@ function SortHeader({
   );
 }
 
-function ProductForm({ initial = null, existingCategories = [], onClose, onSave }) {
+// Campos que puede llenar una consulta por código de barras. El precio, el
+// costo y el stock quedan afuera a propósito: son datos del negocio y ningún
+// catálogo de afuera los sabe.
+const LOOKUP_FIELDS = ["name", "category", "description"];
+const BARCODE_RE = /^\d{8,14}$/;
+
+// Marca un campo cuyo valor no lo escribió nadie de la tienda sino que llegó de
+// un catálogo público. Desaparece apenas se toca el campo, porque a partir de
+// ahí el dato ya pasó por los ojos de quien registra.
+const AutoBadge = ({ source }) => (
+  <span
+    title={`Dato traído de ${source}. Revísalo antes de guardar.`}
+    className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 align-middle text-[10.5px] font-bold uppercase tracking-wide text-violet-700"
+  >
+    <Sparkles className="h-2.5 w-2.5" aria-hidden />
+    Traído
+  </span>
+);
+
+const FIELD_LABELS = {
+  name: "nombre",
+  category: "categoría",
+  description: "descripción",
+  photo: "foto",
+};
+
+// Cómo le fue a la última consulta del código, justo debajo del campo. Se dice
+// siempre qué pasó —incluso cuando no se llenó nada— porque quien registra está
+// mirando la mercancía y no adivina si el botón hizo algo.
+function LookupNote({ lookup }) {
+  if (lookup.status === "idle" || lookup.status === "loading") return null;
+
+  if (lookup.status === "found") {
+    const label = lookup.name || "Ficha sin nombre";
+    return lookup.filled.length ? (
+      <p className="mt-1 text-xs text-violet-700">
+        <span className="font-semibold">{label}</span> — se llenó{" "}
+        {lookup.filled.map((key) => FIELD_LABELS[key] ?? key).join(", ")}.
+      </p>
+    ) : (
+      <p className="mt-1 text-xs text-slate-500">
+        <span className="font-semibold">{label}</span> — no se cambió nada: lo
+        que ya estaba escrito manda.
+      </p>
+    );
+  }
+
+  const empty = lookup.status === "empty";
+  return (
+    <p className={`mt-1 text-xs ${empty ? "text-slate-500" : "text-red-600"}`}>
+      {empty
+        ? "Ese código no está en los catálogos públicos. Toca llenarlo a mano."
+        : lookup.message}
+    </p>
+  );
+}
+
+function ProductForm({
+  initial = null,
+  prefill = null,
+  barcodeOwner = () => null,
+  existingCategories = [],
+  onClose,
+  onSave,
+}) {
   const [form, setForm] = useState(() => ({
     name: "",
     sku: "",
@@ -1613,16 +1767,40 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
     category: "",
     description: "",
     ...initial,
+    ...(prefill?.values ?? {}),
   }));
-  const [photo, setPhoto] = useState(initial?.photo || null);
+  const [photo, setPhoto] = useState(
+    prefill?.values?.photo ?? initial?.photo ?? null,
+  );
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Qué campos llegaron de un catálogo público y todavía nadie confirmó. El
+  // código de barras no cuenta: ese lo puso el lector sobre la mercancía real.
+  const [autofilled, setAutofilled] = useState(() =>
+    prefill?.source
+      ? new Set(
+          Object.keys(prefill.values).filter((key) => key !== "barcode"),
+        )
+      : new Set(),
+  );
+  const [lookupSource, setLookupSource] = useState(prefill?.source ?? null);
+  const [lookup, setLookup] = useState({ status: "idle" });
+
+  const confirmField = (key) =>
+    setAutofilled((s) => {
+      if (!s.has(key)) return s;
+      const next = new Set(s);
+      next.delete(key);
+      return next;
+    });
 
   const setField = (key) => (e) => {
     const val = e.target.value;
     setForm((s) => ({ ...s, [key]: val }));
     setErrors((er) => (er[key] ? { ...er, [key]: undefined } : er));
+    confirmField(key);
   };
 
   const setMoneyField = (key) => (val) => {
@@ -1630,11 +1808,56 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
     setErrors((er) => (er[key] ? { ...er, [key]: undefined } : er));
   };
 
+  // Consulta desde el propio formulario, para cuando el código se escribe o se
+  // escanea acá adentro (o al editar un producto viejo al que recién se le pone
+  // el código). Solo llena lo que está vacío: lo que ya escribieron manda, que
+  // para eso lo escribieron.
+  const runLookup = async () => {
+    const clean = String(form.barcode || "").trim();
+    if (!BARCODE_RE.test(clean)) {
+      setLookup({
+        status: "invalid",
+        message: "Son entre 8 y 14 dígitos, sin letras ni espacios",
+      });
+      return;
+    }
+
+    setLookup({ status: "loading" });
+    try {
+      const found = await lookupBarcode(clean);
+      if (!found) {
+        setLookup({ status: "empty" });
+        return;
+      }
+
+      const fills = {};
+      for (const key of LOOKUP_FIELDS) {
+        if (!String(form[key] ?? "").trim() && found[key]) {
+          fills[key] = found[key];
+        }
+      }
+      const takesPhoto = !photo && Boolean(found.photo);
+
+      if (Object.keys(fills).length) setForm((s) => ({ ...s, ...fills }));
+      if (takesPhoto) setPhoto(found.photo);
+
+      const filled = [...Object.keys(fills), ...(takesPhoto ? ["photo"] : [])];
+      setAutofilled((s) => new Set([...s, ...filled]));
+      setLookupSource(found.source);
+      setLookup({ status: "found", name: found.name, filled });
+    } catch (err) {
+      setLookup({ status: "error", message: err.message });
+    }
+  };
+
   const onPhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setPhoto(reader.result);
+    reader.onload = () => {
+      setPhoto(reader.result);
+      confirmField("photo");
+    };
     reader.readAsDataURL(file);
   };
 
@@ -1662,6 +1885,13 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
       nextErrors.cost_price = "Ingresa un costo válido";
     if (form.stock === "" || Number(form.stock) < 0)
       nextErrors.stock = "Ingresa una cantidad de stock válida";
+
+    // Dos productos con el mismo código dejan al lector de Ventas sin saber
+    // cuál cobrar: agarra el primero que encuentra y nadie se entera.
+    const clash = barcodeOwner(form.barcode, initial?.id);
+    if (clash) {
+      nextErrors.barcode = `Ese código ya es de "${clash.name}" (SKU ${clash.sku})`;
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
@@ -1715,10 +1945,35 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
         </div>
 
         <div className="flex flex-col gap-4 p-5">
+          {autofilled.size > 0 && lookupSource && (
+            <div className="rounded-lg border border-violet-100 bg-violet-50 px-3.5 py-3">
+              <p className="flex items-center gap-1.5 text-[13.5px] font-bold text-violet-900">
+                <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+                {autofilled.size} campo{autofilled.size === 1 ? "" : "s"} vino
+                de un catálogo público
+              </p>
+              <p className="mt-1 text-xs text-violet-800">
+                Son datos del fabricante, no de tu negocio: revísalos contra el
+                producto que tienes en la mano. Quedan anotados en la
+                descripción para poder revisarlos después.
+              </p>
+              <a
+                href={lookupSource.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-violet-700 underline hover:text-violet-900"
+              >
+                Ver la ficha en {lookupSource.label}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+
           <label className="text-sm">
             <span className="font-semibold text-slate-700">
               Nombre <span className="text-red-500">*</span>
             </span>
+            {autofilled.has("name") && <AutoBadge source={lookupSource?.label} />}
             <input
               autoFocus
               value={form.name}
@@ -1753,23 +2008,88 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
                   {errors.sku}
                 </p>
               )}
+              {!errors.sku && lookupSource && !String(form.sku).trim() && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Este lo pones tú: el SKU es tu código interno y ningún
+                  catálogo de afuera lo sabe.
+                </p>
+              )}
             </label>
 
-            <label className="text-sm">
-              <span className="font-semibold text-slate-700">
+            <div className="text-sm">
+              <label
+                htmlFor="form-barcode"
+                className="font-semibold text-slate-700"
+              >
                 Código de barras
-              </span>
-              <input
-                value={form.barcode}
-                onChange={setField("barcode")}
-                placeholder="Opcional"
-                className={fieldClass("barcode")}
-              />
-            </label>
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  id="form-barcode"
+                  inputMode="numeric"
+                  value={form.barcode}
+                  onChange={(e) => {
+                    setForm((s) => ({ ...s, barcode: e.target.value }));
+                    setErrors((er) =>
+                      er.barcode ? { ...er, barcode: undefined } : er,
+                    );
+                    setLookup({ status: "idle" });
+                  }}
+                  onKeyDown={(e) => {
+                    // Enter acá busca la ficha, no guarda el producto: es lo
+                    // que manda el lector al terminar de leer, y guardar a
+                    // medio llenar sería lo último que se quiere.
+                    if (e.defaultPrevented) return;
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    runLookup();
+                  }}
+                  placeholder="Opcional"
+                  aria-invalid={!!errors.barcode}
+                  aria-describedby={
+                    errors.barcode ? "error-barcode" : undefined
+                  }
+                  className={`w-full rounded-lg border px-3 py-2.5 font-mono text-sm outline-none focus:ring-2 ${
+                    errors.barcode
+                      ? "border-red-400 focus:border-red-400 focus:ring-red-100"
+                      : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={runLookup}
+                  disabled={
+                    lookup.status === "loading" || !String(form.barcode).trim()
+                  }
+                  title="Buscar la ficha del producto por su código"
+                  aria-label="Buscar la ficha del producto por su código"
+                  className="flex w-[42px] shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {lookup.status === "loading" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ScanLine className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.barcode ? (
+                <p
+                  id="error-barcode"
+                  className="mt-1 text-xs font-semibold text-red-600"
+                >
+                  {errors.barcode}
+                </p>
+              ) : (
+                <LookupNote lookup={lookup} />
+              )}
+            </div>
           </div>
 
           <label className="text-sm">
             <span className="font-semibold text-slate-700">Categoría</span>
+            {autofilled.has("category") && (
+              <AutoBadge source={lookupSource?.label} />
+            )}
             <input
               list="category-options"
               value={form.category}
@@ -1782,6 +2102,13 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
                 <option key={c} value={c} />
               ))}
             </datalist>
+            {autofilled.has("category") &&
+              !existingCategories.includes(form.category) && (
+                <p className="mt-1 text-xs text-violet-700">
+                  Es la clasificación del catálogo, no una de las tuyas. Si
+                  guardas así, se crea como categoría nueva.
+                </p>
+              )}
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1854,6 +2181,7 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
 
           <div>
             <span className="text-sm font-semibold text-slate-700">Foto</span>
+            {autofilled.has("photo") && <AutoBadge source={lookupSource?.label} />}
             <div className="mt-1 flex items-center gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3.5">
               <div className="relative h-20 w-20 shrink-0">
                 <button
@@ -1873,7 +2201,10 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
                 {photo && (
                   <button
                     type="button"
-                    onClick={() => setPhoto(null)}
+                    onClick={() => {
+                      setPhoto(null);
+                      confirmField("photo");
+                    }}
                     aria-label="Quitar foto"
                     className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-500 shadow ring-1 ring-slate-200 hover:text-red-600"
                   >
@@ -1890,10 +2221,16 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
               />
               <div className="flex-1">
                 <p className="text-[13px] font-semibold text-slate-700">
-                  {photo ? "Foto cargada" : "Sube una foto del producto"}
+                  {autofilled.has("photo")
+                    ? "Foto del catálogo"
+                    : photo
+                      ? "Foto cargada"
+                      : "Sube una foto del producto"}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Ayuda a reconocerlo rápido en la lista y en Ventas.
+                  {autofilled.has("photo")
+                    ? "Queda como enlace: se ve mientras haya internet. Sube una propia si prefieres no depender de eso."
+                    : "Ayuda a reconocerlo rápido en la lista y en Ventas."}
                 </p>
                 <button
                   type="button"
@@ -1908,11 +2245,14 @@ function ProductForm({ initial = null, existingCategories = [], onClose, onSave 
 
           <label className="text-sm">
             <span className="font-semibold text-slate-700">Descripción</span>
+            {autofilled.has("description") && (
+              <AutoBadge source={lookupSource?.label} />
+            )}
             <textarea
               value={form.description}
               onChange={setField("description")}
               className={fieldClass("description")}
-              rows={3}
+              rows={autofilled.has("description") ? 5 : 3}
             />
           </label>
         </div>

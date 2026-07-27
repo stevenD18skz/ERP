@@ -150,6 +150,50 @@ traerse los 435 productos.
 { "data": [ { "category": "Aceites", "product_count": 12, "stock_units": 0, "stock_value_cost": 0 } ] }
 ```
 
+### `GET /api/barcode/:code`
+
+Ficha pública de un producto según su código de barras. **Esta es la única ruta
+que no habla con Supabase**: sale a preguntarle a los catálogos abiertos de
+[Open Food Facts](https://world.openfoodfacts.org) y sus hermanas de cosmética y
+de productos generales. Sirve para llenar el formulario de un producto que
+todavía no existe en la tienda. No escribe nada.
+
+No confundir con `GET /api/products?barcode=`, que busca adentro, en el catálogo
+del negocio.
+
+```json
+{
+  "data": {
+    "barcode": "7702090022711",
+    "name": "Postobon Agua Pet 600",
+    "brand": "Postobon",
+    "quantity": "600ml",
+    "category": "Aguas",
+    "photo": "https://images.openfoodfacts.org/images/products/.../front_es.5.400.jpg",
+    "description": "Datos traídos de Open Food Facts el 27/07/2026 con el código 7702090022711.\n...",
+    "source": {
+      "id": "openfoodfacts",
+      "label": "Open Food Facts",
+      "url": "https://world.openfoodfacts.org/product/7702090022711"
+    }
+  }
+}
+```
+
+| Caso | Respuesta |
+|---|---|
+| el código no son 8-14 dígitos | `400` |
+| ningún catálogo lo tiene | `404` — es un desenlace normal, no una falla: hay que llenar el producto a mano |
+
+`price`, `cost_price` y `stock` **nunca** vienen acá y tampoco se estiman: son
+datos del negocio y los pone quien registra el producto. Lo que sí llega es del
+fabricante, y por eso la respuesta trae `source`: la licencia de esos catálogos
+(ODbL) pide citarlos, y el rastro queda escrito en la descripción del producto
+para poder revisarlo después.
+
+La respuesta se cachea un día y cada consulta espera 6 segundos como máximo
+antes de darse por vencida.
+
 ---
 
 ## Ventas
