@@ -77,7 +77,7 @@ export default function ImportModal({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4.5 mt-1.5 rounded-lg bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+                className="px-4.5 mt-1.5 px-3 rounded-lg bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
               >
                 Seleccionar archivo
               </button>

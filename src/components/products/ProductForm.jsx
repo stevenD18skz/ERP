@@ -237,7 +237,7 @@ export default function ProductForm({
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8 backdrop-blur-sm">
       <form
         onSubmit={submit}
         noValidate

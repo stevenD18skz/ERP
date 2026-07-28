@@ -30,7 +30,7 @@ const AppShell = ({ children }) => {
       <div className="flex">
         <SideBar isExpanded={sidebarOpen} />
         <div
-          className={`flex min-h-[calc(100vh-4rem)] flex-1 flex-col transition-all duration-300 ${
+          className={`flex min-h-lvh flex-1 flex-col transition-all duration-300 ${
             sidebarOpen ? "pl-48" : "pl-16"
           }`}
         >

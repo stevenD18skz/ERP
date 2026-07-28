@@ -70,13 +70,6 @@ const Footer = () => {
           </div>
         </div>
       </div>
-
-      <div className="border-t ">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 text-xs text-slate-500">
-          <div>© {new Date().getFullYear()} Boxes</div>
-          <div>Hecho con ♥ — Simple & útil</div>
-        </div>
-      </div>
     </footer>
   );
 };

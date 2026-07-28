@@ -9,8 +9,6 @@ import {
   ClipboardList,
   Wallet,
   BarChart3,
-  BookOpen,
-  Settings,
   RotateCcw,
   LogOut,
 } from "lucide-react";

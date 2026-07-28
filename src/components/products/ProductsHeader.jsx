@@ -27,15 +27,11 @@ export default function ProductsHeader({
   onNew,
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h2 className="mb-1 text-lg font-bold tracking-tight text-slate-900">
-          Tabla con todos los productos
-        </h2>
-        <p className="text-sm font-semibold text-slate-600">
-          {totalCount} producto{totalCount === 1 ? "" : "s"}
-        </p>
-      </div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">
+        Tabla con todos los productos
+      </h2>
+
 
       <div className="flex flex-wrap gap-2">
         <button onClick={onRefresh} disabled={loading} className={ACTION_CLASS}>
