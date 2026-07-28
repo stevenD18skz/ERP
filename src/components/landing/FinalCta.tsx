@@ -31,8 +31,8 @@ export default function FinalCta() {
               aria-hidden
             />
           </Link>
-          {/* Va a /signup y no a /manual: el manual exige sesión, así que a un
-              visitante lo mandaría a la pantalla de login sin explicación. */}
+          {/* Va a /signup porque aquí invitamos a crear una tienda; el manual es
+              una página pública independiente y está accesible desde el header. */}
           <Link
             href="/signup"
             className="flex min-h-[52px] items-center justify-center gap-2 rounded-xl border border-white/25 px-7 text-base font-semibold text-white transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
