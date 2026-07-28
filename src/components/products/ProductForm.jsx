@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  DollarSign,
   ExternalLink,
   ImagePlus,
   Loader2,
