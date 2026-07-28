@@ -6,12 +6,14 @@ import {
   ExternalLink,
   ImagePlus,
   Loader2,
+  Maximize2,
   ScanLine,
   Sparkles,
   X,
 } from "lucide-react";
 import MoneyInput from "@/components/ui/MoneyInput";
 import CreatableSelect from "@/components/ui/CreatableSelect";
+import ImageViewer from "@/components/ui/ImageViewer";
 import { lookupBarcode } from "@/services/barcode.service";
 import { currency } from "@/utils/converts";
 import { BARCODE_RE, FIELD_LABELS, LOOKUP_FIELDS } from "./productsUtils";
@@ -94,6 +96,7 @@ export default function ProductForm({
   );
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   // Qué campos llegaron de un catálogo público y todavía nadie confirmó. El
@@ -270,6 +273,7 @@ export default function ProductForm({
     }`;
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8 backdrop-blur-sm"
       style={{ scrollbarGutter: "stable" }}
@@ -279,7 +283,7 @@ export default function ProductForm({
         noValidate
         className="w-full max-w-2xl shrink-0 animate-scale-in rounded-2xl bg-white shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
           <div className="flex items-center gap-3">
             <h3 className="text-[22px] font-extrabold leading-none text-slate-900">
               {initial ? "Editar producto" : "Nuevo producto"}
@@ -311,7 +315,7 @@ export default function ProductForm({
           </button>
         </div>
 
-        <div className="flex flex-col gap-5 p-6">
+        <div className="flex flex-col gap-3 px-6 py-3">
           {autofilled.size > 0 && lookupSource && lookupMessageVisible && (
             <div className="relative rounded-lg border border-violet-100 bg-violet-50 px-3.5 py-3">
               <button
@@ -548,7 +552,7 @@ export default function ProductForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1  sm:grid-cols-2">
             <div className="col-span-2 flex gap-4">
               <label className="flex-1 text-sm">
                 <span className="font-semibold text-slate-700">
@@ -596,8 +600,8 @@ export default function ProductForm({
             </div>
 
             {hasMarginPreview && (
-              <div className="col-span-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3.5 py-2.5 text-[13.5px] font-semibold text-emerald-800">
-                <DollarSign className="h-4 w-4" />
+              <div className="col-span-2 flex items-center justify-center gap-2 rounded-b-3xl rounded-t-sm bg-emerald-50 px-3.5 py-2.5 text-[13.5px] font-semibold text-emerald-800">
+                
                 Ganancia por unidad: {marginPreview >= 0 ? "+" : ""}
                 {currency(marginPreview)} ({marginPreviewPct >= 0 ? "+" : ""}
                 {marginPreviewPct}% de la venta)
@@ -613,17 +617,31 @@ export default function ProductForm({
             )}
             <div className="mt-1 flex items-center gap-4 rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3.5">
               <div className="relative h-20 w-20 shrink-0">
+                {/* Con foto puesta, tocarla la abre en grande; cambiarla ya
+                    tiene su propio botón al lado y sustituir la de alguien por
+                    accidente es peor que un clic de más. Vacía sigue siendo el
+                    atajo para subir, que es lo único que se puede hacer ahí. */}
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-blue-300 hover:bg-blue-50"
+                  onClick={() =>
+                    photo ? setPhotoOpen(true) : fileInputRef.current?.click()
+                  }
+                  aria-label={photo ? "Ver la foto en grande" : "Subir una foto"}
+                  className={`group flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    photo ? "relative cursor-zoom-in" : ""
+                  }`}
                 >
                   {photo ? (
-                    <img
-                      src={photo}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={photo}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:bg-slate-900/40 group-hover:opacity-100 group-focus-visible:bg-slate-900/40 group-focus-visible:opacity-100">
+                        <Maximize2 className="h-4 w-4 text-white" aria-hidden />
+                      </span>
+                    </>
                   ) : (
                     <span className="flex flex-col items-center gap-1 text-slate-400">
                       <ImagePlus className="h-5 w-5" />
@@ -690,7 +708,7 @@ export default function ProductForm({
           </label>
         </div>
 
-        <div className="flex items-center gap-3 border-t border-slate-100 px-6 py-4">
+        <div className="flex items-center gap-3 border-t border-slate-100 px-6 py-3">
           <button
             type="button"
             onClick={onClose}
@@ -709,5 +727,15 @@ export default function ProductForm({
         </div>
       </form>
     </div>
+
+    {/* Hermano del modal y no hijo, para que quede por encima de él. */}
+    {photoOpen && photo && (
+      <ImageViewer
+        src={photo}
+        title={form.name || "Foto del producto"}
+        onClose={() => setPhotoOpen(false)}
+      />
+    )}
+    </>
   );
 }

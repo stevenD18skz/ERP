@@ -17,12 +17,14 @@ import { useToasts } from "@/hooks/useToasts";
 import { useProductFilters } from "@/hooks/useProductFilters";
 
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import ImageViewer from "@/components/ui/ImageViewer";
 import Pagination from "@/components/ui/Pagination";
 import ToastStack from "@/components/ui/ToastStack";
 import BarcodeScanModal from "@/components/products/BarcodeScanModal";
 import ImportModal from "@/components/products/ImportModal";
 import ProductForm from "@/components/products/ProductForm";
 import ProductsCardList from "@/components/products/ProductsCardList";
+import ProductsCatalogEmpty from "@/components/products/ProductsCatalogEmpty";
 import ProductsEmptyState from "@/components/products/ProductsEmptyState";
 import ProductsFilters from "@/components/products/ProductsFilters";
 import ProductsHeader from "@/components/products/ProductsHeader";
@@ -87,6 +89,10 @@ export default function ProductsPage() {
   // dejó listo para el formulario (null cuando se abre el formulario vacío)
   const [scanOpen, setScanOpen] = useState(false);
   const [prefill, setPrefill] = useState(null);
+
+  // foto abierta a pantalla completa desde la tabla o las tarjetas (los dos
+  // modales abren la suya por su cuenta, para que quede encima de ellos)
+  const [zoomed, setZoomed] = useState(null);
 
   // importación
   const [importOpen, setImportOpen] = useState(false);
@@ -471,6 +477,11 @@ export default function ProductsPage() {
     fetchTaxonomies();
   };
 
+  // Catálogo vacío de verdad: la tienda no tiene ni un producto. Se mira
+  // products y no filtered, porque filtered también queda en cero cuando lo que
+  // pasa es que la búsqueda no encontró nada, y ese es el otro caso.
+  const catalogEmpty = !loading && products.length === 0;
+
   const closeImport = () => {
     setImportOpen(false);
     setImportStep(1);
@@ -479,7 +490,7 @@ export default function ProductsPage() {
 
   return (
     <>
-      <div className="l mx-auto">
+      <div className="mx-auto min-h-screen">
         <ProductsHeader
           loading={loading}
           canExport={filtered.length > 0}
@@ -494,35 +505,42 @@ export default function ProductsPage() {
           onNew={openNewForm}
         />
 
-        <ProductsToolbar
-          query={filters.query}
-          onQueryChange={filters.setQuery}
-          filtersOpen={filtersOpen}
-          onToggleFilters={() => setFiltersOpen((s) => !s)}
-          activeFilterCount={filters.activeFilterCount}
-          filterChips={filters.filterChips}
-          onClearAll={filters.clearAllFilters}
-        />
+        {/* Buscar y filtrar sobre un catálogo vacío no puede dar otro
+            resultado que el que ya se está viendo, así que la barra se va y
+            deja la pantalla enfocada en cargar el primer producto. */}
+        {!catalogEmpty && (
+          <>
+            <ProductsToolbar
+              query={filters.query}
+              onQueryChange={filters.setQuery}
+              filtersOpen={filtersOpen}
+              onToggleFilters={() => setFiltersOpen((s) => !s)}
+              activeFilterCount={filters.activeFilterCount}
+              filterChips={filters.filterChips}
+              onClearAll={filters.clearAllFilters}
+            />
 
-        <ProductsFilters
-          open={filtersOpen}
-          onClose={() => setFiltersOpen(false)}
-          categories={filters.categories}
-          categoryFilter={filters.categoryFilter}
-          onCategoryFilterChange={filters.setCategoryFilter}
-          brands={filters.brands}
-          brandFilter={filters.brandFilter}
-          onBrandFilterChange={filters.setBrandFilter}
-          minPrice={filters.minPrice}
-          onMinPriceChange={filters.setMinPrice}
-          maxPrice={filters.maxPrice}
-          onMaxPriceChange={filters.setMaxPrice}
-          stockOp={filters.stockOp}
-          onStockOpChange={filters.setStockOp}
-          stockVal={filters.stockVal}
-          onStockValChange={filters.setStockVal}
-          onClearAll={filters.clearAllFilters}
-        />
+            <ProductsFilters
+              open={filtersOpen}
+              onClose={() => setFiltersOpen(false)}
+              categories={filters.categories}
+              categoryFilter={filters.categoryFilter}
+              onCategoryFilterChange={filters.setCategoryFilter}
+              brands={filters.brands}
+              brandFilter={filters.brandFilter}
+              onBrandFilterChange={filters.setBrandFilter}
+              minPrice={filters.minPrice}
+              onMinPriceChange={filters.setMinPrice}
+              maxPrice={filters.maxPrice}
+              onMaxPriceChange={filters.setMaxPrice}
+              stockOp={filters.stockOp}
+              onStockOpChange={filters.setStockOp}
+              stockVal={filters.stockVal}
+              onStockValChange={filters.setStockVal}
+              onClearAll={filters.clearAllFilters}
+            />
+          </>
+        )}
 
         <SelectionBar
           count={selected.size}
@@ -545,6 +563,7 @@ export default function ProductsPage() {
               onStockCommit={quickUpdateStock}
               onEdit={openEditForm}
               onDelete={(p) => setConfirm({ type: "delete", payload: p })}
+              onZoomPhoto={setZoomed}
             />
             <ProductsCardList
               items={pageItems}
@@ -553,13 +572,26 @@ export default function ProductsPage() {
               onStockCommit={quickUpdateStock}
               onEdit={openEditForm}
               onDelete={(p) => setConfirm({ type: "delete", payload: p })}
+              onZoomPhoto={setZoomed}
             />
           </>
         )}
 
         {loading && <ProductsSkeleton />}
 
-        {!loading && pageItems.length === 0 && (
+        {/* Los dos vacíos son excluyentes y tienen salidas distintas: si no hay
+            catálogo, hay que crear el primer producto; si hay catálogo pero la
+            búsqueda no dejó nada, hay que limpiar filtros. */}
+        {catalogEmpty && (
+          <ProductsCatalogEmpty
+            onNew={openNewForm}
+            onScan={() => setScanOpen(true)}
+            onImport={() => setImportOpen(true)}
+            onDownloadTemplate={downloadTemplate}
+          />
+        )}
+
+        {!loading && products.length > 0 && filtered.length === 0 && (
           <ProductsEmptyState
             hasActiveSearch={filters.hasActiveSearch}
             onClearFilters={filters.clearAllFilters}
@@ -637,6 +669,14 @@ export default function ProductsPage() {
             closeImport();
             push(`${importParsed.valid.length} productos importados`, "success");
           }}
+        />
+      )}
+
+      {zoomed?.photo && (
+        <ImageViewer
+          src={zoomed.photo}
+          title={zoomed.name}
+          onClose={() => setZoomed(null)}
         />
       )}
 

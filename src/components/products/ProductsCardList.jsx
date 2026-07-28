@@ -19,6 +19,7 @@ export default function ProductsCardList({
   onStockCommit,
   onEdit,
   onDelete,
+  onZoomPhoto,
 }) {
   return (
     <div className="mt-4 space-y-3 md:hidden">
@@ -39,7 +40,12 @@ export default function ProductsCardList({
                 ariaLabel={`Seleccionar ${p.name}`}
               />
             </div>
-            <Thumb photo={p.photo} size="h-14 w-14" />
+            <Thumb
+              photo={p.photo}
+              size="h-14 w-14"
+              label={p.name}
+              onZoom={onZoomPhoto ? () => onZoomPhoto(p) : undefined}
+            />
             <div className="min-w-0 flex-1">
               <div className="truncate text-[16px] font-bold text-slate-900">
                 {p.name}

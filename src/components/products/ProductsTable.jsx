@@ -29,6 +29,7 @@ export default function ProductsTable({
   onStockCommit,
   onEdit,
   onDelete,
+  onZoomPhoto,
 }) {
   return (
     <div className="mt-4 hidden overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-100 md:block">
@@ -128,7 +129,11 @@ export default function ProductsTable({
                 />
               </td>
               <td className="px-2 py-2.5">
-                <Thumb photo={p.photo} />
+                <Thumb
+                  photo={p.photo}
+                  label={p.name}
+                  onZoom={onZoomPhoto ? () => onZoomPhoto(p) : undefined}
+                />
               </td>
               <td className="px-2 py-2.5">
                 <div className="flex items-center gap-2">

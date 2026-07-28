@@ -3,12 +3,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, CircleUserRound, LogOut, Menu } from "lucide-react";
+import { Search, Bell, CircleUserRound, LogOut, Menu, X } from "lucide-react";
 import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 import SimulationChip from "@/components/simulation/SimulationChip";
 import { useSession } from "@/hooks/useSession";
 
-const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
+const TopBar = ({
+  sidebarExpanded,
+  onToggleSidebar,
+  mobileOpen,
+  onToggleMobile,
+  onSearch,
+}) => {
   const router = useRouter();
   const { tienda, logout } = useSession();
   const [q, setQ] = useState("");
@@ -23,12 +29,31 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar, onSearch }) => {
   return (
     <header className="sticky top-0 z-40 h-16 border-b border-slate-200 bg-white">
       <div className="flex h-full items-center gap-3 px-4 md:px-6">
-        {/* Izquierda: colapsar sidebar + marca */}
+        {/* Izquierda: menú + marca. Son dos botones y no uno porque en cada
+            tamaño el menú hace algo distinto, y decirlo con clases en vez de
+            preguntarle el ancho a JavaScript deja bien el aria-label sin
+            arriesgar un desajuste al hidratar. */}
+
+        {/* Móvil: abre y cierra el cajón que va por encima de la página. */}
+        <button
+          onClick={onToggleMobile}
+          aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={Boolean(mobileOpen)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:hidden"
+        >
+          {mobileOpen ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Menu className="h-5 w-5" />
+          )}
+        </button>
+
+        {/* Escritorio: la barra siempre está, solo cambia de ancho. */}
         <button
           onClick={onToggleSidebar}
           aria-label={sidebarExpanded ? "Colapsar menú" : "Expandir menú"}
           aria-expanded={sidebarExpanded}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:flex"
         >
           <Menu className="h-5 w-5" />
         </button>

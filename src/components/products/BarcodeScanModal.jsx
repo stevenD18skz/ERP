@@ -7,6 +7,7 @@ import {
   ExternalLink,
   ImagePlus,
   Loader2,
+  Maximize2,
   PackageSearch,
   Pencil,
   ScanLine,
@@ -14,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 
+import ImageViewer from "@/components/ui/ImageViewer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 
@@ -56,6 +58,7 @@ export default function BarcodeScanModal({
 }) {
   const [code, setCode] = useState("");
   const [state, setState] = useState({ status: "idle" });
+  const [photoOpen, setPhotoOpen] = useState(false);
   const inputRef = useRef(null);
   // Cada consulta lleva un número. Si alguien escanea otra cosa mientras la
   // anterior venía en camino, la respuesta vieja llega y se descarta en vez de
@@ -108,6 +111,7 @@ export default function BarcodeScanModal({
   const busy = state.status === "loading";
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-8 backdrop-blur-sm sm:items-center"
     >
@@ -290,19 +294,29 @@ export default function BarcodeScanModal({
           {state.status === "found" && (
             <div className="overflow-hidden rounded-xl border border-slate-200">
               <div className="flex gap-3.5 bg-white p-4">
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-                  {state.found.photo ? (
+                {state.found.photo ? (
+                  <button
+                    type="button"
+                    onClick={() => setPhotoOpen(true)}
+                    aria-label="Ver la foto en grande"
+                    className="group relative h-20 w-20 shrink-0 cursor-zoom-in overflow-hidden rounded-lg border border-slate-200 bg-slate-50 transition-colors hover:border-blue-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
                     <img
                       src={state.found.photo}
                       alt=""
                       className="h-full w-full object-cover"
                     />
-                  ) : (
+                    <span className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:bg-slate-900/40 group-hover:opacity-100 group-focus-visible:bg-slate-900/40 group-focus-visible:opacity-100">
+                      <Maximize2 className="h-4 w-4 text-white" aria-hidden />
+                    </span>
+                  </button>
+                ) : (
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
                     <div className="flex h-full w-full items-center justify-center text-slate-300">
                       <ImagePlus className="h-5 w-5" />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-bold leading-snug text-slate-900">
                     {state.found.name || "(la ficha no trae nombre)"}
@@ -374,5 +388,15 @@ export default function BarcodeScanModal({
         </div>
       </div>
     </div>
+
+    {/* Hermano del modal y no hijo, para que quede por encima de él. */}
+    {photoOpen && state.status === "found" && state.found.photo && (
+      <ImageViewer
+        src={state.found.photo}
+        title={state.found.name || "Foto del producto"}
+        onClose={() => setPhotoOpen(false)}
+      />
+    )}
+    </>
   );
 }
