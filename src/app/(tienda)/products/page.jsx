@@ -15,6 +15,8 @@ import { downloadCSV, parseCSV } from "@/utils/csv";
 import { openPrintWindow } from "@/utils/print";
 import { useToasts } from "@/hooks/useToasts";
 import { useProductFilters } from "@/hooks/useProductFilters";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { lookupBarcode } from "@/services/barcode.service";
 
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ImageViewer from "@/components/ui/ImageViewer";
@@ -61,6 +63,10 @@ const errorText = (err, fallback) => {
   const message = err instanceof Error ? err.message.trim() : "";
   return message ? `${fallback}: ${message}` : fallback;
 };
+
+// EAN-8, UPC-A, EAN-13 y los ITF-14 de las cajas del proveedor. Mismo patrón
+// que usa BarcodeScanModal.
+const BARCODE_RE = /^\d{8,14}$/;
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -411,6 +417,53 @@ export default function ProductsPage() {
     setEditing(product);
     setShowForm(true);
   };
+
+  // Escaneo "suelto": el lector se pasó sin abrir antes el modal de escaneo,
+  // por ejemplo mirando el catálogo. Si el código ya es de un producto propio,
+  // se busca como si se hubiera escrito y dado Enter en la barra —acá no hace
+  // falta Enter de verdad porque el filtro ya es instantáneo—. Si no es de
+  // nadie, se sigue el mismo camino que "Registrar por código de barras": se
+  // consulta afuera y se llega directo al formulario con lo que haya traído.
+  const handleGlobalScan = async (raw) => {
+    const clean = String(raw ?? "").trim();
+    if (!clean) return;
+
+    const existing = findByBarcode(clean);
+    if (existing) {
+      filters.setQuery(clean);
+      return;
+    }
+
+    if (!BARCODE_RE.test(clean)) {
+      push(`"${clean}" no tiene forma de código de barras`, "error");
+      openManualForm(clean);
+      return;
+    }
+
+    push(`Buscando ${clean}…`, "info");
+    try {
+      const found = await lookupBarcode(clean);
+      if (found) {
+        openScannedForm(found);
+      } else {
+        push("No está en los catálogos públicos, complétalo a mano", "info");
+        openManualForm(clean);
+      }
+    } catch (err) {
+      console.error(err);
+      push(errorText(err, "No se pudo consultar el código"), "error");
+      openManualForm(clean);
+    }
+  };
+
+  // Apagado mientras cualquier modal está abierto: el de escaneo y el
+  // formulario ya tienen su propio lector de teclado (o su propio campo de
+  // código), y dejar este prendido a la vez procesaría el mismo escaneo dos
+  // veces.
+  useBarcodeScanner({
+    onScan: handleGlobalScan,
+    enabled: !scanOpen && !showForm && !importOpen && !confirm && !zoomed,
+  });
 
   /* --- importar CSV --- */
 
