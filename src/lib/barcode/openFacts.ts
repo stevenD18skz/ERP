@@ -251,7 +251,7 @@ function buildDescription(
     "Revisar contra el producto real. El precio, el costo y el stock no vienen de ahí.",
   ]
     .filter(Boolean)
-    .join("\n");
+    .join(" ");
 }
 
 async function lookupIn(

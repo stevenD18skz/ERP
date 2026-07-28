@@ -16,6 +16,9 @@ import type {
 
 export type SaleDiscountType = "pct" | "amount";
 
+// Sale de la vista v_products y no de la tabla: category y brand son el nombre
+// ya resuelto de las tablas categories y brands, que es lo que la API devuelve
+// y por lo que se busca y se ordena. Los ids son los que se escriben.
 export interface ProductRow {
   id: string;
   name: string;
@@ -26,8 +29,20 @@ export interface ProductRow {
   cost_price: number | string;
   cost_is_estimated: boolean;
   stock: number | string;
-  category: string;
+  category_id: string | null;
+  category: string | null;
+  brand_id: string | null;
+  brand: string | null;
   description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Una fila de categories o de brands. Las dos tablas tienen la misma forma.
+export interface TaxonomyRow {
+  id: string;
+  tienda_id: string;
+  name: string;
   created_at: string;
   updated_at: string;
 }
@@ -112,7 +127,16 @@ export interface DailyCloseRow {
 }
 
 export interface ProductCategoryRow {
+  category_id: string;
   category: string;
+  product_count: number | string;
+  stock_units: number | string;
+  stock_value_cost: number | string;
+}
+
+export interface ProductBrandRow {
+  brand_id: string;
+  brand: string;
   product_count: number | string;
   stock_units: number | string;
   stock_value_cost: number | string;

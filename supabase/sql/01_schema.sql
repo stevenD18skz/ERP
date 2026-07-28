@@ -4,12 +4,20 @@
 -- Ejecutar en: Supabase Dashboard -> SQL Editor -> New query -> pegar -> Run.
 -- Es idempotente: se puede volver a correr sin romper nada.
 --
--- Orden de ejecución de la carpeta supabase/sql:
+-- Orden de ejecución de la carpeta supabase/sql. Los números lo dicen todo:
 --   01_schema.sql          <- este archivo (tablas, vistas, funciones, RLS)
---   02_seed_products.sql   <- 435 productos del Excel
---   03_seed_daily_closes.sql <- 365 cierres diarios de 2025
---   04_seed_expenses.sql   <- 522 gastos y movimientos de caja
+--   06..09                 <- migraciones: multi-tienda, SKU por tienda,
+--                             categorías y marcas
+--   node scripts/seed-tiendas.mjs   <- crea las tiendas (va en la terminal)
+--   10_seed_products.sql   <- 435 productos del Excel, con sus categorías
+--   11_seed_daily_closes.sql <- 365 cierres diarios de 2025
+--   12_seed_expenses.sql   <- 522 gastos y movimientos de caja
 --   05_policies_dev.sql    <- OPCIONAL, solo si el navegador va a consultar directo
+--
+-- Este archivo es el punto de partida de 2025 y quedó tal cual: lo que fue
+-- cambiando desde entonces vive en las migraciones 06 a 09, que lo corrigen.
+-- Por eso acá abajo todavía se lee `category text` en products: el 09 la
+-- convierte en una tabla aparte y la borra.
 --
 -- Modelo de datos, en corto:
 --   products                 catálogo. Del Excel solo salieron nombre y precio.

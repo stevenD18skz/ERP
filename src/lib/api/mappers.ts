@@ -27,6 +27,7 @@ import type {
   ExpenseRow,
   DailyCloseRow,
   ProductCategoryRow,
+  ProductBrandRow,
 } from "@/types/database";
 
 const n = (value: unknown): number => {
@@ -48,7 +49,13 @@ export function toProduct(row: ProductRow): Product {
     cost_price: n(row.cost_price),
     cost_is_estimated: Boolean(row.cost_is_estimated),
     stock: n(row.stock),
-    category: row.category,
+    // Sin categoría el nombre viaja vacío y no como "Sin categoría": el texto
+    // que se lee en pantalla lo pone la pantalla, que es donde se puede
+    // traducir o cambiar sin tocar la base.
+    category: row.category ?? "",
+    category_id: row.category_id ?? null,
+    brand: row.brand ?? "",
+    brand_id: row.brand_id ?? null,
     description: row.description ?? "",
     created_at: row.created_at,
   };
@@ -128,7 +135,18 @@ export function toDailyClose(row: DailyCloseRow): DailyClose {
 
 export function toCategory(row: ProductCategoryRow) {
   return {
+    category_id: row.category_id,
     category: row.category,
+    product_count: n(row.product_count),
+    stock_units: n(row.stock_units),
+    stock_value_cost: n(row.stock_value_cost),
+  };
+}
+
+export function toBrand(row: ProductBrandRow) {
+  return {
+    brand_id: row.brand_id,
+    brand: row.brand,
     product_count: n(row.product_count),
     stock_units: n(row.stock_units),
     stock_value_cost: n(row.stock_value_cost),

@@ -16,7 +16,6 @@ const ACTION_CLASS =
 // no hay nada filtrado en pantalla: trabajan sobre lo que se está viendo, no
 // sobre todo el catálogo.
 export default function ProductsHeader({
-  totalCount,
   loading,
   canExport,
   onRefresh,

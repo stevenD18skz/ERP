@@ -15,15 +15,23 @@
 --
 -- Con esto activo, cualquiera que abra la app puede leer los precios, ver las
 -- ventas del negocio y borrar tablas enteras desde la consola del navegador.
--- Antes de publicar la aplicación hay que revertirlo con 05_policies_drop
--- (el bloque comentado del final).
+-- Antes de publicar la aplicación hay que revertirlo con el bloque comentado
+-- del final de este mismo archivo.
+--
+-- `tiendas` NO está en la lista a propósito: guarda los hash de las contraseñas
+-- y no se abre ni para desarrollar. El login pasa por /api como todo lo demás.
+--
+-- Estado actual de la base del proyecto: CERRADA. Estas políticas se aplicaron
+-- mientras no había service_role configurada y se quitaron el 2026-07-27, ya
+-- con SUPABASE_SERVICE_ROLE_KEY en su sitio.
 -- =============================================================================
 
 do $$
 declare t text;
 begin
   foreach t in array array[
-    'products', 'sales', 'sale_items', 'orders', 'order_items', 'expenses', 'daily_closes'
+    'products', 'categories', 'brands', 'sales', 'sale_items', 'orders',
+    'order_items', 'expenses', 'daily_closes'
   ] loop
     execute format('drop policy if exists dev_all_access on public.%I', t);
     execute format(
@@ -33,14 +41,18 @@ begin
   end loop;
 end $$;
 
--- Para volver al modo seguro, correr esto:
+-- Para volver al modo seguro, descomentar esto y correrlo. Lleva `tiendas` de
+-- más por si alguna vez se abrió a mano: borrar una política que no existe no
+-- hace nada.
 --
 -- do $$
 -- declare t text;
 -- begin
 --   foreach t in array array[
---     'products', 'sales', 'sale_items', 'orders', 'order_items', 'expenses', 'daily_closes'
+--     'products', 'categories', 'brands', 'sales', 'sale_items', 'orders',
+--     'order_items', 'expenses', 'daily_closes', 'tiendas'
 --   ] loop
 --     execute format('drop policy if exists dev_all_access on public.%I', t);
+--     execute format('alter table public.%I enable row level security', t);
 --   end loop;
 -- end $$;

@@ -84,10 +84,13 @@ export async function GET(_request: NextRequest) {
           : "ok";
     const mensaje = {
       sin_esquema:
-        "La base responde pero no tiene las tablas. Correr supabase/sql/01_schema.sql.",
+        "La base responde pero no tiene las tablas. Correr los archivos de supabase/sql en orden.",
       con_errores: "Algunas tablas no se pudieron leer.",
+      // Las semillas 02, 03 y 04 solo sirven sobre un esquema recién creado:
+      // escriben columnas que las migraciones posteriores cambiaron. Sobre una
+      // base ya migrada, el catálogo se carga desde la propia aplicación.
       vacia:
-        "El esquema está creado pero sin datos. Correr las semillas 02, 03 y 04 de supabase/sql.",
+        "El esquema está creado pero sin datos. Se llena desde la aplicación (Productos → Nuevo o Importar), o desde cero con 99_reset.sql y toda la carpeta supabase/sql en orden.",
       ok: "Todo conectado.",
     }[estado];
 

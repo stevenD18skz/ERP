@@ -5,11 +5,22 @@
 
 export const LOW_STOCK_THRESHOLD = 10;
 
+// Un producto puede no tener categoría ni marca: en la base eso es un null, y
+// acá es este texto. Vive en un solo lugar porque la tabla, las tarjetas y la
+// casilla del filtro tienen que decir exactamente lo mismo; si no coinciden, el
+// filtro "Sin categoría" no encuentra nada y parece roto.
+export const SIN_CATEGORIA = "Sin categoría";
+export const SIN_MARCA = "Sin marca";
+
+export const categoryOf = (p) => p.category || SIN_CATEGORIA;
+export const brandOf = (p) => p.brand || SIN_MARCA;
+
 export const CSV_TEMPLATE_HEADERS = [
   "name",
   "sku",
   "barcode",
   "category",
+  "brand",
   "cost_price",
   "price",
   "stock",
@@ -37,12 +48,17 @@ export const isCostEstimated = (p) => Boolean(p.cost_is_estimated);
 // Campos que puede llenar una consulta por código de barras. El precio, el
 // costo y el stock quedan afuera a propósito: son datos del negocio y ningún
 // catálogo de afuera los sabe.
-export const LOOKUP_FIELDS = ["name", "category", "description"];
+//
+// La marca sí entra: es un dato del fabricante, igual que el nombre, y viene
+// limpia en la respuesta de Open Facts. Como la categoría, llega marcada y se
+// crea recién al guardar si no existía.
+export const LOOKUP_FIELDS = ["name", "brand", "category", "description"];
 
 export const BARCODE_RE = /^\d{8,14}$/;
 
 export const FIELD_LABELS = {
   name: "nombre",
+  brand: "marca",
   category: "categoría",
   description: "descripción",
   photo: "foto",
@@ -88,6 +104,7 @@ export const CSV_TEMPLATE_ROWS = [
     "ARZ-001",
     "",
     "Granos",
+    "Diana",
     1800,
     2500,
     100,
@@ -99,7 +116,7 @@ export const CSV_TEMPLATE_ROWS = [
 
 export const buildProductsCSV = (products) => {
   const rows = [
-    "id,name,sku,barcode,category,cost_price,price,stock,description,created_at",
+    "id,name,sku,barcode,category,brand,cost_price,price,stock,description,created_at",
   ];
   products.forEach((p) =>
     rows.push(
@@ -108,7 +125,8 @@ export const buildProductsCSV = (products) => {
         JSON.stringify(p.name),
         p.sku,
         p.barcode || "",
-        p.category,
+        p.category || "",
+        p.brand || "",
         p.cost_price,
         p.price,
         p.stock,
@@ -125,6 +143,7 @@ export const buildProductsPrintHTML = (products) => {
     "Nombre",
     "SKU",
     "Categoría",
+    "Marca",
     "Costo",
     "Precio",
     "Stock",
@@ -137,7 +156,7 @@ export const buildProductsPrintHTML = (products) => {
       <h2>Listado de productos — ${new Date().toLocaleString()}</h2>
       <table><thead><tr>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
       <tbody>
-      ${products.map((p) => `<tr><td>${p.name}</td><td>${p.sku}</td><td>${p.category}</td><td>${p.cost_price}</td><td>${p.price}</td><td>${p.stock}</td><td>${p.description || ""}</td></tr>`).join("")}
+      ${products.map((p) => `<tr><td>${p.name}</td><td>${p.sku}</td><td>${p.category || ""}</td><td>${p.brand || ""}</td><td>${p.cost_price}</td><td>${p.price}</td><td>${p.stock}</td><td>${p.description || ""}</td></tr>`).join("")}
       </tbody></table>
       </body></html>`;
 };

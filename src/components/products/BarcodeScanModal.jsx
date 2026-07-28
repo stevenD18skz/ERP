@@ -115,12 +115,12 @@ export default function BarcodeScanModal({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-lg animate-scale-in rounded-2xl bg-white shadow-2xl"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-5">
           <div>
-            <h3 className="text-lg font-extrabold text-slate-900">
+            <h3 className="text-xl font-extrabold text-slate-900">
               Registrar por código de barras
             </h3>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <p className="mt-0.5 text-sm text-slate-500">
               Pasa el lector o escribe el código y damos con la ficha del
               producto.
             </p>
@@ -146,9 +146,8 @@ export default function BarcodeScanModal({
             <div className="mt-1 flex gap-2">
               <div className="relative flex-1">
                 <ScanLine
-                  className={`pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 ${
-                    scanning ? "animate-pulse text-blue-600" : "text-slate-400"
-                  }`}
+                  className={`pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 ${scanning ? "animate-pulse text-blue-600" : "text-slate-400"
+                    }`}
                   aria-hidden
                 />
                 <input
@@ -176,18 +175,18 @@ export default function BarcodeScanModal({
                 Buscar
               </button>
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">
-              Si usas lector, basta con escanear: el Enter lo manda él solo.
-            </p>
+              <p className="mt-1.5 text-sm text-slate-400 ">
+                <span className="font-normal text-[17px]">ⓘ</span> Si usas lector, basta con escanear: el Enter lo manda él solo.
+              </p>
           </div>
 
           {state.status === "idle" && (
             <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
               <ScanLine className="h-8 w-8 text-slate-300" aria-hidden />
-              <p className="text-sm font-semibold text-slate-600">
+              <p className="text-md font-semibold text-slate-600">
                 Esperando el código
               </p>
-              <p className="max-w-xs text-xs text-slate-400">
+              <p className="max-w-md text-sm text-slate-400">
                 Buscamos el nombre, la marca, la presentación y la foto en los
                 catálogos públicos. El precio, el costo y el stock los pones tú.
               </p>
@@ -320,7 +319,7 @@ export default function BarcodeScanModal({
               </div>
 
               <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
-                <p className="text-xs text-slate-500">
+                <p className="text-sm text-slate-500">
                   El precio, el costo y el stock no vienen de acá: esos son de
                   tu negocio y los llenas en el siguiente paso.
                 </p>
@@ -328,7 +327,7 @@ export default function BarcodeScanModal({
                   href={state.found.source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                  className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 underline hover:text-blue-700 "
                 >
                   Ficha en {state.found.source.label}
                   <ExternalLink className="h-3 w-3" />
@@ -338,14 +337,14 @@ export default function BarcodeScanModal({
           )}
         </div>
 
-        <div className="flex flex-col gap-2.5 border-t border-slate-100 px-5 py-4 sm:flex-row">
-          <button
+        <div className="flex flex-col gap-2.5 border-t border-slate-100 px-5 py-5 sm:flex-row">
+          {/* <button
             type="button"
             onClick={onClose}
             className="rounded-lg border border-slate-200 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 sm:flex-1"
           >
             Cancelar
-          </button>
+          </button> */}
           <button
             type="button"
             onClick={() =>

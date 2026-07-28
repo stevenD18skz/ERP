@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getProducts,
+  getCategories,
+  getBrands,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -63,6 +65,13 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // El catálogo de categorías y marcas se pide aparte porque son tablas
+  // propias: hay que poder elegir una que exista aunque hoy no tenga ningún
+  // producto adentro. Deducirlas de la lista de productos, como se hacía antes,
+  // dejaba fuera justamente esas.
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+
   const filters = useProductFilters(products);
   const { pageItems, filtered } = filters;
 
@@ -100,8 +109,22 @@ export default function ProductsPage() {
     }
   };
 
+  // Sin toast si falla: el formulario sigue sirviendo con la lista vacía —se
+  // escribe la categoría y se crea— y un aviso rojo por algo que no impide
+  // trabajar solo estorba.
+  const fetchTaxonomies = async () => {
+    try {
+      const [cats, brs] = await Promise.all([getCategories(), getBrands()]);
+      setCategories(cats || []);
+      setBrands(brs || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchTaxonomies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -208,8 +231,15 @@ export default function ProductsPage() {
         ps.map((p) => (p.id === payload.id ? { ...p, ...payload } : p)),
       );
       try {
-        await updateProduct(payload.id, payload);
+        // La respuesta manda sobre lo que se pintó de una: si la categoría era
+        // nueva, ahí viene con su id, y si ya existía escrita distinta, viene
+        // con la ortografía que estaba guardada.
+        const saved = await updateProduct(payload.id, payload);
+        setProducts((ps) =>
+          ps.map((p) => (p.id === payload.id ? { ...p, ...saved } : p)),
+        );
         push("Producto actualizado", "success");
+        fetchTaxonomies();
       } catch (err) {
         console.error(err);
         setProducts(prev);
@@ -217,18 +247,26 @@ export default function ProductsPage() {
         throw err;
       }
     } else {
-      const newProduct = {
+      // El id local es provisional: sirve para pintar la fila mientras el
+      // servidor contesta, y se reemplaza por el de verdad apenas llega. Sin
+      // eso, editar un producto recién creado apuntaría a un id inventado.
+      const localId = uid();
+      const optimistic = {
         ...payload,
-        id: uid(),
+        id: localId,
         created_at: new Date().toISOString(),
       };
-      setProducts((ps) => [newProduct, ...ps]);
+      setProducts((ps) => [optimistic, ...ps]);
       try {
-        await createProduct(newProduct);
+        const saved = await createProduct(payload);
+        setProducts((ps) =>
+          ps.map((p) => (p.id === localId ? { ...optimistic, ...saved } : p)),
+        );
         push("Producto creado", "success");
+        fetchTaxonomies();
       } catch (err) {
         console.error(err);
-        setProducts((ps) => ps.filter((p) => p.id !== newProduct.id));
+        setProducts((ps) => ps.filter((p) => p.id !== localId));
         push(errorText(err, "Error creando producto"), "error");
         throw err;
       }
@@ -243,7 +281,12 @@ export default function ProductsPage() {
       onClick: async () => {
         setProducts(prev);
         try {
-          await createProduct(product);
+          // Vuelve con otro id: la fila anterior ya no existe en la base. Se
+          // reemplaza en pantalla para que editarlo después apunte al bueno.
+          const restored = await createProduct(product);
+          setProducts((ps) =>
+            ps.map((p) => (p.id === product.id ? { ...p, ...restored } : p)),
+          );
         } catch (err) {
           console.error(err);
         }
@@ -334,6 +377,7 @@ export default function ProductsPage() {
     for (const [key, value] of Object.entries({
       barcode: found.barcode,
       name: found.name,
+      brand: found.brand,
       category: found.category,
       description: found.description,
       photo: found.photo,
@@ -388,7 +432,10 @@ export default function ProductsPage() {
             name: obj.name,
             sku: obj.sku,
             barcode: obj.barcode || "",
+            // Por nombre y sin id: la API la busca y, si no está, la crea.
+            // Importar 200 filas puede traer categorías y marcas nuevas.
             category: obj.category || "",
+            brand: obj.brand || "",
             cost_price: Number(obj.cost_price),
             // Un costo que viene en el archivo importado es un dato aportado,
             // no el estimado que calcula el importador del Excel.
@@ -409,14 +456,11 @@ export default function ProductsPage() {
     setImportSaving(true);
     const created = [];
     for (const row of importParsed.valid) {
-      const newProduct = {
-        ...row,
-        id: uid(),
-        created_at: new Date().toISOString(),
-      };
       try {
-        await createProduct(newProduct);
-        created.push(newProduct);
+        // Se guarda lo que devuelve el servidor y no lo que se mandó: trae el
+        // id real y la categoría y la marca ya resueltas (creadas si hacía
+        // falta), que es lo que la tabla tiene que pintar.
+        created.push(await createProduct(row));
       } catch (err) {
         console.error(err);
       }
@@ -424,6 +468,7 @@ export default function ProductsPage() {
     setProducts((ps) => [...created, ...ps]);
     setImportSaving(false);
     setImportStep(3);
+    fetchTaxonomies();
   };
 
   const closeImport = () => {
@@ -436,10 +481,12 @@ export default function ProductsPage() {
     <>
       <div className="l mx-auto">
         <ProductsHeader
-          totalCount={products.length}
           loading={loading}
           canExport={filtered.length > 0}
-          onRefresh={fetchProducts}
+          onRefresh={() => {
+            fetchProducts();
+            fetchTaxonomies();
+          }}
           onImport={() => setImportOpen(true)}
           onExportCSV={exportCSV}
           onExportPDF={exportPDF}
@@ -463,6 +510,9 @@ export default function ProductsPage() {
           categories={filters.categories}
           categoryFilter={filters.categoryFilter}
           onCategoryFilterChange={filters.setCategoryFilter}
+          brands={filters.brands}
+          brandFilter={filters.brandFilter}
+          onBrandFilterChange={filters.setBrandFilter}
           minPrice={filters.minPrice}
           onMinPriceChange={filters.setMinPrice}
           maxPrice={filters.maxPrice}
@@ -543,7 +593,8 @@ export default function ProductsPage() {
           prefill={prefill}
           barcodeOwner={barcodeOwner}
           skuOwner={skuOwner}
-          existingCategories={filters.categories.filter((c) => c !== "All")}
+          categories={categories}
+          brands={brands}
           onClose={closeForm}
           onSave={async (p) => {
             await handleSave(p);

@@ -6,12 +6,54 @@
 // El truco de grid-rows-[0fr] a [1fr] anima el alto sin tener que medirlo en
 // JS; el hijo necesita overflow-hidden para que el contenido se recorte
 // mientras la fila crece.
+// Categorías y marcas se filtran igual: una lista de casillas donde "All" es
+// no filtrar nada. Vive acá adentro para que las dos se comporten idéntico sin
+// tener que acordarse de cambiar las dos.
+function CheckboxGroup({ legend, options, selected, onChange }) {
+  const toggle = (value) => {
+    if (value === "All") return onChange([]);
+    const next = new Set(selected);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    onChange(Array.from(next));
+  };
+
+  return (
+    <fieldset>
+      <legend className="text-xs font-medium text-slate-500">{legend}</legend>
+      <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-sm sm:grid-cols-3 md:grid-cols-5">
+        {options.map((option) => {
+          const checked =
+            selected.includes(option) ||
+            (option === "All" && selected.length === 0);
+          return (
+            <label
+              key={option}
+              className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 ${checked ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(option)}
+              />
+              <span className="truncate">{option}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 export default function ProductsFilters({
   open,
   onClose,
   categories,
   categoryFilter,
   onCategoryFilterChange,
+  brands,
+  brandFilter,
+  onBrandFilterChange,
   minPrice,
   onMinPriceChange,
   maxPrice,
@@ -22,14 +64,6 @@ export default function ProductsFilters({
   onStockValChange,
   onClearAll,
 }) {
-  const toggleCategory = (c) => {
-    if (c === "All") return onCategoryFilterChange([]);
-    const next = new Set(categoryFilter);
-    if (next.has(c)) next.delete(c);
-    else next.add(c);
-    onCategoryFilterChange(Array.from(next));
-  };
-
   return (
     <div
       className={`mt-4 grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
@@ -42,7 +76,7 @@ export default function ProductsFilters({
             <div className="flex items-center gap-4">
               <div className="text-sm font-semibold">Filtros avanzados</div>
               <div className="text-xs text-slate-400">
-                Filtra por precio, stock y categorías
+                Filtra por precio, stock, categorías y marcas
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -61,7 +95,7 @@ export default function ProductsFilters({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 items-center justify-center gap-4 md:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 items-start gap-4 md:grid-cols-2">
             <div>
               <div className="text-xs font-medium text-slate-500">
                 Precio (COP)
@@ -90,7 +124,7 @@ export default function ProductsFilters({
               </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center">
+            <div className="flex flex-col">
               <div className="text-xs font-medium text-slate-500">Stock</div>
               <div className="mt-1 flex items-center gap-2">
                 <select
@@ -118,32 +152,21 @@ export default function ProductsFilters({
               </div>
             </div>
 
-            <div>
-              <div className="text-xs font-medium text-slate-500">
-                Categorías
-              </div>
+          </div>
 
-              <div className="mt-2 grid grid-cols-4 gap-2 text-sm">
-                {categories.map((c) => {
-                  const checked =
-                    categoryFilter.includes(c) ||
-                    (c === "All" && categoryFilter.length === 0);
-                  return (
-                    <label
-                      key={c}
-                      className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 ${checked ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleCategory(c)}
-                      />
-                      <span className="truncate">{c}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            <CheckboxGroup
+              legend="Categorías"
+              options={categories}
+              selected={categoryFilter}
+              onChange={onCategoryFilterChange}
+            />
+            <CheckboxGroup
+              legend="Marcas"
+              options={brands}
+              selected={brandFilter}
+              onChange={onBrandFilterChange}
+            />
           </div>
         </div>
       </div>

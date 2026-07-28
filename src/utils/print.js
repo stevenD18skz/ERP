@@ -37,8 +37,9 @@ export function openPrintWindow(html, { delay = 300 } = {}) {
         setTimeout(() => {
           try {
             document.body.removeChild(iframe);
-          } catch (e) {
-            /* ignore */
+          } catch {
+            // El iframe ya no está en el DOM. Da igual: lo que se quería era
+            // justamente que no quedara.
           }
         }, 1000);
       }

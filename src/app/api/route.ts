@@ -24,6 +24,7 @@ export function GET() {
         "GET    /api/products": "catálogo, con búsqueda, filtros y páginas",
         "POST   /api/products": "crea un producto",
         "GET    /api/products/categories": "categorías con su conteo",
+        "GET    /api/products/brands": "marcas con su conteo",
         "GET    /api/products/:id": "un producto",
         "PATCH  /api/products/:id": "actualiza un producto",
         "DELETE /api/products/:id": "borra un producto",

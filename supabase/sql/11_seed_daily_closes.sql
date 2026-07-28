@@ -4,7 +4,10 @@
 -- GENERADO por scripts/generate-sql. No editar a mano: se regenera con
 -- `npm run sql:generate` y cualquier cambio manual se pierde.
 --
--- 365 días, uno por cada fila de Hoja1 del Excel.
+-- Necesita la tabla `tiendas` (06_tiendas.sql) y la tienda ya creada con
+-- `node scripts/seed-tiendas.mjs`.
+-- 
+-- 365 días, uno por cada fila de Hoja1 del Excel, a la tienda "Jose's Market".
 -- Totales del año: venta 154.490.050 · ganancia 29.353.171 ·
 -- gasto 11.836.950 · compra 128.838.300.
 -- 
@@ -15,7 +18,34 @@
 -- para no confundir "no se anotó" con "fue cero".
 -- ===========================================================================
 
-insert into public.daily_closes (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source) values
+do $guard$
+begin
+  if to_regclass('public.tiendas') is null then
+    raise exception 'Falta el esquema multi-tienda. Correr supabase/sql/06_tiendas.sql y las que siguen.';
+  end if;
+  if not exists (
+    select 1 from public.tiendas
+    where lower(btrim(nombre)) = lower(btrim('Jose''s Market'))
+  ) then
+    raise exception 'No existe la tienda % en esta base. Correr antes: node scripts/seed-tiendas.mjs', 'Jose''s Market';
+  end if;
+end
+$guard$;
+
+insert into public.daily_closes (id, tienda_id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.sales_total::numeric,
+  v.gain::numeric,
+  v.expenses_total::numeric,
+  v.purchases_total::numeric,
+  v.cash_in::numeric,
+  v.cash_out::numeric,
+  v.source::public.daily_close_source
+from public.tiendas t
+cross join (values
   ('1274f54b-d90f-5cbc-9d3e-0783c662a1d0', '2025-12-31', 761500, 144685, 135500, 194500, null, null, 'excel'),
   ('c26d80eb-4824-5909-91df-05dd78c13cc6', '2025-12-30', 582550, 110685, 20000, 475550, null, null, 'excel'),
   ('63363681-0f7d-5da6-a155-be862c321464', '2025-12-29', 644900, 122531, 9700, 613700, null, null, 'excel'),
@@ -116,9 +146,24 @@ insert into public.daily_closes (id, date, sales_total, gain, expenses_total, pu
   ('ad4f3212-2c63-5029-9cde-04fe52480177', '2025-09-25', 813700, 154603, 24700, 239000, null, null, 'excel'),
   ('ba08a5f8-5cae-5736-80d0-adbe1adab015', '2025-09-24', 691800, 131442, 19500, 182300, null, null, 'excel'),
   ('14f4e5ca-d1cc-5ccf-bcdd-60bc978049fe', '2025-09-23', 340500, 64695, 18000, 626500, null, null, 'excel')
-on conflict (id) do nothing;
+) as v (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.daily_closes (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source) values
+insert into public.daily_closes (id, tienda_id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.sales_total::numeric,
+  v.gain::numeric,
+  v.expenses_total::numeric,
+  v.purchases_total::numeric,
+  v.cash_in::numeric,
+  v.cash_out::numeric,
+  v.source::public.daily_close_source
+from public.tiendas t
+cross join (values
   ('cc091d6b-a4e9-5e4b-bd0a-fa45eea7d2f5', '2025-09-22', 232900, 44251, 9000, 463900, null, null, 'excel'),
   ('d7557d27-c422-55ce-8170-ecc06933fc8e', '2025-09-21', 521400, 99066, 25800, 525600, null, null, 'excel'),
   ('4949b038-9ca7-5a8f-b0ea-8286f359fb64', '2025-09-20', 380900, 72371, 12000, 288900, null, null, 'excel'),
@@ -219,9 +264,24 @@ insert into public.daily_closes (id, date, sales_total, gain, expenses_total, pu
   ('cceb613a-0aae-540c-bb0f-9f666ef6d0e5', '2025-06-17', 652300, 123937, 86000, 366300, null, null, 'excel'),
   ('e626481d-dc2f-54bb-9e44-db1b46bf073c', '2025-06-16', 602650, 114504, 18000, 824650, null, null, 'excel'),
   ('1e0d3731-deeb-556c-9282-8440240c11af', '2025-06-15', 301350, 57257, 29200, 582150, null, null, 'excel')
-on conflict (id) do nothing;
+) as v (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.daily_closes (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source) values
+insert into public.daily_closes (id, tienda_id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.sales_total::numeric,
+  v.gain::numeric,
+  v.expenses_total::numeric,
+  v.purchases_total::numeric,
+  v.cash_in::numeric,
+  v.cash_out::numeric,
+  v.source::public.daily_close_source
+from public.tiendas t
+cross join (values
   ('226a6212-5208-5855-8fd8-fa7f522e5c0a', '2025-06-14', 245800, 46702, 13800, 392000, null, null, 'excel'),
   ('bcf27a60-30e3-5ceb-98c3-a28b3981430e', '2025-06-13', 453150, 86099, 0, 373150, null, null, 'excel'),
   ('9d4179a5-3c82-55cc-a2f4-0707b587ca78', '2025-06-12', 319800, 60762, 189800, 0, null, null, 'excel'),
@@ -322,9 +382,24 @@ insert into public.daily_closes (id, date, sales_total, gain, expenses_total, pu
   ('d408e43b-b56f-5e4e-bdb2-12be5e0fed08', '2025-03-09', 251850, 47852, 16000, 272850, 0, 39300, 'excel'),
   ('022becda-224a-5bb7-b905-ac822d133edd', '2025-03-08', 259300, 49267, 38400, 200900, 0, 23000, 'excel'),
   ('6be03bab-4cea-5820-8ace-ce3bd29b112f', '2025-03-07', 185500, 35245, 25600, 159900, 0, 29700, 'excel')
-on conflict (id) do nothing;
+) as v (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.daily_closes (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source) values
+insert into public.daily_closes (id, tienda_id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.sales_total::numeric,
+  v.gain::numeric,
+  v.expenses_total::numeric,
+  v.purchases_total::numeric,
+  v.cash_in::numeric,
+  v.cash_out::numeric,
+  v.source::public.daily_close_source
+from public.tiendas t
+cross join (values
   ('371946d6-ffd4-52c7-88e8-e233f56abf41', '2025-03-06', 582000, 110580, 20000, 217000, 0, 72300, 'excel'),
   ('d3411318-2abb-5967-8baf-c4177c97d74e', '2025-03-05', 537900, 102201, 0, 587900, 100000, 55500, 'excel'),
   ('72fe546b-d750-587d-ab20-6abf25fbd0f3', '2025-03-04', 272850, 51842, 30900, 424450, 0, 24000, 'excel'),
@@ -390,4 +465,6 @@ insert into public.daily_closes (id, date, sales_total, gain, expenses_total, pu
   ('a8497024-25e3-595f-abb8-870b6bf4f915', '2025-01-03', 487050, 92540, 1200, 320850, 18000, 17600, 'excel'),
   ('184179e3-3a58-5898-81cd-9431bf358141', '2025-01-02', 499000, 94810, 18000, 0, 0, 31600, 'excel'),
   ('fa9068f7-57f1-5947-b2e2-7241351f4419', '2025-01-01', 726000, 137940, 0, 0, 0, 155100, 'excel')
-on conflict (id) do nothing;
+) as v (id, date, sales_total, gain, expenses_total, purchases_total, cash_in, cash_out, source)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;

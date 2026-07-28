@@ -21,7 +21,7 @@ export default function TopProductsHome({ items }: { items: Product[] }) {
                   {p.name}
                 </div>
                 <div className="text-xs text-slate-400">
-                  {p.category} ·{" "}
+                  {p.category || "Sin categoría"} ·{" "}
                   <span
                     className={
                       p.stock <= LOW_STOCK_THRESHOLD

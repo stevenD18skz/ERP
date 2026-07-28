@@ -6,7 +6,7 @@ import { currency } from "@/utils/converts";
 import StockBadge from "./StockBadge";
 import StockStepper from "./StockStepper";
 import Thumb from "./Thumb";
-import { getMargin, isCostEstimated } from "./productsUtils";
+import { categoryOf, getMargin, isCostEstimated } from "./productsUtils";
 
 // La misma información de la tabla, apilada para el teléfono: identificación
 // arriba, la plata en una tira de tres, y stock y acciones al pie. El margen en
@@ -49,9 +49,18 @@ export default function ProductsCardList({
                   SKU {p.sku}
                 </div>
               ) : null}
-              <span className="mt-1.5 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-                {p.category || "Sin categoría"}
-              </span>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                  {categoryOf(p)}
+                </span>
+                {/* La marca solo aparece si la hay: en el teléfono el espacio
+                    es el recurso escaso y un chip "Sin marca" no dice nada. */}
+                {p.brand && (
+                  <span className="inline-block rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                    {p.brand}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

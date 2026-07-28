@@ -35,7 +35,12 @@ export const createProduct = async (product) => {
       barcode: "",
       photo: null,
       stock: 0,
-      category: "Sin categoría",
+      // Vacío y no "Sin categoría": el texto que se lee cuando no hay ninguna
+      // lo pone la pantalla, igual que hace el mapper de la API.
+      category: "",
+      category_id: null,
+      brand: "",
+      brand_id: null,
       description: "",
       cost_is_estimated: false,
       ...product,
@@ -64,6 +69,51 @@ export const updateProduct = async (id, changes) => {
     body: JSON.stringify(changes),
   });
   return data;
+};
+
+/* --- categorías y marcas -------------------------------------------------
+   Las dos son tablas propias en Supabase, así que el catálogo completo se pide
+   aparte: incluye las que todavía no tienen ningún producto adentro, que es lo
+   que hace que crear una categoría y usarla después sea posible.
+
+   En simulación no hay base, así que se deducen de los productos que hay
+   cargados; ahí una categoría vive solo mientras algún producto la nombre, y
+   está bien: la simulación se borra al cerrar la pestaña.
+
+   Las dos formas salen normalizadas a { id, name, product_count } para que la
+   pantalla no tenga que saber de cuál de los dos lados vino. */
+
+const deriveFromProducts = (field) => {
+  const byName = new Map();
+  for (const product of all()) {
+    const name = String(product[field] ?? "").trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const found = byName.get(key);
+    if (found) found.product_count += 1;
+    else byName.set(key, { id: null, name, product_count: 1 });
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export const getCategories = async () => {
+  if (isSimulationOn()) return deriveFromProducts("category");
+  const { data } = await apiFetch("/api/products/categories");
+  return (data || []).map((row) => ({
+    id: row.category_id,
+    name: row.category,
+    product_count: row.product_count,
+  }));
+};
+
+export const getBrands = async () => {
+  if (isSimulationOn()) return deriveFromProducts("brand");
+  const { data } = await apiFetch("/api/products/brands");
+  return (data || []).map((row) => ({
+    id: row.brand_id,
+    name: row.brand,
+    product_count: row.product_count,
+  }));
 };
 
 export const deleteProduct = async (id) => {

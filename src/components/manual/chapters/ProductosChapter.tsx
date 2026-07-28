@@ -29,7 +29,13 @@ export default function ProductosChapter({ numero }: { numero: number }) {
               campo: "Categoría",
               obligatorio: false,
               notas:
-                "Sugiere las categorías que ya existen mientras se escribe.",
+                "Se elige de la lista. Si se escribe una que no está, aparece arriba el botón «Crear» y la categoría nueva nace al guardar el producto.",
+            },
+            {
+              campo: "Marca",
+              obligatorio: false,
+              notas:
+                "Funciona igual que la categoría. Se deja vacía en lo que se vende sin marca: granel, reempaque, hecho en casa.",
             },
             {
               campo: "Costo",
@@ -71,11 +77,15 @@ export default function ProductosChapter({ numero }: { numero: number }) {
 
       <Topic titulo="Buscar, filtrar y ordenar">
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          El buscador de arriba mira nombre, SKU, código de barras y descripción.
-          El botón <span className="font-medium">Filtros</span> abre un panel
-          para acotar por rango de precio, por stock (cualquiera, menor que,
-          mayor que o igual a un valor) y por categoría. Haciendo clic en el
-          encabezado de una columna se ordena la tabla por ese campo.
+          El buscador de arriba mira nombre, SKU, código de barras, categoría,
+          marca y descripción. El botón{" "}
+          <span className="font-medium">Filtros</span> abre un panel para acotar
+          por rango de precio, por stock (cualquiera, menor que, mayor que o
+          igual a un valor), por categoría y por marca. En esas dos listas hay
+          también <span className="font-medium">Sin categoría</span> y{" "}
+          <span className="font-medium">Sin marca</span>, para encontrar rápido
+          lo que falta clasificar. Haciendo clic en el encabezado de una columna
+          se ordena la tabla por ese campo.
         </p>
       </Topic>
 
@@ -91,6 +101,11 @@ export default function ProductosChapter({ numero }: { numero: number }) {
             "Confirmar: las filas con errores no se importan; se pueden corregir en el archivo y volver a intentar.",
           ]}
         />
+        <p className="mt-3 text-sm leading-relaxed text-slate-600">
+          Las columnas <span className="font-mono">category</span> y{" "}
+          <span className="font-mono">brand</span> se escriben con el nombre. Las
+          que no existan todavía se crean solas al importar.
+        </p>
       </Topic>
 
       <Topic titulo="Eliminar, exportar e imprimir">

@@ -4,7 +4,10 @@
 -- GENERADO por scripts/generate-sql. No editar a mano: se regenera con
 -- `npm run sql:generate` y cualquier cambio manual se pierde.
 --
--- 522 registros: 353 gastos, 54 entradas y 115 salidas de caja.
+-- Necesita la tabla `tiendas` (06_tiendas.sql) y la tienda ya creada con
+-- `node scripts/seed-tiendas.mjs`.
+-- 
+-- 522 registros a la tienda "Jose's Market": 353 gastos, 54 entradas y 115 salidas de caja.
 -- 
 -- El Excel nunca guardó el concepto de un gasto, solo el total del día en una
 -- celda. Por eso todos entran con un concepto genérico: son el punto de
@@ -14,7 +17,31 @@
 -- daily_closes.expenses_total. Al sumar hay que usar una fuente o la otra.
 -- ===========================================================================
 
-insert into public.expenses (id, date, kind, amount, concept, notes) values
+do $guard$
+begin
+  if to_regclass('public.tiendas') is null then
+    raise exception 'Falta el esquema multi-tienda. Correr supabase/sql/06_tiendas.sql y las que siguen.';
+  end if;
+  if not exists (
+    select 1 from public.tiendas
+    where lower(btrim(nombre)) = lower(btrim('Jose''s Market'))
+  ) then
+    raise exception 'No existe la tienda % en esta base. Correr antes: node scripts/seed-tiendas.mjs', 'Jose''s Market';
+  end if;
+end
+$guard$;
+
+insert into public.expenses (id, tienda_id, date, kind, amount, concept, notes)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.kind::public.expense_kind,
+  v.amount::numeric,
+  v.concept::text,
+  v.notes::text
+from public.tiendas t
+cross join (values
   ('28d02ee8-1255-5133-8864-51ed3b765dfb', '2025-12-31', 'gasto', 135500, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('9ba0102a-4a1c-505b-a419-4d4e2628c5d8', '2025-12-30', 'gasto', 20000, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('f767cbd5-7d47-53d4-922a-5087926b96fb', '2025-12-29', 'gasto', 9700, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
@@ -115,9 +142,21 @@ insert into public.expenses (id, date, kind, amount, concept, notes) values
   ('aab5867a-d22a-50f9-a144-99e032d51490', '2025-09-23', 'gasto', 18000, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('a85839ed-1872-51f4-8697-ababa66669be', '2025-09-22', 'gasto', 9000, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('a72ead33-69fd-5ed9-a9df-5ba3edd6726e', '2025-09-21', 'gasto', 25800, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.')
-on conflict (id) do nothing;
+) as v (id, date, kind, amount, concept, notes)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.expenses (id, date, kind, amount, concept, notes) values
+insert into public.expenses (id, tienda_id, date, kind, amount, concept, notes)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.kind::public.expense_kind,
+  v.amount::numeric,
+  v.concept::text,
+  v.notes::text
+from public.tiendas t
+cross join (values
   ('d5a5a5e1-319a-5cec-a5ad-e79824403e25', '2025-09-20', 'gasto', 12000, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('73de7962-fd34-5f54-bf3b-4f8c11cb5899', '2025-09-19', 'gasto', 4500, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('c1a9c79b-7b26-5968-92d1-88f7183eea7f', '2025-09-18', 'gasto', 1700, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
@@ -218,9 +257,21 @@ insert into public.expenses (id, date, kind, amount, concept, notes) values
   ('77c1e550-28b7-5019-b052-dd41a4a06f34', '2025-06-09', 'gasto', 19800, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('7d409c10-e5ba-531c-a42b-a3bbb8eff827', '2025-06-08', 'gasto', 16300, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('58849ac7-1a1c-5a56-951e-12891be4df86', '2025-06-07', 'gasto', 13500, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.')
-on conflict (id) do nothing;
+) as v (id, date, kind, amount, concept, notes)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.expenses (id, date, kind, amount, concept, notes) values
+insert into public.expenses (id, tienda_id, date, kind, amount, concept, notes)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.kind::public.expense_kind,
+  v.amount::numeric,
+  v.concept::text,
+  v.notes::text
+from public.tiendas t
+cross join (values
   ('3b868101-7404-5668-90b4-b3e628648b81', '2025-06-06', 'gasto', 2400, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('9da256f0-89e2-5cd6-b210-01b862c6f285', '2025-06-05', 'gasto', 38600, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('9ed3ad95-62f2-52c5-abc8-8acdc301608b', '2025-06-04', 'gasto', 30100, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
@@ -321,9 +372,21 @@ insert into public.expenses (id, date, kind, amount, concept, notes) values
   ('2ec32e85-9774-53fc-93e9-c61ca6c5bc1d', '2025-04-05', 'gasto', 25100, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('50317b48-06c2-55a5-a483-21307bd6cfac', '2025-04-05', 'salida', 22700, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
   ('16adc4e3-df7e-551a-9442-9fd454cccd82', '2025-04-04', 'entrada', 47700, 'Entrada de caja', 'Importado de la columna DENTRADA del Excel, sin concepto asociado.')
-on conflict (id) do nothing;
+) as v (id, date, kind, amount, concept, notes)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.expenses (id, date, kind, amount, concept, notes) values
+insert into public.expenses (id, tienda_id, date, kind, amount, concept, notes)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.kind::public.expense_kind,
+  v.amount::numeric,
+  v.concept::text,
+  v.notes::text
+from public.tiendas t
+cross join (values
   ('baa9f69e-bbdc-5a82-be45-5dd1a8af775a', '2025-04-04', 'gasto', 87900, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('3d0a2a2d-a300-513c-99bc-0234abfee418', '2025-04-04', 'salida', 10000, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
   ('e4be7323-8e27-5467-8a16-3f91f48a24a3', '2025-04-03', 'gasto', 26600, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
@@ -424,9 +487,21 @@ insert into public.expenses (id, date, kind, amount, concept, notes) values
   ('3c5f9859-7be8-5f13-86ee-5dc3485cbfa7', '2025-02-19', 'salida', 334900, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
   ('dabbbf22-abae-5e4a-8665-65c5a9d37087', '2025-02-18', 'entrada', 10000, 'Entrada de caja', 'Importado de la columna DENTRADA del Excel, sin concepto asociado.'),
   ('fb8062ae-ea71-566d-8073-922b1b087eea', '2025-02-18', 'salida', 36100, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.')
-on conflict (id) do nothing;
+) as v (id, date, kind, amount, concept, notes)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.expenses (id, date, kind, amount, concept, notes) values
+insert into public.expenses (id, tienda_id, date, kind, amount, concept, notes)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.kind::public.expense_kind,
+  v.amount::numeric,
+  v.concept::text,
+  v.notes::text
+from public.tiendas t
+cross join (values
   ('897ee112-72eb-5a50-83cc-9b9aa30327d3', '2025-02-17', 'entrada', 242300, 'Entrada de caja', 'Importado de la columna DENTRADA del Excel, sin concepto asociado.'),
   ('801e744f-f2b1-5b65-a1ad-6cd087917705', '2025-02-17', 'gasto', 86750, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('9e25c118-9094-5ade-8990-912cf9dda4d7', '2025-02-17', 'salida', 41000, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
@@ -527,9 +602,21 @@ insert into public.expenses (id, date, kind, amount, concept, notes) values
   ('2b01987e-df95-5e10-9269-93fe6ba4a862', '2025-01-11', 'salida', 23900, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
   ('922ee30e-eed0-5cc7-a739-c9252b5edb6f', '2025-01-10', 'entrada', 20000, 'Entrada de caja', 'Importado de la columna DENTRADA del Excel, sin concepto asociado.'),
   ('d4c9db1c-d62f-5e71-b0f6-53e3a1a7bf74', '2025-01-10', 'gasto', 1500, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.')
-on conflict (id) do nothing;
+) as v (id, date, kind, amount, concept, notes)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;
 
-insert into public.expenses (id, date, kind, amount, concept, notes) values
+insert into public.expenses (id, tienda_id, date, kind, amount, concept, notes)
+select
+  v.id::uuid,
+  t.id,
+  v.date::date,
+  v.kind::public.expense_kind,
+  v.amount::numeric,
+  v.concept::text,
+  v.notes::text
+from public.tiendas t
+cross join (values
   ('152cc7c5-4f01-5964-a018-149111476efc', '2025-01-10', 'salida', 34500, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
   ('da9f420e-9737-53e8-9c72-c54b5f561aab', '2025-01-09', 'gasto', 3200, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('38f9dba2-de99-55a5-be28-a0738db1f0ac', '2025-01-09', 'salida', 19100, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
@@ -552,4 +639,6 @@ insert into public.expenses (id, date, kind, amount, concept, notes) values
   ('908bfac6-1f68-5515-b546-cfaf4598a988', '2025-01-02', 'gasto', 18000, 'Gasto del día', 'Importado del Excel: la hoja solo guardaba el total diario, sin detalle.'),
   ('5bc651aa-285d-51ed-b935-516492b8f45f', '2025-01-02', 'salida', 31600, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.'),
   ('54d149cf-647d-5278-956a-cb184d09b1c3', '2025-01-01', 'salida', 155100, 'Salida de caja', 'Importado de la columna SALIDA del Excel, sin concepto asociado.')
-on conflict (id) do nothing;
+) as v (id, date, kind, amount, concept, notes)
+where lower(btrim(t.nombre)) = lower(btrim('Jose''s Market'))
+on conflict do nothing;

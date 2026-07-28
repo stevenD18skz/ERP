@@ -2,29 +2,39 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { currency } from "@/utils/converts";
-import { getMargin } from "@/components/products/productsUtils";
+import {
+  brandOf,
+  categoryOf,
+  getMargin,
+} from "@/components/products/productsUtils";
 
 // Búsqueda, filtros, orden y paginación del catálogo. Vive aparte de la página
 // porque es lógica sin pantalla: recibe la lista de productos y devuelve la
 // porción que toca dibujar, más los controles para moverla.
+// Un producto sin categoría o sin marca también es un grupo por el que se
+// quiere filtrar ("¿qué me falta clasificar?"): categoryOf y brandOf le ponen
+// nombre a ese vacío, el mismo que muestran la tabla y las tarjetas.
 export function useProductFilters(products, { perPage = 8 } = {}) {
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState([]); // multi-select
+  const [brandFilter, setBrandFilter] = useState([]); // multi-select
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [stockOp, setStockOp] = useState("any"); // any, lt, gt, eq
   const [stockVal, setStockVal] = useState("");
 
-  const [sortBy, setSortBy] = useState(null); // name|category|price|cost_price|margin|stock
+  const [sortBy, setSortBy] = useState(null); // name|category|brand|price|cost_price|margin|stock
   const [sortDir, setSortDir] = useState("asc");
 
   const [page, setPage] = useState(1);
 
   const categories = useMemo(
-    () => [
-      "All",
-      ...Array.from(new Set(products.map((p) => p.category || "Otros"))),
-    ],
+    () => ["All", ...Array.from(new Set(products.map(categoryOf))).sort()],
+    [products],
+  );
+
+  const brands = useMemo(
+    () => ["All", ...Array.from(new Set(products.map(brandOf))).sort()],
     [products],
   );
 
@@ -33,13 +43,17 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     let list = products.slice();
 
     if (categoryFilter.length > 0 && !categoryFilter.includes("All")) {
-      list = list.filter((p) => categoryFilter.includes(p.category));
+      list = list.filter((p) => categoryFilter.includes(categoryOf(p)));
+    }
+
+    if (brandFilter.length > 0 && !brandFilter.includes("All")) {
+      list = list.filter((p) => brandFilter.includes(brandOf(p)));
     }
 
     if (q) {
       list = list.filter((p) =>
-        [p.name, p.sku, p.barcode, p.category, p.description].some((f) =>
-          (f || "").toLowerCase().includes(q),
+        [p.name, p.sku, p.barcode, p.category, p.brand, p.description].some(
+          (f) => (f || "").toLowerCase().includes(q),
         ),
       );
     }
@@ -59,15 +73,26 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     }
 
     // El margen no es una columna de la base: se calcula, así que se ordena
-    // aparte. Sin orden elegido, alfabético por nombre.
+    // aparte. La categoría y la marca se ordenan por el nombre del grupo, para
+    // que los productos sin clasificar queden juntos y no dispersos.
+    // Sin orden elegido, alfabético por nombre.
+    const sortValue = (p) => {
+      if (sortBy === "margin") return getMargin(p);
+      if (sortBy === "category") return categoryOf(p);
+      if (sortBy === "brand") return brandOf(p);
+      return p[sortBy];
+    };
+
     if (sortBy) {
       list.sort((a, b) => {
-        const aVal = sortBy === "margin" ? getMargin(a) : a[sortBy];
-        const bVal = sortBy === "margin" ? getMargin(b) : b[sortBy];
-        if (typeof aVal === "string") {
+        const aVal = sortValue(a);
+        const bVal = sortValue(b);
+        if (typeof aVal === "string" || typeof bVal === "string") {
+          const aText = String(aVal ?? "");
+          const bText = String(bVal ?? "");
           return sortDir === "asc"
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
+            ? aText.localeCompare(bText)
+            : bText.localeCompare(aText);
         }
         return sortDir === "asc" ? aVal - bVal : bVal - aVal;
       });
@@ -80,6 +105,7 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     products,
     query,
     categoryFilter,
+    brandFilter,
     minPrice,
     maxPrice,
     stockOp,
@@ -90,6 +116,7 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
 
   const activeFilterCount =
     (categoryFilter.length > 0 ? 1 : 0) +
+    (brandFilter.length > 0 ? 1 : 0) +
     (minPrice !== "" ? 1 : 0) +
     (maxPrice !== "" ? 1 : 0) +
     (stockOp !== "any" && stockVal !== "" ? 1 : 0);
@@ -103,6 +130,13 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
         label: c,
         onRemove: () =>
           setCategoryFilter((prev) => prev.filter((x) => x !== c)),
+      }),
+    );
+    brandFilter.forEach((b) =>
+      chips.push({
+        key: `brand-${b}`,
+        label: b,
+        onRemove: () => setBrandFilter((prev) => prev.filter((x) => x !== b)),
       }),
     );
     if (minPrice !== "")
@@ -134,11 +168,12 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
       });
     }
     return chips;
-  }, [categoryFilter, minPrice, maxPrice, stockOp, stockVal]);
+  }, [categoryFilter, brandFilter, minPrice, maxPrice, stockOp, stockVal]);
 
   const clearAllFilters = () => {
     setQuery("");
     setCategoryFilter([]);
+    setBrandFilter([]);
     setMinPrice("");
     setMaxPrice("");
     setStockOp("any");
@@ -149,7 +184,7 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
   // los filtros, aquí.
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, minPrice, maxPrice, stockOp, stockVal]);
+  }, [categoryFilter, brandFilter, minPrice, maxPrice, stockOp, stockVal]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
 
@@ -181,6 +216,7 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     // valores
     query,
     categoryFilter,
+    brandFilter,
     minPrice,
     maxPrice,
     stockOp,
@@ -191,6 +227,7 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     perPage,
     // derivados
     categories,
+    brands,
     filtered,
     pageItems,
     totalPages,
@@ -200,6 +237,7 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     // acciones
     setQuery: changeQuery,
     setCategoryFilter,
+    setBrandFilter,
     setMinPrice,
     setMaxPrice,
     setStockOp,

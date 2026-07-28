@@ -103,14 +103,41 @@ Ordena por `name` ascendente si no se dice otra cosa.
 
 | Filtro | Ejemplo | Qué hace |
 |---|---|---|
-| `q` | `?q=arroz` | busca en nombre, SKU, código de barras y categoría |
-| `category` | `?category=Bebidas` | exacto |
+| `q` | `?q=arroz` | busca en nombre, SKU, código de barras, categoría y marca |
+| `category` | `?category=Bebidas` | exacto, por nombre |
+| `brand` | `?brand=Postobón` | exacto, por nombre |
 | `barcode` | `?barcode=7702001` | exacto, para el lector del punto de venta |
 | `lowStock` | `?lowStock=10` | los que tienen 10 o menos |
 | `inStock` | `?inStock=false` | los que están en cero o en negativo |
 | `estimatedCost` | `?estimatedCost=true` | los 398 que todavía tienen el costo calculado con el margen del 19% |
 
-`sort`: `name`, `sku`, `price`, `cost_price`, `stock`, `category`, `created_at`.
+`sort`: `name`, `sku`, `price`, `cost_price`, `stock`, `category`, `brand`,
+`created_at`.
+
+### La categoría y la marca
+
+Las dos son tablas propias de cada tienda (`categories`, `brands`) y el producto
+apunta a una de cada una, o a ninguna. En la respuesta viajan por partida doble:
+
+```json
+{ "category": "Bebidas", "category_id": "8f2c…", "brand": "Postobón", "brand_id": "1a7d…" }
+```
+
+Al escribir (`POST` y `PATCH`) se acepta cualquiera de las dos formas:
+
+| Se manda | Qué pasa |
+|---|---|
+| `"category_id": "8f2c…"` | se usa esa. Si no es de esta tienda, `400` |
+| `"category": "Bebidas"` | se busca por nombre sin distinguir mayúsculas; **si no existe, se crea** |
+| `"category": ""` o `"category_id": null` | el producto queda sin categoría |
+| no se manda nada (solo en `PATCH`) | no se toca |
+
+Cuando llegan las dos, manda el id. Así el formulario puede mandar el id de lo
+que se eligió de la lista y el nombre de lo que se acaba de escribir, sin tener
+que decidir nada. `brand` y `brand_id` funcionan igual.
+
+Crear la categoría junto con el producto es a propósito: en el mostrador,
+"registrar el producto" y "abrir la categoría nueva" son un solo movimiento.
 
 ### `POST /api/products`
 
@@ -121,13 +148,15 @@ Ordena por `name` ascendente si no se dice otra cosa.
   "price": 9400,
   "cost_price": 7614,
   "category": "Aceites",
+  "brand": "Diana",
   "barcode": "",
   "stock": 0,
   "description": ""
 }
 ```
 
-Obligatorios: `name`, `sku`, `price`. SKU repetido da `409`.
+Obligatorios: `name` y `price`. El SKU es opcional y, si se manda repetido
+dentro de la misma tienda, da `409`.
 
 Mandar `cost_price` marca el costo como real (`cost_is_estimated: false`), que
 es justo lo que significa corregirlo a mano. Para forzar lo contrario hay que
@@ -141,13 +170,18 @@ apaga `cost_is_estimated`.
 Borrar un producto no borra el historial: las líneas de ventas y pedidos viejos
 se quedan con el nombre del producto y su `product_id` en null.
 
-### `GET /api/products/categories`
+### `GET /api/products/categories` · `GET /api/products/brands`
 
-Las categorías que existen hoy, con su conteo. Para armar los filtros sin
-traerse los 435 productos.
+Las categorías y las marcas de la tienda, con su conteo. Para armar los filtros
+y el select del formulario sin traerse los 435 productos. Incluyen las que
+todavía no tienen ningún producto adentro.
 
 ```json
-{ "data": [ { "category": "Aceites", "product_count": 12, "stock_units": 0, "stock_value_cost": 0 } ] }
+{ "data": [ { "category_id": "8f2c…", "category": "Aceites", "product_count": 12, "stock_units": 0, "stock_value_cost": 0 } ] }
+```
+
+```json
+{ "data": [ { "brand_id": "1a7d…", "brand": "Diana", "product_count": 5, "stock_units": 0, "stock_value_cost": 0 } ] }
 ```
 
 ### `GET /api/barcode/:code`

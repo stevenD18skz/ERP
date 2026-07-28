@@ -7,7 +7,12 @@ import { currency } from "@/utils/converts";
 import StockBadge from "./StockBadge";
 import StockStepper from "./StockStepper";
 import Thumb from "./Thumb";
-import { getMargin, getMarginPct, isCostEstimated } from "./productsUtils";
+import {
+  categoryOf,
+  getMargin,
+  getMarginPct,
+  isCostEstimated,
+} from "./productsUtils";
 
 // Tabla de escritorio. En móvil se esconde y toma su lugar ProductsCardList:
 // diez columnas no caben en un teléfono ni con scroll horizontal.
@@ -51,6 +56,14 @@ export default function ProductsTable({
             <SortHeader
               label="Categoría"
               sortKey="category"
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onClick={onSort}
+              className="w-28"
+            />
+            <SortHeader
+              label="Marca"
+              sortKey="brand"
               sortBy={sortBy}
               sortDir={sortDir}
               onClick={onSort}
@@ -132,8 +145,17 @@ export default function ProductsTable({
               </td>
               <td className="px-2 py-2.5">
                 <span className="inline-block max-w-full truncate rounded-full bg-slate-100 px-2.5 py-1 align-bottom text-[12.5px] font-semibold text-slate-700">
-                  {p.category || "Sin categoría"}
+                  {categoryOf(p)}
                 </span>
+              </td>
+              {/* Sin marca queda la raya y no un chip vacío: el granel y lo
+                  hecho en casa no tienen marca y no es un dato faltante. */}
+              <td className="px-2 py-2.5 text-[12.5px] text-slate-600">
+                {p.brand ? (
+                  <span className="block truncate">{p.brand}</span>
+                ) : (
+                  <span className="text-slate-300">—</span>
+                )}
               </td>
               <td className="px-2 py-2.5 font-mono text-[12.5px] text-slate-600">
                 {p.barcode || <span className="text-slate-300">—</span>}

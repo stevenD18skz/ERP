@@ -66,7 +66,10 @@ drop view if exists public.v_sales_daily cascade;
 drop view if exists public.v_monthly_summary cascade;
 drop view if exists public.v_product_categories cascade;
 
-create view public.v_sales_daily as
+-- security_invoker = true: sin eso la vista se consulta con los permisos de
+-- quien la creó y se salta el RLS de la tabla de abajo, o sea que con la anon
+-- key se podrían leer las ventas de todas las tiendas por la puerta de atrás.
+create view public.v_sales_daily with (security_invoker = true) as
 select
   s.tienda_id,
   (s.sale_date at time zone 'America/Bogota')::date as date,
@@ -77,7 +80,7 @@ from public.sales s
 where not s.voided
 group by 1, 2;
 
-create view public.v_monthly_summary as
+create view public.v_monthly_summary with (security_invoker = true) as
 select
   dc.tienda_id,
   to_char(date_trunc('month', dc.date), 'YYYY-MM') as month,
@@ -89,7 +92,10 @@ select
 from public.daily_closes dc
 group by 1, 2;
 
-create view public.v_product_categories as
+-- Esta versión es la de cuando la categoría era texto. El 09 la reemplaza por
+-- una que sale de la tabla `categories`; queda acá solo para que el orden de la
+-- carpeta funcione de corrido en una instalación nueva.
+create view public.v_product_categories with (security_invoker = true) as
 select
   p.tienda_id,
   p.category,

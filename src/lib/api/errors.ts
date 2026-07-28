@@ -50,6 +50,8 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   products_tienda_sku_idx: "Ya tienes otro producto con ese SKU",
   products_sku_key:
     "Ese SKU ya existe en otra tienda. Falta correr supabase/sql/08_products_sku_por_tienda.sql en Supabase.",
+  categories_tienda_name_idx: "Ya tienes una categoría con ese nombre",
+  brands_tienda_name_idx: "Ya tienes una marca con ese nombre",
   sales_fiado_needs_client:
     "Una venta a crédito necesita el nombre del cliente",
   sale_items_quantity_check:
@@ -75,8 +77,11 @@ type PostgrestLikeError = {
   code?: string | null;
 };
 
+// Puede faltar el esquema entero o solo la última migración (la vista
+// v_products, por ejemplo, nace en el 09), así que el mensaje manda a correr la
+// carpeta en orden y no un archivo suelto.
 const SCHEMA_HINT =
-  "La base de datos no tiene el esquema del ERP. Correr supabase/sql/01_schema.sql en el SQL Editor de Supabase.";
+  "A la base de datos le falta parte del esquema del ERP. Correr los archivos de supabase/sql en orden en el SQL Editor de Supabase.";
 
 // Traduce el error que devuelve PostgREST/Postgres al ApiError equivalente.
 export function fromPostgrest(

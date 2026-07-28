@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { handle, ok, created, listMeta } from "@/lib/api/http";
-import { fromPostgrest } from "@/lib/api/errors";
+import { ApiError, fromPostgrest } from "@/lib/api/errors";
 import { requireTiendaId } from "@/lib/api/auth";
 import { Fields, readJson } from "@/lib/api/validate";
 import {
@@ -15,6 +15,7 @@ import {
   sanitizeFilter,
 } from "@/lib/api/query";
 import { toProduct } from "@/lib/api/mappers";
+import { resolveTaxonomyId, readProductRow } from "@/lib/api/taxonomy";
 import type { ProductRow } from "@/types/database";
 
 export const runtime = "nodejs";
@@ -27,6 +28,7 @@ const SORTABLE = [
   "cost_price",
   "stock",
   "category",
+  "brand",
   "created_at",
 ] as const;
 
@@ -41,8 +43,10 @@ export async function GET(request: NextRequest) {
       });
 
     const db = getSupabaseAdmin();
+    // Se lee de la vista y no de la tabla: trae el nombre de la categoría y de
+    // la marca ya resueltos, que es por lo que se busca, se filtra y se ordena.
     let query = db
-      .from("products")
+      .from("v_products")
       .select("*", { count: "exact" })
       .eq("tienda_id", tiendaId);
 
@@ -53,12 +57,18 @@ export async function GET(request: NextRequest) {
           `sku.ilike.%${q}%`,
           `barcode.ilike.%${q}%`,
           `category.ilike.%${q}%`,
+          `brand.ilike.%${q}%`,
         ].join(","),
       );
     }
 
+    // Por nombre y no por id: es lo que se ve en pantalla y lo que se puede
+    // escribir a mano en una URL.
     const category = params.get("category");
     if (category) query = query.eq("category", category);
+
+    const brand = params.get("brand");
+    if (brand) query = query.eq("brand", brand);
 
     // Búsqueda exacta por código de barras, para el lector del punto de venta.
     const barcode = params.get("barcode");
@@ -107,7 +117,13 @@ export async function POST(request: NextRequest) {
     const barcode = f.string("barcode", { max: 60, allowEmpty: true });
     const photo = f.string("photo", { nullable: true, max: 2000 });
     const stock = f.number("stock", { min: 0 });
+    // La categoría y la marca se aceptan por id (cuando se eligieron de la
+    // lista) o por nombre. El nombre que no existe todavía se crea junto con el
+    // producto: para quien registra es un solo "Guardar".
     const category = f.string("category", { max: 120, allowEmpty: true });
+    const categoryId = f.uuid("category_id", { nullable: true });
+    const brand = f.string("brand", { max: 120, allowEmpty: true });
+    const brandId = f.uuid("brand_id", { nullable: true });
     const description = f.string("description", {
       allowEmpty: true,
       max: 4000,
@@ -121,6 +137,15 @@ export async function POST(request: NextRequest) {
       costIsEstimated ?? (costPrice === undefined ? true : false);
 
     const db = getSupabaseAdmin();
+    const resolvedCategory = await resolveTaxonomyId(db, "categories", tiendaId, {
+      id: categoryId,
+      name: category,
+    });
+    const resolvedBrand = await resolveTaxonomyId(db, "brands", tiendaId, {
+      id: brandId,
+      name: brand,
+    });
+
     const { data, error } = await db
       .from("products")
       .insert({
@@ -133,14 +158,26 @@ export async function POST(request: NextRequest) {
         barcode: barcode ?? "",
         photo: photo ?? null,
         stock: stock ?? 0,
-        category: category || "Sin categoría",
+        category_id: resolvedCategory ?? null,
+        brand_id: resolvedBrand ?? null,
         description: description ?? "",
       })
-      .select("*")
+      .select("id")
       .single();
 
     if (error) throw fromPostgrest(error, "la creación del producto");
 
-    return created(toProduct(data as ProductRow));
+    // Se relee de la vista para devolver los nombres de la categoría y la
+    // marca, no solo sus ids: es lo que la pantalla pinta.
+    const row = await readProductRow(db, data.id as string, tiendaId);
+    if (!row) {
+      throw new ApiError(
+        500,
+        "El producto se creó pero no se pudo volver a leer. Recarga el catálogo.",
+        "read_after_write",
+      );
+    }
+
+    return created(toProduct(row));
   });
 }

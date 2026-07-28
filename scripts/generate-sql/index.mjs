@@ -3,8 +3,8 @@
 //   npm run sql:generate
 //
 // Lee src/lib/data/*.data.ts (lo que hoy consume el mock) y escribe
-// supabase/sql/02_seed_products.sql, 03_seed_daily_closes.sql y
-// 04_seed_expenses.sql. Así la base de datos y el mock siempre dicen lo mismo:
+// supabase/sql/10_seed_products.sql, 11_seed_daily_closes.sql y
+// 12_seed_expenses.sql. Así la base de datos y el mock siempre dicen lo mismo:
 // si cambia el Excel se corre `npm run import:excel` y después esto.
 //
 // Los archivos generados están marcados como "no editar a mano": cualquier
@@ -12,8 +12,19 @@
 //
 // Los id son UUID v5 derivados del identificador del mock (el sku del producto,
 // la fecha del cierre, el id del gasto). Son estables entre corridas, así que
-// volver a ejecutar la semilla no duplica filas: el `on conflict (id) do
-// nothing` las reconoce.
+// volver a ejecutar la semilla no duplica filas: el `on conflict do nothing`
+// las reconoce.
+//
+// LAS SEMILLAS VAN AL FINAL
+// Por eso llevan los números 10, 11 y 12: las tres necesitan el esquema
+// completo —la tabla `tiendas` la crea el 06 y la tabla `categories` la crea el
+// 09— y además la tienda ya creada con `node scripts/seed-tiendas.mjs`. Cada
+// archivo lo comprueba al empezar y se planta con un mensaje claro si le falta
+// algo, en vez de insertar cero filas en silencio.
+//
+// Nada de tienda_id ni de category_id va escrito a mano: se resuelven contra la
+// base por el NOMBRE de la tienda y de la categoría. Así el archivo sirve en
+// cualquier proyecto de Supabase, no solo en el que se generó.
 
 import fs from "fs";
 import path from "path";
@@ -30,6 +41,11 @@ fs.mkdirSync(OUT, { recursive: true });
 
 // Namespace fijo de este proyecto. Cambiarlo regenera TODOS los id.
 const NAMESPACE = "1b4e28ba-2fa1-11d2-883f-0016d3cca427";
+
+// A qué tienda entran los datos del Excel. Es la misma que crea
+// scripts/seed-tiendas.mjs y a la que ese script le asignaba las filas viejas:
+// todo el histórico de 2025 es de este negocio. The Sunny Go arranca vacía.
+const TIENDA = "Jose's Market";
 
 function uuid5(name) {
   const ns = Buffer.from(NAMESPACE.replace(/-/g, ""), "hex");
@@ -76,17 +92,92 @@ const B = (v) => (v ? "true" : "false");
 // sentencias gigantes de miles de VALUES.
 const CHUNK = 100;
 
-function buildInserts({ table, columns, rows, conflict = "id" }) {
+/**
+ * Un insert que saca tienda_id de la propia base, buscándola por nombre.
+ *
+ * Sale un `insert ... select` en vez de un `insert ... values` porque el
+ * tienda_id no se puede escribir en el archivo: es un uuid que cambia en cada
+ * proyecto de Supabase. El cross join contra `tiendas` filtrado por nombre lo
+ * resuelve al momento de correr.
+ *
+ * Los ::tipo del select no sobran: dentro de un VALUES suelto, una columna que
+ * en todas sus filas es null se queda sin tipo y Postgres la toma como texto.
+ *
+ * `on conflict do nothing` sin decir cuál: así atrapa tanto el id repetido como
+ * el sku repetido dentro de la tienda, y volver a correr la semilla nunca falla.
+ *
+ * joins  -> líneas extra de join (las usa el catálogo para la categoría)
+ * select -> qué va en cada columna, ya sea de la fila (v.x) o de un join (c.id)
+ */
+function buildTiendaInserts({
+  table,
+  columns,
+  valueColumns,
+  select,
+  rows,
+  joins = "",
+}) {
   const out = [];
   for (let i = 0; i < rows.length; i += CHUNK) {
     const slice = rows.slice(i, i + CHUNK);
     out.push(
-      `insert into public.${table} (${columns.join(", ")}) values\n` +
-        slice.map((r) => `  (${r.join(", ")})`).join(",\n") +
-        `\non conflict (${conflict}) do nothing;`,
+      [
+        `insert into public.${table} (${columns.join(", ")})`,
+        `select`,
+        select.map((expr) => `  ${expr}`).join(",\n"),
+        `from public.tiendas t`,
+        `cross join (values`,
+        slice.map((r) => `  (${r.join(", ")})`).join(",\n"),
+        `) as v (${valueColumns.join(", ")})`,
+        ...(joins ? [joins] : []),
+        `where lower(btrim(t.nombre)) = lower(btrim(${Stext(TIENDA)}))`,
+        `on conflict do nothing;`,
+      ].join("\n"),
     );
   }
   return out.join("\n\n");
+}
+
+/**
+ * Lo primero de cada semilla: comprobar que la base esté lista.
+ *
+ * Sin esto, correr el archivo sobre un esquema a medias no da error: el cross
+ * join contra una tienda que no existe devuelve cero filas y el editor dice
+ * "Success. No rows returned", que se lee como si hubiera funcionado.
+ */
+function schemaGuard({ needsCategories = false } = {}) {
+  const checks = [
+    [
+      "public.tiendas",
+      "Falta el esquema multi-tienda. Correr supabase/sql/06_tiendas.sql y las que siguen.",
+    ],
+    ...(needsCategories
+      ? [
+          [
+            "public.categories",
+            "Faltan las categorías. Correr supabase/sql/09_categorias_y_marcas.sql.",
+          ],
+        ]
+      : []),
+  ];
+
+  return [
+    "do $guard$",
+    "begin",
+    ...checks.flatMap(([relation, message]) => [
+      `  if to_regclass(${Stext(relation)}) is null then`,
+      `    raise exception ${Stext(message)};`,
+      "  end if;",
+    ]),
+    "  if not exists (",
+    "    select 1 from public.tiendas",
+    `    where lower(btrim(nombre)) = lower(btrim(${Stext(TIENDA)}))`,
+    "  ) then",
+    `    raise exception 'No existe la tienda % en esta base. Correr antes: node scripts/seed-tiendas.mjs', ${Stext(TIENDA)};`,
+    "  end if;",
+    "end",
+    "$guard$;",
+  ].join("\n");
 }
 
 function header(title, lines) {
@@ -114,7 +205,9 @@ const productRows = products.map((p) => [
   Stext(p.name),
   Stext(p.sku),
   Stext(p.barcode ?? ""),
-  p.photo ? Stext(p.photo) : "null",
+  // null::text y no null a secas: la foto está vacía en los 435, y una columna
+  // que en todas sus filas es null se queda sin tipo dentro del VALUES.
+  p.photo ? Stext(p.photo) : "null::text",
   N(p.price),
   N(p.cost_price),
   B(p.cost_is_estimated),
@@ -124,14 +217,42 @@ const productRows = products.map((p) => [
   S(p.created_at),
 ]);
 
+// Las categorías que trae el Excel, una sola vez cada una. Tienen que existir
+// antes que los productos que las nombran.
+const categoryNames = [
+  ...new Set(
+    products
+      .map((p) => String(p.category ?? "").trim())
+      .filter((name) => name && name.toLowerCase() !== "sin categoría"),
+  ),
+].sort((a, b) => a.localeCompare(b, "es"));
+
+const categoriesInsert = [
+  "insert into public.categories (tienda_id, name)",
+  "select t.id, c.name::text",
+  "from public.tiendas t",
+  "cross join (values",
+  categoryNames.map((name) => `  (${Stext(name)})`).join(",\n"),
+  ") as c (name)",
+  `where lower(btrim(t.nombre)) = lower(btrim(${Stext(TIENDA)}))`,
+  "on conflict do nothing;",
+].join("\n");
+
 const estimated = products.filter((p) => p.cost_is_estimated).length;
 fs.writeFileSync(
-  path.join(OUT, "02_seed_products.sql"),
+  path.join(OUT, "10_seed_products.sql"),
   header("ERP Supermercado · Catálogo de productos", [
-    `${products.length} productos importados del Excel de 2025 (Hoja2).`,
+    "Va después del 09 y de `node scripts/seed-tiendas.mjs`: necesita el esquema",
+    "completo y la tienda ya creada. El archivo lo comprueba y avisa si falta algo.",
+    "",
+    `${products.length} productos importados del Excel de 2025 (Hoja2), a la tienda "${TIENDA}".`,
     `${products.length - estimated} tienen costo real de factura; ${estimated} lo tienen estimado`,
     "en precio x 0.81 (el margen del 19% de la contabilidad) y están marcados",
     "con cost_is_estimated = true.",
+    "",
+    `Primero se crean las ${categoryNames.length} categorías y después los productos, que la`,
+    "buscan por nombre. La MARCA queda vacía en los 435: el Excel no la traía y",
+    "no se inventa. Se va llenando a mano o al escanear el código de barras.",
     "",
     "stock queda en 0 en todos: el Excel nunca llevó inventario. Hay que contar.",
     "barcode queda vacío por la misma razón.",
@@ -141,9 +262,28 @@ fs.writeFileSync(
     "(ojo: eso borra el stock contado y deja las ventas viejas sin producto asociado).",
   ]) +
     "\n" +
-    buildInserts({
+    schemaGuard({ needsCategories: true }) +
+    "\n\n" +
+    categoriesInsert +
+    "\n\n" +
+    buildTiendaInserts({
       table: "products",
       columns: [
+        "id",
+        "tienda_id",
+        "name",
+        "sku",
+        "barcode",
+        "photo",
+        "price",
+        "cost_price",
+        "cost_is_estimated",
+        "stock",
+        "category_id",
+        "description",
+        "created_at",
+      ],
+      valueColumns: [
         "id",
         "name",
         "sku",
@@ -157,6 +297,28 @@ fs.writeFileSync(
         "description",
         "created_at",
       ],
+      select: [
+        "v.id::uuid",
+        "t.id",
+        "v.name::text",
+        "v.sku::text",
+        "v.barcode::text",
+        "v.photo::text",
+        "v.price::numeric",
+        "v.cost_price::numeric",
+        "v.cost_is_estimated::boolean",
+        "v.stock::numeric",
+        "c.id",
+        "v.description::text",
+        "v.created_at::timestamptz",
+      ],
+      // left join y no join: si alguna categoría faltara, el producto entra sin
+      // ella en vez de desaparecer de la semilla sin que nadie se entere.
+      joins: [
+        "left join public.categories c",
+        "  on c.tienda_id = t.id",
+        " and lower(btrim(c.name)) = lower(btrim(v.category))",
+      ].join("\n"),
       rows: productRows,
     }) +
     "\n",
@@ -180,9 +342,12 @@ const closeRows = dailyCloses.map((c) => [
 const sum = (k) => dailyCloses.reduce((a, c) => a + (Number(c[k]) || 0), 0);
 const fmt = (n) => n.toLocaleString("es-CO");
 fs.writeFileSync(
-  path.join(OUT, "03_seed_daily_closes.sql"),
+  path.join(OUT, "11_seed_daily_closes.sql"),
   header("ERP Supermercado · Cierres diarios de 2025", [
-    `${dailyCloses.length} días, uno por cada fila de Hoja1 del Excel.`,
+    "Necesita la tabla `tiendas` (06_tiendas.sql) y la tienda ya creada con",
+    "`node scripts/seed-tiendas.mjs`.",
+    "",
+    `${dailyCloses.length} días, uno por cada fila de Hoja1 del Excel, a la tienda "${TIENDA}".`,
     `Totales del año: venta ${fmt(sum("sales_total"))} · ganancia ${fmt(sum("gain"))} ·`,
     `gasto ${fmt(sum("expenses_total"))} · compra ${fmt(sum("purchases_total"))}.`,
     "",
@@ -193,9 +358,23 @@ fs.writeFileSync(
     'para no confundir "no se anotó" con "fue cero".',
   ]) +
     "\n" +
-    buildInserts({
+    schemaGuard() +
+    "\n\n" +
+    buildTiendaInserts({
       table: "daily_closes",
       columns: [
+        "id",
+        "tienda_id",
+        "date",
+        "sales_total",
+        "gain",
+        "expenses_total",
+        "purchases_total",
+        "cash_in",
+        "cash_out",
+        "source",
+      ],
+      valueColumns: [
         "id",
         "date",
         "sales_total",
@@ -205,6 +384,18 @@ fs.writeFileSync(
         "cash_in",
         "cash_out",
         "source",
+      ],
+      select: [
+        "v.id::uuid",
+        "t.id",
+        "v.date::date",
+        "v.sales_total::numeric",
+        "v.gain::numeric",
+        "v.expenses_total::numeric",
+        "v.purchases_total::numeric",
+        "v.cash_in::numeric",
+        "v.cash_out::numeric",
+        "v.source::public.daily_close_source",
       ],
       rows: closeRows,
     }) +
@@ -228,9 +419,12 @@ const byKind = expenses.reduce(
   {},
 );
 fs.writeFileSync(
-  path.join(OUT, "04_seed_expenses.sql"),
+  path.join(OUT, "12_seed_expenses.sql"),
   header("ERP Supermercado · Gastos y movimientos de caja de 2025", [
-    `${expenses.length} registros: ${byKind.gasto ?? 0} gastos, ${byKind.entrada ?? 0} entradas y ${byKind.salida ?? 0} salidas de caja.`,
+    "Necesita la tabla `tiendas` (06_tiendas.sql) y la tienda ya creada con",
+    "`node scripts/seed-tiendas.mjs`.",
+    "",
+    `${expenses.length} registros a la tienda "${TIENDA}": ${byKind.gasto ?? 0} gastos, ${byKind.entrada ?? 0} entradas y ${byKind.salida ?? 0} salidas de caja.`,
     "",
     "El Excel nunca guardó el concepto de un gasto, solo el total del día en una",
     "celda. Por eso todos entran con un concepto genérico: son el punto de",
@@ -240,18 +434,34 @@ fs.writeFileSync(
     "daily_closes.expenses_total. Al sumar hay que usar una fuente o la otra.",
   ]) +
     "\n" +
-    buildInserts({
+    schemaGuard() +
+    "\n\n" +
+    buildTiendaInserts({
       table: "expenses",
-      columns: ["id", "date", "kind", "amount", "concept", "notes"],
+      columns: ["id", "tienda_id", "date", "kind", "amount", "concept", "notes"],
+      valueColumns: ["id", "date", "kind", "amount", "concept", "notes"],
+      select: [
+        "v.id::uuid",
+        "t.id",
+        "v.date::date",
+        "v.kind::public.expense_kind",
+        "v.amount::numeric",
+        "v.concept::text",
+        "v.notes::text",
+      ],
       rows: expenseRows,
     }) +
     "\n",
   "utf8",
 );
 
-console.log(`02_seed_products.sql       ${products.length} productos`);
-console.log(`03_seed_daily_closes.sql   ${dailyCloses.length} cierres diarios`);
+console.log(`10_seed_products.sql       ${products.length} productos`);
+console.log(`11_seed_daily_closes.sql   ${dailyCloses.length} cierres diarios`);
 console.log(
-  `04_seed_expenses.sql       ${expenses.length} gastos y movimientos`,
+  `12_seed_expenses.sql       ${expenses.length} gastos y movimientos`,
 );
-console.log("\nListo. Correr los archivos de supabase/sql en orden numérico.");
+console.log(`\nTodo entra a la tienda "${TIENDA}".`);
+console.log(
+  "Van después de las migraciones y de `node scripts/seed-tiendas.mjs`;",
+);
+console.log("el número de cada archivo ya dice en qué orden. Ver supabase/README.md.");
