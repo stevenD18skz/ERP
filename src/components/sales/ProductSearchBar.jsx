@@ -1,6 +1,6 @@
 "use client";
 
-import { ScanLine, Search } from "lucide-react";
+import { Camera, ScanLine, Search } from "lucide-react";
 import { currency } from "@/utils/converts";
 
 /*
@@ -17,30 +17,51 @@ export default function ProductSearchBar({
   suggestionIndex,
   onPick,
   scanning,
+  cameraAvailable = false,
+  onOpenCamera,
 }) {
   return (
     <div className="relative rounded-xl bg-white p-3.5 shadow-sm ring-1 ring-slate-100">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="Buscar producto por nombre, SKU o código..."
-          aria-label="Buscar producto"
-          role="combobox"
-          aria-expanded={suggestions.length > 0}
-          className="h-[46px] w-full rounded-lg border border-slate-200 pl-10 pr-3 text-[15px] outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-        />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Buscar producto por nombre, SKU o código..."
+              aria-label="Buscar producto"
+              role="combobox"
+              aria-expanded={suggestions.length > 0}
+              className="h-[46px] w-full rounded-lg border border-slate-200 pl-10 pr-3 text-[15px] outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+            />
 
-        {scanning && (
-          <span className="pointer-events-none absolute right-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1.5 text-xs font-medium text-teal-600">
-            <ScanLine className="h-4 w-4 animate-pulse" aria-hidden />
-            Leyendo código…
-          </span>
-        )}
+            {scanning && (
+              <span className="pointer-events-none absolute right-3.5 top-1/2 flex -translate-y-1/2 items-center gap-1.5 text-xs font-medium text-teal-600">
+                <ScanLine className="h-4 w-4 animate-pulse" aria-hidden />
+                Leyendo código…
+              </span>
+            )}
+          </div>
+
+          {/* Solo en el aparato que de verdad puede leer con la cámara (ver
+              useCameraScanner). En el computador del mostrador no aparece y la
+              barra queda igual que siempre. */}
+          {cameraAvailable && (
+            <button
+              type="button"
+              onClick={onOpenCamera}
+              aria-label="Escanear con la cámara"
+              title="Escanear con la cámara"
+              className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-teal-200 bg-teal-50 text-teal-700 transition-colors hover:bg-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            >
+              <Camera className="h-[18px] w-[18px]" aria-hidden />
+            </button>
+          )}
+        </div>
 
         {suggestions.length > 0 && (
           <div

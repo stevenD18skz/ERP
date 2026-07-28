@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowRight,
   ExternalLink,
+  Camera,
   ImagePlus,
   Loader2,
   Maximize2,
@@ -15,8 +16,10 @@ import {
   X,
 } from "lucide-react";
 
+import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import ImageViewer from "@/components/ui/ImageViewer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 
 /*
@@ -59,6 +62,8 @@ export default function BarcodeScanModal({
   const [code, setCode] = useState("");
   const [state, setState] = useState({ status: "idle" });
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const cameraAvailable = useCameraScannerAvailable();
   const inputRef = useRef(null);
   // Cada consulta lleva un número. Si alguien escanea otra cosa mientras la
   // anterior venía en camino, la respuesta vieja llega y se descarta en vez de
@@ -96,7 +101,10 @@ export default function BarcodeScanModal({
     }
   };
 
-  const { scanning } = useBarcodeScanner({ onScan: run });
+  // Con la cámara abierta el lector de teclado se apaga: no hay teclado a la
+  // vista y dejarlo escuchando solo abre la puerta a procesar el mismo código
+  // dos veces.
+  const { scanning } = useBarcodeScanner({ onScan: run, enabled: !cameraOpen });
 
   const handleKeyDown = (e) => {
     // useBarcodeScanner ya resolvió este Enter en fase de captura y lo canceló.
@@ -179,6 +187,22 @@ export default function BarcodeScanModal({
                 Buscar
               </button>
             </div>
+
+            {/* Solo aparece donde de verdad se puede: aparato con cámara,
+                navegador que sabe leer códigos y conexión segura. En el
+                computador del mostrador sin webcam no se ve, y el flujo de
+                teclado de siempre queda igual que estaba. */}
+            {cameraAvailable && (
+              <button
+                type="button"
+                onClick={() => setCameraOpen(true)}
+                className="mt-2 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 text-sm font-bold text-blue-700 transition-colors hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                <Camera className="h-4 w-4" aria-hidden />
+                Escanear con la cámara
+              </button>
+            )}
+
               <p className="mt-1.5 text-sm text-slate-400 ">
                 <span className="font-normal text-[17px]">ⓘ</span> Si usas lector, basta con escanear: el Enter lo manda él solo.
               </p>
@@ -388,6 +412,16 @@ export default function BarcodeScanModal({
         </div>
       </div>
     </div>
+
+    {/* La cámara entrega el código igual que el lector de teclado: entra por
+        run(), que ya revisa duplicados y sale a consultar la ficha. */}
+    {cameraOpen && (
+      <CameraScannerModal
+        title="Escanear el producto"
+        onScan={(scanned) => run(scanned)}
+        onClose={() => setCameraOpen(false)}
+      />
+    )}
 
     {/* Hermano del modal y no hijo, para que quede por encima de él. */}
     {photoOpen && state.status === "found" && state.found.photo && (

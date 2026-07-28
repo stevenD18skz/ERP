@@ -10,8 +10,10 @@ import {
 } from "@/services/sales.service";
 import { openPrintWindow } from "@/utils/print";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
 import { useToasts } from "@/hooks/useToasts";
 
+import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import ToastStack from "@/components/ui/ToastStack";
 import CartLines from "@/components/sales/CartLines";
 import DailyCloseMode from "@/components/sales/DailyCloseMode";
@@ -37,12 +39,13 @@ import {
     descuentos por línea (%/$), métodos de pago (efectivo/tarjeta/
     transferencia/fiado), recibo de éxito y anulación de ventas con
     devolución real de stock.
-  - No se implementó el escaneo de código con cámara (mismo criterio que en
-    Productos): simularlo habría sido fingir una función que no existe. Sí
-    hay soporte para lectores que funcionan como teclado (apps como Barcode
-    to PC, o un lector USB físico): ver useBarcodeScanner más abajo. El
-    buscador de todas formas empareja por código de barras si se escribe o
-    se pega a mano.
+  - Dos maneras de escanear, y ninguna estorba a la otra: lectores que
+    funcionan como teclado (apps como Barcode to PC, o un lector USB físico),
+    ver useBarcodeScanner; y la cámara del propio aparato, ver
+    useCameraScanner, que solo se ofrece donde de verdad funciona. Mientras la
+    cámara está abierta el lector de teclado se apaga, para no procesar el
+    mismo código dos veces. El buscador de todas formas empareja por código de
+    barras si se escribe o se pega a mano.
   - Esta página coordina el estado; el dibujo vive en los componentes de
     components/sales y los cálculos compartidos en salesUtils.
 */
@@ -63,6 +66,8 @@ export default function SalePageEnhanced() {
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
   const [lines, setLines] = useState([]);
   const [focusTarget, setFocusTarget] = useState(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const cameraAvailable = useCameraScannerAvailable();
 
   // descuento por línea
   const [discountEditingKey, setDiscountEditingKey] = useState(null);
@@ -152,7 +157,14 @@ export default function SalePageEnhanced() {
   // -reemplazando la cantidad por el código de barras- antes de que
   // useBarcodeScanner llegue a procesar el Enter, y el valor gigante
   // resultante terminaba recortado al stock máximo. Ver useBarcodeScanner.ts.
-  const addLineFromProduct = (product, { focusQty = true } = {}) => {
+  //
+  // focus=false no mueve el foco a ninguna parte. Lo usa el escaneo con
+  // cámara: el visor está encima de la pantalla, y enfocar el buscador que
+  // quedó detrás levantaría el teclado del celular tapando la cámara.
+  const addLineFromProduct = (
+    product,
+    { focusQty = true, focus = true } = {},
+  ) => {
     if (!product.stock || product.stock <= 0) {
       push("Sin stock disponible para agregar", "error");
       return false;
@@ -171,13 +183,15 @@ export default function SalePageEnhanced() {
         }
         const next = prev.slice();
         next[existingIdx] = { ...existing, quantity: nextQty };
-        if (focusQty) setFocusTarget({ type: "qty", key: existing._key });
-        else setFocusTarget({ type: "search" });
+        if (focus)
+          setFocusTarget(
+            focusQty ? { type: "qty", key: existing._key } : { type: "search" },
+          );
         return next;
       }
       const key = uid();
-      if (focusQty) setFocusTarget({ type: "qty", key });
-      else setFocusTarget({ type: "search" });
+      if (focus)
+        setFocusTarget(focusQty ? { type: "qty", key } : { type: "search" });
       return [
         ...prev,
         {
@@ -199,11 +213,12 @@ export default function SalePageEnhanced() {
     return added;
   };
 
-  // Callback del lector de código de barras (celular con Barcode to PC, o un
-  // lector USB el día de mañana: al hook le da igual). Busca coincidencia
-  // exacta por código de barras y avisa siempre el resultado, porque quien
-  // escanea suele estar mirando la mercancía, no la pantalla.
-  const handleBarcodeScan = (code) => {
+  // Callback de los dos escáneres: el lector de teclado (celular con Barcode
+  // to PC, o un lector USB el día de mañana) y la cámara. Los dos entregan lo
+  // mismo —el código— y de aquí en adelante el camino es idéntico: busca
+  // coincidencia exacta por código de barras y avisa siempre el resultado,
+  // porque quien escanea suele estar mirando la mercancía, no la pantalla.
+  const handleBarcodeScan = (code, { fromCamera = false } = {}) => {
     const match = allProducts.find(
       (p) => (p.barcode || "").trim() === code.trim(),
     );
@@ -211,14 +226,17 @@ export default function SalePageEnhanced() {
       push(`Ningún producto tiene el código ${code}`, "error");
       return;
     }
-    if (addLineFromProduct(match, { focusQty: false })) {
+    if (addLineFromProduct(match, { focusQty: false, focus: !fromCamera })) {
       push(`${match.name} agregado por código de barras`, "success");
     }
   };
 
   const { scanning: barcodeScanning } = useBarcodeScanner({
     onScan: handleBarcodeScan,
-    enabled: mode === "transaccion" && !receiptData && !voidConfirmId,
+    // Con la cámara abierta el lector de teclado se apaga: no hay teclado a la
+    // vista y dejarlo escuchando solo abre la puerta a agregar dos veces.
+    enabled:
+      mode === "transaccion" && !receiptData && !voidConfirmId && !cameraOpen,
   });
 
   const handleSearchKeyDown = (e) => {
@@ -524,6 +542,8 @@ export default function SalePageEnhanced() {
               suggestionIndex={suggestionIndex}
               onPick={addLineFromProduct}
               scanning={barcodeScanning}
+              cameraAvailable={cameraAvailable}
+              onOpenCamera={() => setCameraOpen(true)}
             />
 
             <CartLines
@@ -582,6 +602,20 @@ export default function SalePageEnhanced() {
           data={receiptData}
           onPrint={printReceipt}
           onClose={() => setReceiptData(null)}
+        />
+      )}
+
+      {/* En modo continuo: se queda abierta pasando mercancía, porque el cajero
+          tiene la mano ocupada y cerrar y abrir por cada artículo sería más
+          lento que teclear. Va antes que ToastStack —los dos son z-[70]— para
+          que los avisos de "agregado" y "ningún producto tiene ese código"
+          queden por encima del visor y no debajo. */}
+      {cameraOpen && (
+        <CameraScannerModal
+          continuous
+          title="Escanear productos"
+          onScan={(code) => handleBarcodeScan(code, { fromCamera: true })}
+          onClose={() => setCameraOpen(false)}
         />
       )}
 
