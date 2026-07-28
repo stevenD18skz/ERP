@@ -67,6 +67,11 @@ export default function CreatableSelect({
   // avisa. Se mira contra las opciones y no contra el id, porque en simulación
   // no hay ids.
   const isNew = Boolean(selectedName) && !exists(selectedName);
+  // El aviso completo se guarda para el tooltip: dentro del formulario, dos
+  // renglones de texto debajo del campo empujaban todo lo de abajo y pesaban
+  // más que el dato en sí. La marca de que algo es nuevo tiene que verse de
+  // reojo; el porqué solo hace falta cuando alguien se lo pregunta.
+  const newHint = `(${selectedName}) ${createHint ?? "todavía no existe: se crea al guardar el producto."}`;
 
   useEffect(() => setHighlight(0), [text, open]);
 
@@ -174,6 +179,30 @@ export default function CreatableSelect({
           className="w-full bg-transparent px-2 py-2.5 text-[15px] outline-none placeholder:text-slate-400"
         />
 
+        {isNew && !open && (
+          <span className="group relative shrink-0">
+            <button
+              type="button"
+              tabIndex={0}
+              aria-describedby={`${id}-new-hint`}
+              // Es solo para mirar: el clic no hace nada más que darle el foco,
+              // que es lo que abre el tooltip donde no hay mouse que pasar por
+              // encima (celular, tablet).
+              onClick={(event) => event.preventDefault()}
+              className="inline-flex cursor-help items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-amber-700"
+            >
+              Nuevo
+            </button>
+            <span
+              id={`${id}-new-hint`}
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full right-0 z-30 mb-2 w-60 rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              {newHint}
+            </span>
+          </span>
+        )}
+
         {selectedName && !open && (
           <button
             type="button"
@@ -196,12 +225,6 @@ export default function CreatableSelect({
           />
         </button>
       </div>
-
-      {isNew && !open && (
-        <p className="mt-1 text-xs text-amber-700">
-          «{selectedName}» {createHint ?? "todavía no existe: se crea al guardar el producto."}
-        </p>
-      )}
 
       {open && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">

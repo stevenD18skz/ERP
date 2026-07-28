@@ -80,6 +80,19 @@ export function useBarcodeScanner({
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // No todo lo que llega rotulado como "keydown" viene de una tecla. Cuando
+      // el navegador rellena un campo con el autocompletar, no simula que
+      // alguien teclee: escribe el valor de una y después dispara eventos
+      // fabricados —keydown, input, change, keyup— para que la página se entere
+      // del cambio. Esos keydown fabricados son eventos pelados, sin `key` ni
+      // `keyCode`, así que leerles event.key.length tiraba la pantalla entera.
+      // Nada sin una tecla de verdad puede ser parte de un escaneo, y además el
+      // valor ya quedó puesto en el campo: se corta la ráfaga y se sigue.
+      if (typeof event.key !== "string" || event.key === "") {
+        reset();
+        return;
+      }
+
       // Atajos de teclado (Ctrl+C, Cmd+V, etc.): no son un escaneo, y no hay
       // que interferir con ellos.
       if (event.ctrlKey || event.metaKey || event.altKey) {
