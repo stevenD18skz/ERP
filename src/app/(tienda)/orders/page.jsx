@@ -381,7 +381,7 @@ export default function OrdersPageEnhanced() {
 
   return (
     <>
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="mx-auto grid min-h-screen grid-cols-1 gap-6 lg:grid-cols-3">
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-2">
           <div>
