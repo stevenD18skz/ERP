@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  Camera,
   ExternalLink,
   ImagePlus,
   Loader2,
@@ -11,9 +12,11 @@ import {
   X,
 } from "lucide-react";
 import MoneyInput from "@/components/ui/MoneyInput";
+import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import CreatableSelect from "@/components/ui/CreatableSelect";
 import ImageViewer from "@/components/ui/ImageViewer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 import { currency } from "@/utils/converts";
 import { BARCODE_RE, FIELD_LABELS, LOOKUP_FIELDS } from "./productsUtils";
@@ -97,6 +100,8 @@ export default function ProductForm({
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const cameraAvailable = useCameraScannerAvailable();
   const fileInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
   // Qué campo de texto tiene el foco ahora mismo (name, stock, barcode) y qué
@@ -241,7 +246,7 @@ export default function ProductForm({
       scanSnapshotRef.current =
         key && key !== "barcode" ? { key, value: form[key] ?? "" } : null;
     },
-    enabled: !photoOpen,
+    enabled: !photoOpen && !cameraOpen,
   });
 
   const onPhotoChange = (e) => {
@@ -517,22 +522,37 @@ export default function ProductForm({
                     : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
                     }`}
                 />
-                <button
-                  type="button"
-                  onClick={runLookup}
-                  disabled={
-                    lookup.status === "loading" || !String(form.barcode).trim()
-                  }
-                  title="Buscar la ficha del producto por su código"
-                  aria-label="Buscar la ficha del producto por su código"
-                  className="flex w-[44px] shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {lookup.status === "loading" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ScanLine className="h-4 w-4" />
-                  )}
-                </button>
+                {cameraAvailable ? (
+                  // Con cámara a mano, escanear reemplaza a buscar a mano: el
+                  // botón abre la cámara y handleScan hace el resto (llena el
+                  // campo y ya de una consulta la ficha).
+                  <button
+                    type="button"
+                    onClick={() => setCameraOpen(true)}
+                    title="Escanear el código con la cámara"
+                    aria-label="Escanear el código con la cámara"
+                    className="flex w-[44px] shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => runLookup()}
+                    disabled={
+                      lookup.status === "loading" || !String(form.barcode).trim()
+                    }
+                    title="Buscar la ficha del producto por su código"
+                    aria-label="Buscar la ficha del producto por su código"
+                    className="flex w-[44px] shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {lookup.status === "loading" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ScanLine className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
               </div>
               {errors.barcode ? (
                 <p
@@ -787,6 +807,14 @@ export default function ProductForm({
         src={photo}
         title={form.name || "Foto del producto"}
         onClose={() => setPhotoOpen(false)}
+      />
+    )}
+
+    {cameraOpen && (
+      <CameraScannerModal
+        title="Escanear el código"
+        onScan={handleScan}
+        onClose={() => setCameraOpen(false)}
       />
     )}
     </>

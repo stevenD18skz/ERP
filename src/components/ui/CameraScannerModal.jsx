@@ -115,6 +115,19 @@ export default function CameraScannerModal({
           className="h-full w-full object-cover"
         />
 
+        {/* Arriba y no abajo: quien escanea en el modo continuo (Ventas)
+            suele tener el pulgar cerca del borde inferior sosteniendo el
+            teléfono, y ahí mismo puede quedar tapada por la mano o el
+            teclado del sistema si estaba abierto. */}
+        {continuous && lastCode && (
+          <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center px-4">
+            <p className="flex animate-fade-slide-up items-center gap-2 rounded-full bg-emerald-500/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
+              <Check className="h-4 w-4 shrink-0" aria-hidden />
+              Leído {lastCode}
+            </p>
+          </div>
+        )}
+
         {!error && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative h-40 w-[78%] max-w-sm rounded-2xl ring-2 ring-white/70">
@@ -148,18 +161,11 @@ export default function CameraScannerModal({
       </div>
 
       <div className="shrink-0 px-4 pb-5 pt-3 text-center">
-        {continuous && lastCode ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-semibold text-emerald-400">
-            <Check className="h-4 w-4" aria-hidden />
-            Leído {lastCode}
-          </p>
-        ) : (
-          <p className="text-xs leading-relaxed text-white/50">
-            {continuous
-              ? "Apunta al código. Puedes seguir pasando productos sin cerrar."
-              : "Apunta al código de barras del producto."}
-          </p>
-        )}
+        <p className="text-xs leading-relaxed text-white/50">
+          {continuous
+            ? "Apunta al código. Puedes seguir pasando productos sin cerrar."
+            : "Apunta al código de barras del producto."}
+        </p>
       </div>
     </div>
   );

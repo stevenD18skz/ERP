@@ -14,8 +14,10 @@ import { useToasts } from "@/hooks/useToasts";
 import { useProductFilters } from "@/hooks/useProductFilters";
 import { useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
+import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 
+import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ImageViewer from "@/components/ui/ImageViewer";
 import Pagination from "@/components/ui/Pagination";
@@ -110,6 +112,15 @@ export default function ProductsPage() {
   // dejó listo para el formulario (null cuando se abre el formulario vacío)
   const [scanOpen, setScanOpen] = useState(false);
   const [prefill, setPrefill] = useState(null);
+
+  // Con cámara a mano (celular, sobre todo) "Escanear código" abre la cámara
+  // de una: nadie que trae el teléfono para escanear quiere primero ver un
+  // formulario con un campo de texto y un botón. Sin cámara (el computador
+  // del mostrador) sigue abriendo el modal de siempre, que además sirve para
+  // teclear el código a mano.
+  const cameraAvailable = useCameraScannerAvailable();
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const openScan = () => (cameraAvailable ? setCameraOpen(true) : setScanOpen(true));
 
   // foto abierta a pantalla completa desde la tabla o las tarjetas (los dos
   // modales abren la suya por su cuenta, para que quede encima de ellos)
@@ -481,7 +492,8 @@ export default function ProductsPage() {
   // veces.
   useBarcodeScanner({
     onScan: handleGlobalScan,
-    enabled: !scanOpen && !showForm && !importOpen && !confirm && !zoomed,
+    enabled:
+      !scanOpen && !cameraOpen && !showForm && !importOpen && !confirm && !zoomed,
   });
 
   /* --- importar CSV --- */
@@ -570,7 +582,7 @@ export default function ProductsPage() {
           onImport={() => setImportOpen(true)}
           onExportCSV={exportCSV}
           onExportPDF={exportPDF}
-          onScan={() => setScanOpen(true)}
+          onScan={openScan}
           onNew={openNewForm}
         />
 
@@ -659,7 +671,7 @@ export default function ProductsPage() {
         {catalogEmpty && (
           <ProductsCatalogEmpty
             onNew={openNewForm}
-            onScan={() => setScanOpen(true)}
+            onScan={openScan}
             onImport={() => setImportOpen(true)}
             onDownloadTemplate={downloadTemplate}
           />
@@ -690,6 +702,18 @@ export default function ProductsPage() {
           onUse={openScannedForm}
           onManual={openManualForm}
           onEditExisting={openExistingFromScan}
+        />
+      )}
+
+      {/* Cámara directa (celular): el mismo camino que un escaneo suelto
+          —handleGlobalScan ya revisa duplicados, valida el código y consulta
+          el catálogo público— así que al cerrarse la cámara, lo que sigue es
+          directo el formulario con lo que haya traído la consulta. */}
+      {cameraOpen && (
+        <CameraScannerModal
+          title="Escanear producto"
+          onScan={handleGlobalScan}
+          onClose={() => setCameraOpen(false)}
         />
       )}
 
