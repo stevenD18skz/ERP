@@ -20,7 +20,6 @@ const TopBar = ({
   // con el servidor en el primer render y no dispara un desajuste de
   // hidratación.
   const { tienda, logout } = useSession();
-  const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
   const userMenuRef = useRef(null);
   const initial = (tienda?.dueno ?? "?").trim().charAt(0).toUpperCase();
@@ -43,10 +42,7 @@ const TopBar = ({
     };
   }, [userOpen]);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (onSearch) onSearch(q);
-  };
+
 
   return (
     <header className="sticky top-0 z-40 h-16 border-b border-slate-200 bg-white">
