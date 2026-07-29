@@ -36,6 +36,14 @@ import { useEffect, useRef, useState } from "react";
 export type UseBarcodeScannerOptions = {
   /** Se llama con el código completo cuando se confirma un escaneo. */
   onScan: (code: string) => void;
+  /**
+   * Se llama justo al arrancar una posible ráfaga, antes de que el primer
+   * carácter le llegue al campo que tenga el foco en ese momento (todavía no
+   * se sabe si va a terminar siendo un escaneo real). Sirve para que quien
+   * use el hook guarde "qué había en ese campo antes" y pueda deshacer el
+   * filtrado si el escaneo se confirma más abajo con onScan.
+   */
+  onBurstStart?: () => void;
   /** Apaga el hook por completo (por ejemplo, mientras hay un modal abierto). */
   enabled?: boolean;
   /** Caracteres mínimos para considerar algo un código y no una tecla suelta. */
@@ -55,6 +63,7 @@ const DEFAULT_IGNORE_SELECTOR = "textarea, [contenteditable='true']";
 
 export function useBarcodeScanner({
   onScan,
+  onBurstStart,
   enabled = true,
   minLength = 3,
   maxDelayMs = 50,
@@ -66,10 +75,12 @@ export function useBarcodeScanner({
 
   const bufferRef = useRef("");
   const lastKeyTimeRef = useRef(0);
-  // Guarda la última versión de onScan sin tener que reinstalar el listener
-  // cada vez que el componente que usa el hook se re-renderiza.
+  // Guarda la última versión de onScan/onBurstStart sin tener que reinstalar
+  // el listener cada vez que el componente que usa el hook se re-renderiza.
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
+  const onBurstStartRef = useRef(onBurstStart);
+  onBurstStartRef.current = onBurstStart;
 
   useEffect(() => {
     if (!enabled) return;
@@ -127,7 +138,15 @@ export function useBarcodeScanner({
       // etc. no forman parte del código y no deben romper la ráfaga.
       if (event.key.length !== 1) return;
 
-      bufferRef.current = delta > maxDelayMs ? event.key : bufferRef.current + event.key;
+      if (delta > maxDelayMs) {
+        // Arranca una ráfaga nueva: se avisa ANTES de que este primer
+        // carácter llegue al campo enfocado (el aviso sale desde acá mismo,
+        // en fase de captura, antes de que el evento siga su curso).
+        onBurstStartRef.current?.();
+        bufferRef.current = event.key;
+      } else {
+        bufferRef.current += event.key;
+      }
       setScanning(bufferRef.current.length >= minLength);
     };
 

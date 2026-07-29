@@ -13,6 +13,7 @@ import {
 import MoneyInput from "@/components/ui/MoneyInput";
 import CreatableSelect from "@/components/ui/CreatableSelect";
 import ImageViewer from "@/components/ui/ImageViewer";
+import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 import { currency } from "@/utils/converts";
 import { BARCODE_RE, FIELD_LABELS, LOOKUP_FIELDS } from "./productsUtils";
@@ -97,6 +98,16 @@ export default function ProductForm({
   const [saving, setSaving] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const barcodeInputRef = useRef(null);
+  // Qué campo de texto tiene el foco ahora mismo (name, stock, barcode) y qué
+  // llave de `form` le corresponde. Se llena con onFocus en cada input
+  // rastreado; sirve para saber, si llega un escaneo, a quién hay que
+  // devolverle lo que el escaneo le filtró mientras tecleaba.
+  const focusedFieldRef = useRef(null);
+  // Snapshot del valor de ese campo justo antes de que arranque la ráfaga
+  // (ver onBurstStart más abajo): si el escaneo se confirma, ese es el valor
+  // al que hay que volver.
+  const scanSnapshotRef = useRef(null);
 
   // Qué campos llegaron de un catálogo público y todavía nadie confirmó. El
   // código de barras no cuenta: ese lo puso el lector sobre la mercancía real.
@@ -155,8 +166,9 @@ export default function ProductForm({
   // escanea acá adentro (o al editar un producto viejo al que recién se le pone
   // el código). Solo llena lo que está vacío: lo que ya escribieron manda, que
   // para eso lo escribieron.
-  const runLookup = async () => {
-    const clean = String(form.barcode || "").trim();
+  const runLookup = async (codeOverride, formOverride) => {
+    const baseForm = formOverride ?? form;
+    const clean = String(codeOverride ?? baseForm.barcode ?? "").trim();
     if (!BARCODE_RE.test(clean)) {
       setLookup({
         status: "invalid",
@@ -176,7 +188,7 @@ export default function ProductForm({
 
       const fills = {};
       for (const key of LOOKUP_FIELDS) {
-        if (!String(form[key] ?? "").trim() && found[key]) {
+        if (!String(baseForm[key] ?? "").trim() && found[key]) {
           fills[key] = found[key];
         }
       }
@@ -193,6 +205,44 @@ export default function ProductForm({
       setLookup({ status: "error", message: err.message });
     }
   };
+
+  // Un lector físico o del celular escribe el código como si tecleara muy
+  // rápido, termine donde termine el foco: si alguien deja el cursor en
+  // "Nombre" (el que trae autoFocus) y escanea sin haber tocado antes el
+  // campo de código, el código se le mete ahí en vez de en el suyo. Se
+  // guarda con onBurstStart lo que ese campo tenía ANTES de que arrancara la
+  // ráfaga; cuando el escaneo se confirma, se le devuelve eso y el código se
+  // va a donde siempre debió llegar.
+  const handleFieldFocus = (key) => () => {
+    focusedFieldRef.current = key;
+  };
+
+  const handleScan = (code) => {
+    const snap = scanSnapshotRef.current;
+    scanSnapshotRef.current = null;
+    const restoredForm = { ...form, barcode: code };
+    if (snap && snap.key && snap.key !== "barcode") {
+      restoredForm[snap.key] = snap.value;
+    }
+    setForm(restoredForm);
+    setErrors((er) => (er.barcode ? { ...er, barcode: undefined } : er));
+    barcodeInputRef.current?.focus();
+    // Se le pasa el formulario ya restaurado (no el de este render, que
+    // todavía tiene lo que el escaneo filtró antes de la restauración de
+    // arriba): si no, la búsqueda cree que "Nombre" ya lo escribió alguien y
+    // no lo llena con lo que traiga el catálogo.
+    runLookup(code, restoredForm);
+  };
+
+  useBarcodeScanner({
+    onScan: handleScan,
+    onBurstStart: () => {
+      const key = focusedFieldRef.current;
+      scanSnapshotRef.current =
+        key && key !== "barcode" ? { key, value: form[key] ?? "" } : null;
+    },
+    enabled: !photoOpen,
+  });
 
   const onPhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -358,6 +408,7 @@ export default function ProductForm({
               autoFocus
               value={form.name}
               onChange={setField("name")}
+              onFocus={handleFieldFocus("name")}
               placeholder="Ej. Leche entera 1L"
               aria-invalid={!!errors.name}
               aria-describedby={errors.name ? "error-name" : undefined}
@@ -412,6 +463,7 @@ export default function ProductForm({
                 min="0"
                 value={form.stock}
                 onChange={setField("stock")}
+                onFocus={handleFieldFocus("stock")}
                 placeholder="0"
                 aria-invalid={!!errors.stock}
                 aria-describedby={errors.stock ? "error-stock" : undefined}
@@ -436,6 +488,7 @@ export default function ProductForm({
               </label>
               <div className="mt-1.5 flex gap-2">
                 <input
+                  ref={barcodeInputRef}
                   id="form-barcode"
                   inputMode="numeric"
                   value={form.barcode}
@@ -446,6 +499,7 @@ export default function ProductForm({
                     );
                     setLookup({ status: "idle" });
                   }}
+                  onFocus={handleFieldFocus("barcode")}
                   onKeyDown={(e) => {
                     // Enter acá busca la ficha, no guarda el producto: es lo
                     // que manda el lector al terminar de leer, y guardar a

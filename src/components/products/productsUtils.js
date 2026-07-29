@@ -142,6 +142,7 @@ export const buildProductsPrintHTML = (products) => {
   const cols = [
     "Nombre",
     "SKU",
+    "Código de barras",
     "Categoría",
     "Marca",
     "Costo",
@@ -156,7 +157,7 @@ export const buildProductsPrintHTML = (products) => {
       <h2>Listado de productos — ${new Date().toLocaleString()}</h2>
       <table><thead><tr>${cols.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
       <tbody>
-      ${products.map((p) => `<tr><td>${p.name}</td><td>${p.sku}</td><td>${p.category || ""}</td><td>${p.brand || ""}</td><td>${p.cost_price}</td><td>${p.price}</td><td>${p.stock}</td><td>${p.description || ""}</td></tr>`).join("")}
+      ${products.map((p) => `<tr><td>${p.name}</td><td>${p.sku}</td><td>${p.barcode || ""}</td><td>${p.category || ""}</td><td>${p.brand || ""}</td><td>${p.cost_price}</td><td>${p.price}</td><td>${p.stock}</td><td>${p.description || ""}</td></tr>`).join("")}
       </tbody></table>
       </body></html>`;
 };
