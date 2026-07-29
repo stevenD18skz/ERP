@@ -12,7 +12,6 @@ const TopBar = ({
   onToggleSidebar,
   mobileOpen,
   onToggleMobile,
-  onSearch,
 }) => {
   const router = useRouter();
   // useSession ya se encarga de no mostrar la sesión cacheada hasta montar
