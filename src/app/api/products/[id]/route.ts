@@ -50,7 +50,9 @@ export async function PATCH(request: NextRequest, context: Context) {
     // una sola vez, y recién después se va a la base a resolver la categoría y
     // la marca: no tiene sentido crear una categoría si el precio venía mal.
     const name = f.string("name", { max: 200 });
-    const sku = f.string("sku", { max: 60 });
+    // Igual que en POST: el SKU es opcional (el campo ni siquiera está en el
+    // formulario), así que un "" no puede tumbar el guardado.
+    const sku = f.string("sku", { max: 60, allowEmpty: true });
     const price = f.number("price", { min: 0 });
     const costPrice = f.number("cost_price", { min: 0 });
     const costIsEstimated = f.boolean("cost_is_estimated");

@@ -1,9 +1,9 @@
 // TopBar.jsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, CircleUserRound, LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
 import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 import SimulationChip from "@/components/simulation/SimulationChip";
 import { useSession } from "@/hooks/useSession";
@@ -19,7 +19,26 @@ const TopBar = ({
   const { tienda, logout } = useSession();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
-  const [notifications] = useState(2); // ejemplo estático, conectar con backend si quieres
+  const userMenuRef = useRef(null);
+  const initial = (tienda?.dueno ?? "?").trim().charAt(0).toUpperCase();
+
+  // Clic afuera o Escape cierran el menú: sin esto se queda abierto tapando
+  // el resto del topbar hasta el próximo clic en el botón.
+  useEffect(() => {
+    if (!userOpen) return;
+    const onPointerDown = (e) => {
+      if (!userMenuRef.current?.contains(e.target)) setUserOpen(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setUserOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userOpen]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -78,7 +97,7 @@ const TopBar = ({
         {/* Derecha: acciones */}
         <div className="flex shrink-0 items-center gap-2">
           <SimulationChip />
-          <SupabaseStatusChip />
+          {/* <SupabaseStatusChip />*/}
 
           {/* Búsqueda */}
           <form
@@ -109,29 +128,18 @@ const TopBar = ({
             </div>
           </form>
 
-          <button
-            onClick={() => alert("Notificaciones (placeholder)")}
-            className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            aria-label="Notificaciones"
-          >
-            <Bell className="h-4 w-4" />
-            {notifications > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-semibold text-white">
-                {notifications}
-              </span>
-            )}
-          </button>
-
           <div className="mx-1 hidden h-6 w-px bg-slate-200 sm:block" />
 
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setUserOpen((s) => !s)}
-              className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="flex items-center gap-2 rounded-md py-1 pl-1 pr-2 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               aria-haspopup="menu"
               aria-expanded={userOpen}
             >
-              <CircleUserRound className="h-6 w-6 text-slate-500" />
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                {initial}
+              </span>
               <div className="hidden text-left sm:block">
                 <div className="text-xs font-medium text-slate-700">
                   {tienda?.dueno ?? "..."}
@@ -140,16 +148,33 @@ const TopBar = ({
                   {tienda?.nombre ?? ""}
                 </div>
               </div>
+              <ChevronDown
+                className={`hidden h-3.5 w-3.5 text-slate-400 transition-transform sm:block ${userOpen ? "rotate-180" : ""}`}
+              />
             </button>
 
             {userOpen && (
-              <div className="absolute right-0 mt-2 w-44 rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+              >
+                <div className="border-b border-slate-100 px-3.5 py-3">
+                  <div className="truncate text-sm font-semibold text-slate-800">
+                    {tienda?.dueno ?? "..."}
+                  </div>
+                  <div className="truncate text-xs text-slate-500">
+                    {tienda?.nombre ?? ""}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-slate-400">
+                    {tienda?.email ?? ""}
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setUserOpen(false);
                     logout();
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" /> Cerrar sesión
                 </button>

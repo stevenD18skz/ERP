@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
     const session = await verifySessionToken(token);
     if (!session) throw unauthorized("No hay una sesión activa");
 
-    return ok({ nombre: session.nombre, dueno: session.dueno });
+    return ok({
+      nombre: session.nombre,
+      dueno: session.dueno,
+      email: session.email,
+    });
   });
 }

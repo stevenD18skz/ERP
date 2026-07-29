@@ -1,4 +1,4 @@
-// POST /api/auth/login   { nombre, password } -> cookie de sesión
+// POST /api/auth/login   { email, password } -> cookie de sesión
 
 import type { NextRequest } from "next/server";
 
@@ -17,8 +17,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // ILIKE sin comodines es un match exacto sin importar mayúsculas, pero % y _
-// sí son comodines para ILIKE: si el nombre de la tienda los trae de verdad,
-// hay que escaparlos para que no actúen como tal.
+// sí son comodines para ILIKE: si el correo los trae de verdad (no debería,
+// pero por si acaso), hay que escaparlos para que no actúen como tal.
 function ilikeExact(value: string): string {
   return value.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
@@ -27,29 +27,34 @@ export async function POST(request: NextRequest) {
   return handle(async () => {
     const body = await readJson(request);
     const f = new Fields(body);
-    const nombre = f.string("nombre", { required: true, max: 120 });
+    const email = f.string("email", { required: true, max: 200 });
     const password = f.string("password", { required: true, max: 200 });
     f.check();
 
     const db = getSupabaseAdmin();
     const { data: tienda, error } = await db
       .from("tiendas")
-      .select("id, nombre, dueno, password_hash")
-      .ilike("nombre", ilikeExact(nombre!))
+      .select("id, nombre, dueno, email, password_hash")
+      .ilike("email", ilikeExact(email!))
       .maybeSingle();
     if (error) throw fromPostgrest(error, "el inicio de sesión");
 
     if (!tienda || !verifyPassword(password!, tienda.password_hash)) {
-      throw unauthorized("Tienda o contraseña incorrecta");
+      throw unauthorized("Correo o contraseña incorrectos");
     }
 
     const token = await createSessionToken({
       tiendaId: tienda.id,
       nombre: tienda.nombre,
       dueno: tienda.dueno,
+      email: tienda.email,
     });
 
-    const res = ok({ nombre: tienda.nombre, dueno: tienda.dueno });
+    const res = ok({
+      nombre: tienda.nombre,
+      dueno: tienda.dueno,
+      email: tienda.email,
+    });
     res.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

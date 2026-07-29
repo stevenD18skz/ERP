@@ -1,6 +1,6 @@
-// POST /api/auth/register   { nombre, dueno, password } -> crea la tienda y
-// deja la sesión iniciada. Es lo que permite "crear una tienda desde cero"
-// para probar, sin tocar los datos de las demás.
+// POST /api/auth/register   { nombre, dueno, email, password } -> crea la
+// tienda y deja la sesión iniciada. Es lo que permite "crear una tienda desde
+// cero" para probar, sin tocar los datos de las demás.
 
 import type { NextRequest } from "next/server";
 
@@ -18,15 +18,21 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 export async function POST(request: NextRequest) {
   return handle(async () => {
     const body = await readJson(request);
     const f = new Fields(body);
     const nombre = f.string("nombre", { required: true, max: 120 });
     const dueno = f.string("dueno", { required: true, max: 120 });
+    const email = f.string("email", { required: true, max: 200 })?.toLowerCase();
     const password = f.string("password", { required: true, max: 200 });
     if (password && password.length < 4) {
       f.add("password", "Debe tener al menos 4 caracteres");
+    }
+    if (email && !EMAIL_RE.test(email)) {
+      f.add("email", "No es un correo válido");
     }
     f.check();
 
@@ -36,9 +42,10 @@ export async function POST(request: NextRequest) {
       .insert({
         nombre,
         dueno,
+        email,
         password_hash: hashPassword(password!),
       })
-      .select("id, nombre, dueno")
+      .select("id, nombre, dueno, email")
       .single();
     if (error) throw fromPostgrest(error, "la creación de la tienda");
 
@@ -46,9 +53,14 @@ export async function POST(request: NextRequest) {
       tiendaId: tienda.id,
       nombre: tienda.nombre,
       dueno: tienda.dueno,
+      email: tienda.email,
     });
 
-    const res = created({ nombre: tienda.nombre, dueno: tienda.dueno });
+    const res = created({
+      nombre: tienda.nombre,
+      dueno: tienda.dueno,
+      email: tienda.email,
+    });
     res.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

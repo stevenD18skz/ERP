@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Check, FlaskConical, Sparkles } from "lucide-react";
-import AppPreview from "./AppPreview";
+import AppPreview, { AppPreviewMobile } from "./AppPreview";
 
 const GARANTIAS = ["Sin instalar nada", "Sin tarjeta", "Funciona en el celular"];
 
@@ -26,7 +26,7 @@ export default function LandingHero({
         <div className="absolute -right-24 top-24 h-[22rem] w-[22rem] rounded-full bg-teal-200/40 blur-3xl" />
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-24">
+      <div className="mx-auto max-w-[1440px] px-4 py-16 md:px-6 md:py-24">
         <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-14">
           {/* Copy */}
           <div>
@@ -46,7 +46,7 @@ export default function LandingHero({
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">
               Inventario, punto de venta, pedidos a proveedores, gastos y
               reportes. Lo que hoy vive repartido entre un cuaderno y una hoja de
-              cálculo, junto y al día — sin fórmulas que se rompan.
+              cálculo, junto y al día, sin fórmulas que se rompan.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -86,10 +86,13 @@ export default function LandingHero({
             </ul>
           </div>
 
-          {/* Vista de la aplicación */}
-          <div className="relative">
+          {/* Vista de la aplicación: pc de fondo, celular montado encima */}
+          <div className="relative pb-10 pl-8 pr-4 pt-2 sm:pb-14 sm:pl-14">
             <div className="lg:rotate-1 lg:transform">
               <AppPreview />
+            </div>
+            <div className="absolute -bottom-28 -left-64 w-32 rotate-[-8deg] sm:-bottom-6 sm:left-0 sm:w-40 md:w-44">
+              <AppPreviewMobile />
             </div>
           </div>
         </div>

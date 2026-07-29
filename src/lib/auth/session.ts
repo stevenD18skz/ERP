@@ -12,6 +12,7 @@ export type SessionPayload = {
   tiendaId: string;
   nombre: string;
   dueno: string;
+  email: string;
 };
 
 function getSecret(): string {
@@ -94,11 +95,17 @@ export async function verifySessionToken(
     if (
       typeof payload.tiendaId !== "string" ||
       typeof payload.nombre !== "string" ||
-      typeof payload.dueno !== "string"
+      typeof payload.dueno !== "string" ||
+      typeof payload.email !== "string"
     ) {
       return null;
     }
-    return { tiendaId: payload.tiendaId, nombre: payload.nombre, dueno: payload.dueno };
+    return {
+      tiendaId: payload.tiendaId,
+      nombre: payload.nombre,
+      dueno: payload.dueno,
+      email: payload.email,
+    };
   } catch {
     return null;
   }

@@ -10,13 +10,14 @@ export default function TodayTotalsCard({ total, count }) {
       <div className="mb-3 text-[13px] font-bold uppercase tracking-wide text-slate-500">
         Ventas de hoy
       </div>
-      <div className="flex gap-4">
+      <div className="flex gap-4 justify-between">
         <div>
           <div className="text-2xl font-extrabold tabular-nums text-slate-900">
             {currency(total)}
           </div>
           <div className="mt-0.5 text-xs text-slate-400">Total vendido</div>
         </div>
+
         <div>
           <div className="text-2xl font-extrabold tabular-nums text-teal-600">
             {count}

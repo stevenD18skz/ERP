@@ -42,6 +42,8 @@ export const invalidPayload = (details: Record<string, string>) =>
 const CONSTRAINT_MESSAGES: Record<string, string> = {
   daily_closes_tienda_date_key: "Ya existe un cierre para esa fecha",
   tiendas_nombre_lower_idx: "Ya existe una tienda con ese nombre",
+  tiendas_email_lower_idx: "Ya existe una tienda con ese correo",
+  tiendas_email_format_check: "El correo no tiene un formato válido",
   // Es por tienda: ver supabase/sql/08_products_sku_por_tienda.sql. El nombre
   // viejo (products_sku_key, único en toda la base) se deja mapeado por si
   // alguien corre la app contra una base a la que no se le aplicó esa

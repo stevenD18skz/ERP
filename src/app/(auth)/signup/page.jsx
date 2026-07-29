@@ -17,6 +17,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [nombre, setNombre] = useState("");
   const [dueno, setDueno] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -41,7 +42,7 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, dueno, password }),
+        body: JSON.stringify({ nombre, dueno, email, password }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
@@ -101,6 +102,18 @@ export default function SignupPage() {
           value={dueno}
           onChange={(e) => setDueno(e.target.value)}
           placeholder="Tu nombre"
+        />
+
+        <AuthField
+          id="email"
+          label="Correo electrónico"
+          hint="Con este vas a iniciar sesión."
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="tucorreo@ejemplo.com"
         />
 
         <PasswordField

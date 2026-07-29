@@ -34,6 +34,7 @@ en orden numérico. Primero el esquema:
 | `sql/07_tiendas_notnull.sql` | exige `tienda_id` |
 | `sql/08_products_sku_por_tienda.sql` | el SKU pasa a ser opcional y único por tienda |
 | `sql/09_categorias_y_marcas.sql` | categoría y marca pasan a ser tablas propias; `products.category` se convierte y se borra |
+| `sql/13_tiendas_email.sql` | agrega el correo a `tiendas`, obligatorio y único: el login pasa a ser por correo |
 
 El `01` es el punto de partida de 2025 y quedó tal cual: del `06` al `09` está
 lo que fue cambiando desde entonces. No hay `02`, `03` ni `04` — eran las

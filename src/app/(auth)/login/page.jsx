@@ -16,7 +16,7 @@ import {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +29,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, password }),
+        body: JSON.stringify({ email, password }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
@@ -61,7 +61,7 @@ function LoginForm() {
       subtitle={
         redirected
           ? "Para abrir esa pantalla primero hay que iniciar sesión."
-          : "Con el nombre de la tienda y su contraseña."
+          : "Con tu correo y tu contraseña."
       }
       footer={
         <p className="text-center text-sm text-slate-600">
@@ -77,16 +77,16 @@ function LoginForm() {
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <AuthField
-          id="nombre"
-          label="Nombre de la tienda"
-          type="text"
-          autoComplete="username"
+          id="email"
+          label="Correo electrónico"
+          type="email"
+          autoComplete="email"
           autoFocus
           required
           invalid={!!error}
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          placeholder="Mi tienda"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="tucorreo@ejemplo.com"
         />
 
         <PasswordField

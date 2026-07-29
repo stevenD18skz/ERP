@@ -56,16 +56,9 @@ export default function ModulesSection() {
               ))}
             </ul>
 
-            <Link
-              href={modulo.href}
-              className="mt-5 flex min-h-[40px] items-center gap-1 self-start text-sm font-semibold text-blue-600 transition-colors hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              Abrir {modulo.titulo.toLowerCase()}
-              <ArrowRight
-                className="h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
-                aria-hidden
-              />
-            </Link>
+
+
+              
           </article>
         ))}
       </div>

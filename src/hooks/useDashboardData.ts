@@ -31,6 +31,7 @@ export function useDashboardData() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [dailyCloses, setDailyCloses] = useState<DailyClose[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,7 @@ export function useDashboardData() {
       setOrders(o);
       setDailyCloses(c);
       setExpenses(e);
+      setLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -199,7 +201,7 @@ export function useDashboardData() {
     [products, sales, orders],
   );
 
-  return { ...today, lowStockCount, topProductsHome, activity };
+  return { ...today, lowStockCount, topProductsHome, activity, loading };
 }
 
 export default useDashboardData;

@@ -3,9 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  getProducts,
-  getCategories,
-  getBrands,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -15,6 +12,7 @@ import { downloadCSV, parseCSV } from "@/utils/csv";
 import { openPrintWindow } from "@/utils/print";
 import { useToasts } from "@/hooks/useToasts";
 import { useProductFilters } from "@/hooks/useProductFilters";
+import { useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 
@@ -70,15 +68,27 @@ const BARCODE_RE = /^\d{8,14}$/;
 
 export default function ProductsPage() {
   const router = useRouter();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  // Productos, categorías y marcas viven en caché de SWR (ver
+  // useProductsCatalog): entrar y salir de esta página ya no vuelve a pedirle
+  // nada a Supabase, solo la primera vez de la sesión o cuando algo lo pide a
+  // propósito (refresh / refreshTaxonomies).
+  //
   // El catálogo de categorías y marcas se pide aparte porque son tablas
   // propias: hay que poder elegir una que exista aunque hoy no tenga ningún
   // producto adentro. Deducirlas de la lista de productos, como se hacía antes,
   // dejaba fuera justamente esas.
-  const [categories, setCategories] = useState([]);
-  const [brands, setBrands] = useState([]);
+  const {
+    products,
+    categories,
+    brands,
+    loading,
+    refreshing,
+    productsError,
+    setProducts,
+    refresh,
+    refreshTaxonomies,
+  } = useProductsCatalog();
 
   const filters = useProductFilters(products);
   const { pageItems, filtered } = filters;
@@ -108,37 +118,14 @@ export default function ProductsPage() {
 
   const { toasts, push, dismiss } = useToasts({ duration: 5000 });
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const res = await getProducts();
-      setProducts(res || []);
-    } catch (err) {
-      console.error(err);
-      push(errorText(err, "No se pudo cargar productos"), "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Sin toast si falla: el formulario sigue sirviendo con la lista vacía —se
-  // escribe la categoría y se crea— y un aviso rojo por algo que no impide
-  // trabajar solo estorba.
-  const fetchTaxonomies = async () => {
-    try {
-      const [cats, brs] = await Promise.all([getCategories(), getBrands()]);
-      setCategories(cats || []);
-      setBrands(brs || []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
+  // El fetch en sí vive en useProductsCatalog (SWR); acá solo se avisa si
+  // falló, igual que antes con el catch de fetchProducts.
   useEffect(() => {
-    fetchProducts();
-    fetchTaxonomies();
+    if (!productsError) return;
+    console.error(productsError);
+    push(errorText(productsError, "No se pudo cargar productos"), "error");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [productsError]);
 
   // Deep-link desde el inicio: abrir filtro de stock bajo o el formulario de creación
   useEffect(() => {
@@ -205,7 +192,6 @@ export default function ProductsPage() {
     );
     try {
       await updateProduct(id, { stock: newStock });
-      push("Stock actualizado", "success");
     } catch (err) {
       console.error(err);
       setProducts(prev);
@@ -251,7 +237,7 @@ export default function ProductsPage() {
           ps.map((p) => (p.id === payload.id ? { ...p, ...saved } : p)),
         );
         push("Producto actualizado", "success");
-        fetchTaxonomies();
+        refreshTaxonomies();
       } catch (err) {
         console.error(err);
         setProducts(prev);
@@ -275,7 +261,7 @@ export default function ProductsPage() {
           ps.map((p) => (p.id === localId ? { ...optimistic, ...saved } : p)),
         );
         push("Producto creado", "success");
-        fetchTaxonomies();
+        refreshTaxonomies();
       } catch (err) {
         console.error(err);
         setProducts((ps) => ps.filter((p) => p.id !== localId));
@@ -527,7 +513,7 @@ export default function ProductsPage() {
     setProducts((ps) => [...created, ...ps]);
     setImportSaving(false);
     setImportStep(3);
-    fetchTaxonomies();
+    refreshTaxonomies();
   };
 
   // Catálogo vacío de verdad: la tienda no tiene ni un producto. Se mira
@@ -545,12 +531,9 @@ export default function ProductsPage() {
     <>
       <div className="mx-auto min-h-screen">
         <ProductsHeader
-          loading={loading}
+          loading={refreshing}
           canExport={filtered.length > 0}
-          onRefresh={() => {
-            fetchProducts();
-            fetchTaxonomies();
-          }}
+          onRefresh={refresh}
           onImport={() => setImportOpen(true)}
           onExportCSV={exportCSV}
           onExportPDF={exportPDF}
