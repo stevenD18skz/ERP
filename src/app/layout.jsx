@@ -1,5 +1,6 @@
 import "@/index.css";
 import AppShell from "@/components/layout/AppShell";
+import SWRProvider from "@/components/providers/SWRProvider";
 
 export const metadata = {
   title: "Boxes · Everything in one box",
@@ -14,7 +15,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <AppShell>{children}</AppShell>
+        <SWRProvider>
+          <AppShell>{children}</AppShell>
+        </SWRProvider>
       </body>
     </html>
   );

@@ -15,6 +15,7 @@
 // revalidaciones automáticas; `shouldRetryOnError: false` evita que un error
 // (por ejemplo la sesión vencida) dispare reintentos solos en cadena.
 import useSWR from "swr";
+import { useIsClient } from "@/hooks/useIsClient";
 import {
   getProducts,
   getCategories,
@@ -29,13 +30,24 @@ const swrOptions = {
 };
 
 export function useProductsCatalog() {
-  const productsSWR = useSWR("products", getProducts, swrOptions);
+  // keys en null hasta montar: mismo motivo que en useDashboardData, para no
+  // desajustar la hidratación con lo que ya trae la caché de localStorage.
+  const isClient = useIsClient();
+  const productsSWR = useSWR(
+    isClient ? "products" : null,
+    getProducts,
+    swrOptions,
+  );
   const categoriesSWR = useSWR(
-    "product-categories",
+    isClient ? "product-categories" : null,
     getCategories,
     swrOptions,
   );
-  const brandsSWR = useSWR("product-brands", getBrands, swrOptions);
+  const brandsSWR = useSWR(
+    isClient ? "product-brands" : null,
+    getBrands,
+    swrOptions,
+  );
 
   // Fuerza a volver a pedir las tres cosas (botón "Actualizar").
   const refresh = () =>
@@ -58,7 +70,7 @@ export function useProductsCatalog() {
     // Solo verdadero mientras no hay datos todavía (primera carga real, sin
     // caché). Una revalidación en segundo plano con datos ya en pantalla no
     // debe volver a mostrar el esqueleto de carga.
-    loading: productsSWR.isLoading,
+    loading: !isClient || productsSWR.isLoading,
     // Verdadero durante cualquier pedido en curso, incluida una
     // revalidación: para el ícono del botón "Actualizar".
     refreshing: productsSWR.isValidating,

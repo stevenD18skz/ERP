@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
+import { useIsClient } from "@/hooks/useIsClient";
 import { localDateKey } from "@/utils/dates";
 import { getProducts } from "@/services/products.service";
 import { getSales } from "@/services/sales.service";
@@ -25,36 +27,62 @@ import {
 // Los datos se piden en el cliente y no se importan directo del mock: así esta
 // pantalla también funciona con los datos de la simulación, que viven en la
 // pestaña del navegador y el servidor no puede ver.
-export function useDashboardData() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [dailyCloses, setDailyCloses] = useState<DailyClose[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
+//
+// Cacheado con SWR bajo las mismas claves que usan Productos ("products") y
+// Ventas ("sales"): entrar a Inicio después de haber estado en cualquiera de
+// esas dos no vuelve a pedir nada, usa lo que ya está en caché. Sin
+// revalidación automática, igual que en useProductsCatalog: estos datos no
+// cambian solos, solo cuando algo en la propia app los guarda.
+const swrOptions = {
+  revalidateIfStale: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  shouldRetryOnError: false,
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const [p, s, o, c, e] = await Promise.all([
-        getProducts(),
-        getSales(),
-        getOrders(),
-        getDailyCloses(),
-        getExpenses(),
-      ]);
-      if (cancelled) return;
-      setProducts(p);
-      setSales(s);
-      setOrders(o);
-      setDailyCloses(c);
-      setExpenses(e);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export function useDashboardData() {
+  // Las keys se apagan (null) hasta montar: la caché ya trae estos datos
+  // restaurados de localStorage antes de este render, pero el servidor
+  // arranca siempre sin nada. Sin este freno, el primer render en el
+  // navegador ya mostraría el contenido real donde el servidor mandó el
+  // esqueleto de carga, y React marcaría un desajuste de hidratación (ver
+  // useIsClient).
+  const isClient = useIsClient();
+  const productsSWR = useSWR<Product[]>(
+    isClient ? "products" : null,
+    getProducts,
+    swrOptions,
+  );
+  const salesSWR = useSWR<Sale[]>(isClient ? "sales" : null, getSales, swrOptions);
+  const ordersSWR = useSWR<Order[]>(
+    isClient ? "orders" : null,
+    getOrders,
+    swrOptions,
+  );
+  const dailyClosesSWR = useSWR<DailyClose[]>(
+    isClient ? "daily-closes" : null,
+    getDailyCloses,
+    swrOptions,
+  );
+  const expensesSWR = useSWR<Expense[]>(
+    isClient ? "expenses" : null,
+    getExpenses,
+    swrOptions,
+  );
+
+  const products = productsSWR.data ?? [];
+  const sales = salesSWR.data ?? [];
+  const orders = ordersSWR.data ?? [];
+  const dailyCloses = dailyClosesSWR.data ?? [];
+  const expenses = expensesSWR.data ?? [];
+
+  const loading =
+    !isClient ||
+    productsSWR.isLoading ||
+    salesSWR.isLoading ||
+    ordersSWR.isLoading ||
+    dailyClosesSWR.isLoading ||
+    expensesSWR.isLoading;
 
   const lowStockCount = useMemo(
     () => products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD).length,

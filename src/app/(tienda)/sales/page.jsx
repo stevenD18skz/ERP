@@ -2,6 +2,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
+import { useIsClient } from "@/hooks/useIsClient";
 import { getProducts, updateProduct } from "@/services/products.service";
 import {
   getSales,
@@ -50,6 +52,18 @@ import {
     components/sales y los cálculos compartidos en salesUtils.
 */
 
+// Mismas claves ("products", "sales") y mismas opciones que useProductsCatalog
+// y useDashboardData: comparten caché con Productos e Inicio, así que llegar
+// acá desde cualquiera de esos dos no vuelve a pedir nada. Sin revalidación
+// automática porque el catálogo y las ventas no cambian solos, solo cuando
+// esta misma pantalla u otra guarda algo (ver mutate más abajo).
+const swrOptions = {
+  revalidateIfStale: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  shouldRetryOnError: false,
+};
+
 export default function SalePageEnhanced() {
   // modo de captura: "transaccion" registra venta por venta con carrito;
   // "cierre" anota un único total al final del día, como se llevaba en el
@@ -57,9 +71,21 @@ export default function SalePageEnhanced() {
   const [mode, setMode] = useState("transaccion");
 
   // data
-  const [allProducts, setAllProducts] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [loadingSales, setLoadingSales] = useState(true);
+  // keys en null hasta montar: mismo motivo que en useDashboardData, para no
+  // desajustar la hidratación con lo que ya trae la caché de localStorage.
+  const isClient = useIsClient();
+  const {
+    data: allProducts = [],
+    error: productsError,
+    mutate: mutateProducts,
+  } = useSWR(isClient ? "products" : null, getProducts, swrOptions);
+  const {
+    data: sales = [],
+    isLoading: salesLoading,
+    error: salesError,
+    mutate: mutateSales,
+  } = useSWR(isClient ? "sales" : null, getSales, swrOptions);
+  const loadingSales = !isClient || salesLoading;
 
   // búsqueda + carrito
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,26 +118,11 @@ export default function SalePageEnhanced() {
   const qtyRefs = useRef({});
 
   useEffect(() => {
-    let mounted = true;
-    const fetchData = async () => {
-      setLoadingSales(true);
-      try {
-        const p = await getProducts();
-        const s = await getSales();
-        if (!mounted) return;
-        setAllProducts(Array.isArray(p) ? p : []);
-        setSales(Array.isArray(s) ? s : []);
-      } catch (err) {
-        console.error("Error fetching sales/products:", err);
-        push("No se pudo cargar datos. Revisa conexión.", "error");
-      } finally {
-        if (mounted) setLoadingSales(false);
-      }
-    };
-    fetchData();
-    return () => (mounted = false);
+    if (!productsError && !salesError) return;
+    console.error("Error fetching sales/products:", productsError || salesError);
+    push("No se pudo cargar datos. Revisa conexión.", "error");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [productsError, salesError]);
 
   useEffect(() => {
     if (!focusTarget) return;
@@ -431,12 +442,10 @@ export default function SalePageEnhanced() {
         }),
       );
 
-      const [updatedSales, updatedProducts] = await Promise.all([
-        getSales(),
-        getProducts(),
-      ]);
-      setSales(Array.isArray(updatedSales) ? updatedSales : []);
-      setAllProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
+      // mutate() sin argumentos revalida contra la API y deja el resultado en
+      // la caché compartida: Inicio y Productos ven el stock y la venta
+      // nuevos sin tener que volver a pedirlos ellos mismos.
+      await Promise.all([mutateSales(), mutateProducts()]);
 
       setReceiptData({
         total,
@@ -487,12 +496,7 @@ export default function SalePageEnhanced() {
           }).catch((err) => console.error(err));
         }),
       );
-      const [updatedSales, updatedProducts] = await Promise.all([
-        getSales(),
-        getProducts(),
-      ]);
-      setSales(Array.isArray(updatedSales) ? updatedSales : []);
-      setAllProducts(Array.isArray(updatedProducts) ? updatedProducts : []);
+      await Promise.all([mutateSales(), mutateProducts()]);
       push("Venta anulada", "info");
     } catch (err) {
       console.error(err);

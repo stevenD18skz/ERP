@@ -12,7 +12,9 @@
 // reconexión) ni reintentos solos, porque la sesión no cambia sin que la
 // tienda cierre sesión o inicie una nueva.
 import { useCallback } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
+import { clearPersistedSWRCache } from "@/lib/swrLocalStorageProvider";
+import { useIsClient } from "@/hooks/useIsClient";
 
 export type SessionTienda = {
   nombre: string;
@@ -30,18 +32,38 @@ async function fetchSession(): Promise<SessionTienda> {
 }
 
 export function useSession() {
-  const { data, isLoading, mutate } = useSWR(SESSION_KEY, fetchSession, {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    shouldRetryOnError: false,
-  });
+  // key en null hasta montar: la caché ya trae la sesión restaurada de
+  // localStorage desde antes de este render, pero el servidor nunca la tiene.
+  // Sin este freno, el primerísimo render en el navegador (el que React
+  // compara contra el HTML del servidor al hidratar) ya mostraría el dato
+  // real y saltaría un desajuste de hidratación en cualquier componente que
+  // pinte `tienda` (TopBar, SideBar, Inicio...).
+  const isClient = useIsClient();
+  const { data, isLoading, mutate } = useSWR(
+    isClient ? SESSION_KEY : null,
+    fetchSession,
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: false,
+    },
+  );
+  const { cache, mutate: globalMutate } = useSWRConfig();
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
-    await mutate(null, { revalidate: false });
+    // No solo la sesión: se vacía toda la caché de SWR (productos, ventas,
+    // etc.), porque queda respaldada en localStorage. Si no se limpia acá, la
+    // próxima tienda que inicie sesión en este mismo aparato vería de entrada
+    // los datos de esta tienda -varias claves tienen revalidateIfStale:
+    // false, así que ni se refrescarían solas.
+    for (const key of cache.keys()) {
+      globalMutate(key, undefined, { revalidate: false });
+    }
+    clearPersistedSWRCache();
     window.location.href = "/login";
-  }, [mutate]);
+  }, [cache, globalMutate]);
 
-  return { tienda: data ?? null, loading: isLoading, logout };
+  return { tienda: data ?? null, loading: !isClient || isLoading, logout };
 }

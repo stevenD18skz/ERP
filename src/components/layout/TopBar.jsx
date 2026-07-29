@@ -16,6 +16,10 @@ const TopBar = ({
   onSearch,
 }) => {
   const router = useRouter();
+  // useSession ya se encarga de no mostrar la sesión cacheada hasta montar
+  // (ver useIsClient), así que tienda es seguro de pintar directo: coincide
+  // con el servidor en el primer render y no dispara un desajuste de
+  // hidratación.
   const { tienda, logout } = useSession();
   const [q, setQ] = useState("");
   const [userOpen, setUserOpen] = useState(false);
