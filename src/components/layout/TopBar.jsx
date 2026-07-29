@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, Menu, Search, X } from "lucide-react";
-import SupabaseStatusChip from "@/components/ui/SupabaseStatusChip";
 import SimulationChip from "@/components/simulation/SimulationChip";
 import { useSession } from "@/hooks/useSession";
 
