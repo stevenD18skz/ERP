@@ -241,7 +241,7 @@ const categoriesInsert = [
 const estimated = products.filter((p) => p.cost_is_estimated).length;
 fs.writeFileSync(
   path.join(OUT, "10_seed_products.sql"),
-  header("ERP Supermercado · Catálogo de productos", [
+  header("Boxes · Catálogo de productos", [
     "Va después del 09 y de `node scripts/seed-tiendas.mjs`: necesita el esquema",
     "completo y la tienda ya creada. El archivo lo comprueba y avisa si falta algo.",
     "",
@@ -343,7 +343,7 @@ const sum = (k) => dailyCloses.reduce((a, c) => a + (Number(c[k]) || 0), 0);
 const fmt = (n) => n.toLocaleString("es-CO");
 fs.writeFileSync(
   path.join(OUT, "11_seed_daily_closes.sql"),
-  header("ERP Supermercado · Cierres diarios de 2025", [
+  header("Boxes · Cierres diarios de 2025", [
     "Necesita la tabla `tiendas` (06_tiendas.sql) y la tienda ya creada con",
     "`node scripts/seed-tiendas.mjs`.",
     "",
@@ -420,7 +420,7 @@ const byKind = expenses.reduce(
 );
 fs.writeFileSync(
   path.join(OUT, "12_seed_expenses.sql"),
-  header("ERP Supermercado · Gastos y movimientos de caja de 2025", [
+  header("Boxes · Gastos y movimientos de caja de 2025", [
     "Necesita la tabla `tiendas` (06_tiendas.sql) y la tienda ya creada con",
     "`node scripts/seed-tiendas.mjs`.",
     "",

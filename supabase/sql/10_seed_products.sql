@@ -1,5 +1,5 @@
 -- ===========================================================================
--- ERP Supermercado · Catálogo de productos
+-- Boxes · Catálogo de productos
 -- ===========================================================================
 -- GENERADO por scripts/generate-sql. No editar a mano: se regenera con
 -- `npm run sql:generate` y cualquier cambio manual se pierde.

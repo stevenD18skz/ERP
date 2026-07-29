@@ -1,6 +1,6 @@
 # Supabase
 
-Todo lo que necesita la base de datos del ERP: el esquema, los datos de 2025
+Todo lo que necesita la base de datos de Boxes: el esquema, los datos de 2025
 que salieron del Excel y las funciones que usa la API.
 
 ## Puesta en marcha

@@ -1,5 +1,5 @@
 -- ===========================================================================
--- ERP Supermercado · Cierres diarios de 2025
+-- Boxes · Cierres diarios de 2025
 -- ===========================================================================
 -- GENERADO por scripts/generate-sql. No editar a mano: se regenera con
 -- `npm run sql:generate` y cualquier cambio manual se pierde.

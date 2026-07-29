@@ -83,7 +83,7 @@ type PostgrestLikeError = {
 // v_products, por ejemplo, nace en el 09), así que el mensaje manda a correr la
 // carpeta en orden y no un archivo suelto.
 const SCHEMA_HINT =
-  "A la base de datos le falta parte del esquema del ERP. Correr los archivos de supabase/sql en orden en el SQL Editor de Supabase.";
+  "A la base de datos le falta parte del esquema de Boxes. Correr los archivos de supabase/sql en orden en el SQL Editor de Supabase.";
 
 // Traduce el error que devuelve PostgREST/Postgres al ApiError equivalente.
 export function fromPostgrest(

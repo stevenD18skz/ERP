@@ -1,5 +1,5 @@
 -- =============================================================================
--- ERP Supermercado · La categoría deja de ser texto y aparece la marca
+-- Boxes · La categoría deja de ser texto y aparece la marca
 -- =============================================================================
 -- Ejecutar después de 08_products_sku_por_tienda.sql. Es idempotente.
 --

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ERP Supermercado · Multi-tienda
+-- Boxes · Multi-tienda
 -- =============================================================================
 -- Ejecutar después de 01_schema.sql. Es idempotente: se puede volver a correr
 -- sin romper nada.

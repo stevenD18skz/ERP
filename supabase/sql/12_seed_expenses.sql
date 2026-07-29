@@ -1,5 +1,5 @@
 -- ===========================================================================
--- ERP Supermercado · Gastos y movimientos de caja de 2025
+-- Boxes · Gastos y movimientos de caja de 2025
 -- ===========================================================================
 -- GENERADO por scripts/generate-sql. No editar a mano: se regenera con
 -- `npm run sql:generate` y cualquier cambio manual se pierde.

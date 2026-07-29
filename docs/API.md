@@ -1,4 +1,4 @@
-# API del ERP
+# API de Boxes
 
 Rutas HTTP en `src/app/api`. Corren en el servidor de Next y hablan con
 Supabase con la `service_role`, así que el navegador nunca toca la base

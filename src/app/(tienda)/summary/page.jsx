@@ -33,7 +33,7 @@ import {
 /*
   ReportsPage
   - Implementación del diseño "Reportes.dc.html" del proyecto de Claude Design
-    "ERP para tiendas y supermercados", portado a Tailwind y montado sobre el
+    "Boxes" (antes "ERP para tiendas y supermercados"), portado a Tailwind y montado sobre el
     shell de la app (sidebar + TopBar) en vez de la barra superior del mockup.
   - El mockup corría sobre datos generados: 12 productos con ritmo sintético,
     120 días de ventas hechas con un LCG, 3 fiados y porcentajes de medios de

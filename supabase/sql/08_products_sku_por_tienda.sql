@@ -1,5 +1,5 @@
 -- =============================================================================
--- ERP Supermercado · El SKU es de cada tienda, y deja de ser obligatorio
+-- Boxes · El SKU es de cada tienda, y deja de ser obligatorio
 -- =============================================================================
 -- Ejecutar después de 07_tiendas_notnull.sql. Es idempotente.
 --

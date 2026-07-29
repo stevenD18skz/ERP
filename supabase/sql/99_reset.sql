@@ -1,5 +1,5 @@
 -- =============================================================================
--- DESTRUCTIVO · Borra el esquema completo del ERP
+-- DESTRUCTIVO · Borra el esquema completo de Boxes
 -- =============================================================================
 -- Esto elimina las tablas de negocio con todo lo que tengan adentro: ventas,
 -- pedidos, gastos, cierres, catálogo, categorías y marcas. No hay deshacer.

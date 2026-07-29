@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export function GET() {
   return NextResponse.json({
     data: {
-      nombre: "ERP Supermercado · API",
+      nombre: "Boxes · API",
       documentacion: "docs/API.md",
       formato: {
         exito: '{ "data": ..., "meta": { ... } }',

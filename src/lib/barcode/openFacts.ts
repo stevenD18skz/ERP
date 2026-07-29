@@ -20,7 +20,7 @@
 // eso cada resultado trae de dónde salió, y ese rastro termina escrito en la
 // descripción del producto para poder revisarlo después.
 
-const USER_AGENT = "Boxes-ERP/1.0 (ERP de tienda de barrio)";
+const USER_AGENT = "Boxes/1.0 (app de tienda de barrio)";
 
 // Cuánto se espera a cada base antes de darse por vencido. Quien escanea está
 // parado frente al mostrador: es mejor decirle "no se encontró, llénalo a

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ERP Supermercado · Login por correo
+-- Boxes · Login por correo
 -- =============================================================================
 -- Ejecutar después de 09_categorias_y_marcas.sql. Es idempotente.
 --

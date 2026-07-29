@@ -45,7 +45,7 @@ export function getSupabaseAdmin(): SupabaseClient {
   if (!client) {
     client = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { "x-application-name": "erp-supermarket" } },
+      global: { headers: { "x-application-name": "boxes" } },
     });
   }
 

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ERP Supermercado · Esquema de base de datos (Supabase / PostgreSQL)
+-- Boxes · Esquema de base de datos (Supabase / PostgreSQL)
 -- =============================================================================
 -- Ejecutar en: Supabase Dashboard -> SQL Editor -> New query -> pegar -> Run.
 -- Es idempotente: se puede volver a correr sin romper nada.
