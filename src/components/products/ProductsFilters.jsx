@@ -58,6 +58,10 @@ export default function ProductsFilters({
   onMinPriceChange,
   maxPrice,
   onMaxPriceChange,
+  minCost,
+  onMinCostChange,
+  maxCost,
+  onMaxCostChange,
   stockOp,
   onStockOpChange,
   stockVal,
@@ -76,7 +80,7 @@ export default function ProductsFilters({
             <div className="flex items-center gap-4">
               <div className="text-sm font-semibold">Filtros avanzados</div>
               <div className="text-xs text-slate-400">
-                Filtra por precio, stock, categorías y marcas
+                Filtra por precio, costo, stock, categorías y marcas
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -95,7 +99,7 @@ export default function ProductsFilters({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 items-start gap-4 md:grid-cols-3">
             <div>
               <div className="text-xs font-medium text-slate-500">
                 Precio (COP)
@@ -121,6 +125,34 @@ export default function ProductsFilters({
               </div>
               <div className="mt-1 text-xs text-slate-400">
                 Ej: Min 1000, Max 5000
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-medium text-slate-500">
+                Costo (COP)
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  value={minCost}
+                  onChange={(e) => onMinCostChange(e.target.value)}
+                  placeholder="Min"
+                  className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="text-slate-400">—</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={maxCost}
+                  onChange={(e) => onMaxCostChange(e.target.value)}
+                  placeholder="Max"
+                  className="w-full rounded-md border border-slate-200 px-2 py-1.5 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+              <div className="mt-1 text-xs text-slate-400">
+                Ej: Min 500, Max 3000
               </div>
             </div>
 

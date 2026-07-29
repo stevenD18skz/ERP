@@ -18,6 +18,7 @@ import {
 // diez columnas no caben en un teléfono ni con scroll horizontal.
 export default function ProductsTable({
   items,
+  perPage,
   selected,
   allPageSelected,
   somePageSelected,
@@ -31,6 +32,15 @@ export default function ProductsTable({
   onDelete,
   onZoomPhoto,
 }) {
+  // Con poquitos productos en la página, la tabla se veía chiquita y suelta
+  // en medio de la pantalla. Se rellena con filas vacías hasta el alto de una
+  // página llena, para que el espacio se sienta igual de armonioso tenga 1
+  // producto o el cupo completo.
+  const fillerRows =
+    perPage && items.length > 0 && items.length < perPage
+      ? perPage - items.length
+      : 0;
+
   return (
     <div className="mt-4 hidden overflow-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-100 md:block">
       <table className="w-full table-fixed text-sm">
@@ -235,6 +245,11 @@ export default function ProductsTable({
                   </button>
                 </div>
               </td>
+            </tr>
+          ))}
+          {Array.from({ length: fillerRows }).map((_, i) => (
+            <tr key={`filler-${i}`} aria-hidden className="h-[57px]">
+              <td colSpan={11} />
             </tr>
           ))}
         </tbody>

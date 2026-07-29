@@ -20,6 +20,8 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
   const [brandFilter, setBrandFilter] = useState([]); // multi-select
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [minCost, setMinCost] = useState("");
+  const [maxCost, setMaxCost] = useState("");
   const [stockOp, setStockOp] = useState("any"); // any, lt, gt, eq
   const [stockVal, setStockVal] = useState("");
 
@@ -65,6 +67,13 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     if (!Number.isNaN(max) && maxPrice !== "")
       list = list.filter((p) => p.price <= max);
 
+    const minC = Number(minCost);
+    const maxC = Number(maxCost);
+    if (!Number.isNaN(minC) && minCost !== "")
+      list = list.filter((p) => p.cost_price >= minC);
+    if (!Number.isNaN(maxC) && maxCost !== "")
+      list = list.filter((p) => p.cost_price <= maxC);
+
     const sVal = Number(stockVal);
     if (stockOp !== "any" && !Number.isNaN(sVal)) {
       if (stockOp === "lt") list = list.filter((p) => p.stock < sVal);
@@ -108,6 +117,8 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     brandFilter,
     minPrice,
     maxPrice,
+    minCost,
+    maxCost,
     stockOp,
     stockVal,
     sortBy,
@@ -119,6 +130,8 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     (brandFilter.length > 0 ? 1 : 0) +
     (minPrice !== "" ? 1 : 0) +
     (maxPrice !== "" ? 1 : 0) +
+    (minCost !== "" ? 1 : 0) +
+    (maxCost !== "" ? 1 : 0) +
     (stockOp !== "any" && stockVal !== "" ? 1 : 0);
   const hasActiveSearch = query.trim() !== "" || activeFilterCount > 0;
 
@@ -151,6 +164,18 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
         label: `Hasta ${currency(Number(maxPrice))}`,
         onRemove: () => setMaxPrice(""),
       });
+    if (minCost !== "")
+      chips.push({
+        key: "minCost",
+        label: `Costo desde ${currency(Number(minCost))}`,
+        onRemove: () => setMinCost(""),
+      });
+    if (maxCost !== "")
+      chips.push({
+        key: "maxCost",
+        label: `Costo hasta ${currency(Number(maxCost))}`,
+        onRemove: () => setMaxCost(""),
+      });
     if (stockOp !== "any" && stockVal !== "") {
       const opLabel =
         stockOp === "lt"
@@ -168,7 +193,16 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
       });
     }
     return chips;
-  }, [categoryFilter, brandFilter, minPrice, maxPrice, stockOp, stockVal]);
+  }, [
+    categoryFilter,
+    brandFilter,
+    minPrice,
+    maxPrice,
+    minCost,
+    maxCost,
+    stockOp,
+    stockVal,
+  ]);
 
   const clearAllFilters = () => {
     setQuery("");
@@ -176,6 +210,8 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     setBrandFilter([]);
     setMinPrice("");
     setMaxPrice("");
+    setMinCost("");
+    setMaxCost("");
     setStockOp("any");
     setStockVal("");
   };
@@ -184,7 +220,16 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
   // los filtros, aquí.
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, brandFilter, minPrice, maxPrice, stockOp, stockVal]);
+  }, [
+    categoryFilter,
+    brandFilter,
+    minPrice,
+    maxPrice,
+    minCost,
+    maxCost,
+    stockOp,
+    stockVal,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
 
@@ -219,6 +264,8 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     brandFilter,
     minPrice,
     maxPrice,
+    minCost,
+    maxCost,
     stockOp,
     stockVal,
     sortBy,
@@ -240,6 +287,8 @@ export function useProductFilters(products, { perPage = 8 } = {}) {
     setBrandFilter,
     setMinPrice,
     setMaxPrice,
+    setMinCost,
+    setMaxCost,
     setStockOp,
     setStockVal,
     setPage,

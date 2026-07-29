@@ -95,6 +95,14 @@ const TopBar = ({
           </span>
         </button>
 
+        <div className="mx-1 hidden h-6 w-px bg-slate-200 sm:block" />
+
+        <div className="flex flex-col">
+          <h1 className="text-xl font-semibold text-slate-800">
+            {tienda?.nombre ?? "..."}
+          </h1>
+        </div>
+
         <div className="flex-1" />
 
         {/* Derecha: acciones */}
@@ -102,7 +110,7 @@ const TopBar = ({
           <SimulationChip />
           {/* <SupabaseStatusChip />*/}
 
-          {/* Búsqueda */}
+          {/* Búsqueda 
           <form
             onSubmit={handleSearchSubmit}
             className="hidden w-56 md:block xl:w-72"
@@ -129,7 +137,7 @@ const TopBar = ({
                 </button>
               )}
             </div>
-          </form>
+          </form>*/}
 
           <div className="mx-1 hidden h-6 w-px bg-slate-200 sm:block" />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createProduct,
@@ -65,6 +65,11 @@ const errorText = (err, fallback) => {
 // EAN-8, UPC-A, EAN-13 y los ITF-14 de las cajas del proveedor. Mismo patrón
 // que usa BarcodeScanModal.
 const BARCODE_RE = /^\d{8,14}$/;
+
+// Si le dan varias veces seguidas a +/- del stock, se espera este tiempo sin
+// más clics antes de mandar la petición: mismo principio que un buscador que
+// espera a que se deje de teclear.
+const STOCK_COMMIT_DELAY_MS = 500;
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -183,20 +188,48 @@ export default function ProductsPage() {
     });
   };
 
-  /* --- stock rápido (optimista) --- */
+  /* --- stock rápido (optimista, con debounce por producto) --- */
 
-  const quickUpdateStock = async (id, newStock) => {
-    const prev = products.slice();
+  // id -> { timeoutId, baseline }. "baseline" es el stock que había antes de
+  // que arrancara esta tanda de clics: si la petición falla, es a donde hay
+  // que devolver la fila (no al valor del clic anterior, que ya no existió
+  // para la API).
+  const stockTimers = useRef(new Map());
+
+  useEffect(() => {
+    const timers = stockTimers.current;
+    return () => timers.forEach(({ timeoutId }) => clearTimeout(timeoutId));
+  }, []);
+
+  const quickUpdateStock = (id, newStock) => {
+    // La UI se siente inmediata: el número cambia en el acto en cada clic.
     setProducts((ps) =>
       ps.map((p) => (p.id === id ? { ...p, stock: newStock } : p)),
     );
-    try {
-      await updateProduct(id, { stock: newStock });
-    } catch (err) {
-      console.error(err);
-      setProducts(prev);
-      push(errorText(err, "Error actualizando stock"), "error");
-    }
+
+    const pending = stockTimers.current.get(id);
+    if (pending) clearTimeout(pending.timeoutId);
+    const baseline =
+      pending?.baseline ?? products.find((p) => p.id === id)?.stock ?? newStock;
+
+    // La llamada a la API se reprograma en cada clic: solo se dispara la
+    // última, después de que pase STOCK_COMMIT_DELAY_MS sin que vuelvan a
+    // tocar +/-. Diez clics en tres segundos terminan en una sola petición.
+    const timeoutId = setTimeout(async () => {
+      stockTimers.current.delete(id);
+      if (newStock === baseline) return; // fueron y volvieron, nada que guardar
+      try {
+        await updateProduct(id, { stock: newStock });
+      } catch (err) {
+        console.error(err);
+        setProducts((ps) =>
+          ps.map((p) => (p.id === id ? { ...p, stock: baseline } : p)),
+        );
+        push(errorText(err, "Error actualizando stock"), "error");
+      }
+    }, STOCK_COMMIT_DELAY_MS);
+
+    stockTimers.current.set(id, { timeoutId, baseline });
   };
 
   /* --- exportar --- */
@@ -569,6 +602,10 @@ export default function ProductsPage() {
               onMinPriceChange={filters.setMinPrice}
               maxPrice={filters.maxPrice}
               onMaxPriceChange={filters.setMaxPrice}
+              minCost={filters.minCost}
+              onMinCostChange={filters.setMinCost}
+              maxCost={filters.maxCost}
+              onMaxCostChange={filters.setMaxCost}
               stockOp={filters.stockOp}
               onStockOpChange={filters.setStockOp}
               stockVal={filters.stockVal}
@@ -588,6 +625,7 @@ export default function ProductsPage() {
           <>
             <ProductsTable
               items={pageItems}
+              perPage={filters.perPage}
               selected={selected}
               allPageSelected={allPageSelected}
               somePageSelected={somePageSelected}

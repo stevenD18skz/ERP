@@ -39,8 +39,11 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (error) throw fromPostgrest(error, "el inicio de sesión");
 
-    if (!tienda || !verifyPassword(password!, tienda.password_hash)) {
-      throw unauthorized("Correo o contraseña incorrectos");
+    if (!tienda) {
+      throw unauthorized("No hay ninguna tienda registrada con ese correo", "email_not_found");
+    }
+    if (!verifyPassword(password!, tienda.password_hash)) {
+      throw unauthorized("La contraseña es incorrecta", "invalid_password");
     }
 
     const token = await createSessionToken({

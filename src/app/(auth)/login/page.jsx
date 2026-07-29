@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -13,27 +13,92 @@ import {
   PasswordField,
 } from "@/components/auth/AuthField";
 
+// Mismo patrón que usa el input type="email" del navegador: alcanza para
+// descartar "prueba1" sin ser tan estricto como para rechazar un correo real.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateEmail(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "Escribe tu correo electrónico";
+  if (!EMAIL_RE.test(trimmed)) return "Ese correo no parece válido";
+  return "";
+}
+
+function validatePassword(value) {
+  if (!value) return "Escribe tu contraseña";
+  return "";
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  // Errores que no señalan un campo puntual (red caída, servidor caído): van
+  // aparte, en el cartel general.
+  const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const handleEmailBlur = () => {
+    if (email) setEmailError(validateEmail(email));
+  };
+  const handlePasswordBlur = () => {
+    if (password) setPasswordError(validatePassword(password));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setFormError("");
+
+    const emailMsg = validateEmail(email);
+    const passwordMsg = validatePassword(password);
+    setEmailError(emailMsg);
+    setPasswordError(passwordMsg);
+
+    if (emailMsg) {
+      emailRef.current?.focus();
+      return;
+    }
+    if (passwordMsg) {
+      passwordRef.current?.focus();
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        setError(body?.error?.message || "No se pudo iniciar sesión");
+        const code = body?.error?.code;
+        const message = body?.error?.message || "No se pudo iniciar sesión";
+        const details = body?.error?.details;
+        if (code === "email_not_found") {
+          setEmailError(message);
+          emailRef.current?.focus();
+        } else if (code === "invalid_password") {
+          setPasswordError(message);
+          passwordRef.current?.focus();
+        } else if (code === "invalid_payload" && details) {
+          // Validación que el propio servidor rechazó (p. ej. un correo
+          // pegado con más de 200 caracteres, algo que el front no cubre):
+          // el detalle ya viene separado por campo.
+          if (details.email) setEmailError(details.email);
+          if (details.password) setPasswordError(details.password);
+          (details.email ? emailRef : passwordRef).current?.focus();
+        } else {
+          // Error inesperado del servidor (caído, sin base de datos, etc.):
+          // no hay un campo culpable, así que va en el cartel general.
+          setFormError(message);
+        }
         return;
       }
       // Si esta pestaña había quedado con la simulación encendida, un login
@@ -45,7 +110,7 @@ function LoginForm() {
       router.replace(from && from.startsWith("/") ? from : "/dashboard");
       router.refresh();
     } catch {
-      setError("No se pudo conectar con el servidor");
+      setFormError("No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -77,30 +142,42 @@ function LoginForm() {
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <AuthField
+          ref={emailRef}
           id="email"
           label="Correo electrónico"
           type="email"
           autoComplete="email"
           autoFocus
           required
-          invalid={!!error}
+          error={emailError}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (emailError) setEmailError("");
+            if (formError) setFormError("");
+          }}
+          onBlur={handleEmailBlur}
           placeholder="tucorreo@ejemplo.com"
         />
 
         <PasswordField
+          ref={passwordRef}
           id="password"
           label="Contraseña"
           autoComplete="current-password"
           required
-          invalid={!!error}
+          error={passwordError}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (passwordError) setPasswordError("");
+            if (formError) setFormError("");
+          }}
+          onBlur={handlePasswordBlur}
           placeholder="••••••••"
         />
 
-        <AuthError message={error} />
+        <AuthError message={formError} />
 
         <SubmitButton loading={submitting} loadingLabel="Entrando...">
           Entrar

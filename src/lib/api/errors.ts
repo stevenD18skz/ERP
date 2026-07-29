@@ -32,8 +32,8 @@ export const notFound = (message = "No se encontró el recurso") =>
 export const conflict = (message: string, details?: unknown) =>
   new ApiError(409, message, "conflict", details);
 
-export const unauthorized = (message = "No autenticado") =>
-  new ApiError(401, message, "unauthenticated");
+export const unauthorized = (message = "No autenticado", code = "unauthenticated") =>
+  new ApiError(401, message, code);
 
 export const invalidPayload = (details: Record<string, string>) =>
   new ApiError(422, "Hay campos con errores", "invalid_payload", details);
