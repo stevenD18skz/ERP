@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Camera,
   ExternalLink,
-  ImagePlus,
   Loader2,
   Maximize2,
   ScanLine,
@@ -16,7 +15,7 @@ import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import CreatableSelect from "@/components/ui/CreatableSelect";
 import ImageViewer from "@/components/ui/ImageViewer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
-import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
+import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { lookupBarcode } from "@/services/barcode.service";
 import { currency } from "@/utils/converts";
 import { BARCODE_RE, FIELD_LABELS, LOOKUP_FIELDS } from "./productsUtils";
@@ -101,8 +100,9 @@ export default function ProductForm({
   const [saving, setSaving] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const cameraAvailable = useCameraScannerAvailable();
+  const isMobileDevice = useIsMobileDevice();
   const fileInputRef = useRef(null);
+  const photoCameraInputRef = useRef(null);
   const barcodeInputRef = useRef(null);
   // Qué campo de texto tiene el foco ahora mismo (name, stock, barcode) y qué
   // llave de `form` le corresponde. Se llena con onFocus en cada input
@@ -522,10 +522,10 @@ export default function ProductForm({
                     : "border-slate-200 focus:border-blue-500 focus:ring-blue-100"
                     }`}
                 />
-                {cameraAvailable ? (
-                  // Con cámara a mano, escanear reemplaza a buscar a mano: el
-                  // botón abre la cámara y handleScan hace el resto (llena el
-                  // campo y ya de una consulta la ficha).
+                {isMobileDevice && (
+                  // Solo en celular/tablet: se suma el botón de escanear al
+                  // lado del de buscar, que queda igual en cualquier aparato
+                  // para quien digita o pega el código.
                   <button
                     type="button"
                     onClick={() => setCameraOpen(true)}
@@ -535,24 +535,23 @@ export default function ProductForm({
                   >
                     <Camera className="h-4 w-4" />
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => runLookup()}
-                    disabled={
-                      lookup.status === "loading" || !String(form.barcode).trim()
-                    }
-                    title="Buscar la ficha del producto por su código"
-                    aria-label="Buscar la ficha del producto por su código"
-                    className="flex w-[44px] shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {lookup.status === "loading" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ScanLine className="h-4 w-4" />
-                    )}
-                  </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => runLookup()}
+                  disabled={
+                    lookup.status === "loading" || !String(form.barcode).trim()
+                  }
+                  title="Buscar la ficha del producto por su código"
+                  aria-label="Buscar la ficha del producto por su código"
+                  className="flex w-[44px] shrink-0 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {lookup.status === "loading" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ScanLine className="h-4 w-4" />
+                  )}
+                </button>
               </div>
               {errors.barcode ? (
                 <p
@@ -697,9 +696,11 @@ export default function ProductForm({
                 <button
                   type="button"
                   onClick={() =>
-                    photo ? setPhotoOpen(true) : fileInputRef.current?.click()
+                    photo
+                      ? setPhotoOpen(true)
+                      : photoCameraInputRef.current?.click()
                   }
-                  aria-label={photo ? "Ver la foto en grande" : "Subir una foto"}
+                  aria-label={photo ? "Ver la foto en grande" : "Tomar foto"}
                   className={`group flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                     photo ? "relative cursor-zoom-in" : ""
                   }`}
@@ -717,8 +718,8 @@ export default function ProductForm({
                     </>
                   ) : (
                     <span className="flex flex-col items-center gap-1 text-slate-400">
-                      <ImagePlus className="h-5 w-5" />
-                      <span className="text-[10px] font-semibold">Subir</span>
+                      <Camera className="h-5 w-5" />
+                      <span className="text-[10px] font-semibold">Tomar foto</span>
                     </span>
                   )}
                 </button>
@@ -740,6 +741,14 @@ export default function ProductForm({
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                onChange={onPhotoChange}
+                className="hidden"
+              />
+              <input
+                ref={photoCameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 onChange={onPhotoChange}
                 className="hidden"
               />

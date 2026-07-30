@@ -19,6 +19,18 @@ function isPublic(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // La landing es la puerta de entrada, pero si ya hay sesión válida no tiene
+  // caso mostrarla: se manda directo al dashboard de la tienda.
+  if (pathname === "/") {
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
+    const session = await verifySessionToken(token);
+    if (session) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return NextResponse.next();
+  }
+
   if (isPublic(pathname)) return NextResponse.next();
 
   // La simulación es datos de mentira en sessionStorage: nunca llama a /api,

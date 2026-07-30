@@ -14,7 +14,7 @@ import { useToasts } from "@/hooks/useToasts";
 import { useProductFilters } from "@/hooks/useProductFilters";
 import { useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
-import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
+import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { lookupBarcode } from "@/services/barcode.service";
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
@@ -113,14 +113,13 @@ export default function ProductsPage() {
   const [scanOpen, setScanOpen] = useState(false);
   const [prefill, setPrefill] = useState(null);
 
-  // Con cámara a mano (celular, sobre todo) "Escanear código" abre la cámara
-  // de una: nadie que trae el teléfono para escanear quiere primero ver un
-  // formulario con un campo de texto y un botón. Sin cámara (el computador
-  // del mostrador) sigue abriendo el modal de siempre, que además sirve para
-  // teclear el código a mano.
-  const cameraAvailable = useCameraScannerAvailable();
+  // En celular/tablet "Escanear código" abre la cámara de una: nadie que trae
+  // el teléfono para escanear quiere primero ver un formulario con un campo
+  // de texto y un botón. En el computador del mostrador sigue abriendo el
+  // modal de siempre, que además sirve para teclear el código a mano.
+  const isMobileDevice = useIsMobileDevice();
   const [cameraOpen, setCameraOpen] = useState(false);
-  const openScan = () => (cameraAvailable ? setCameraOpen(true) : setScanOpen(true));
+  const openScan = () => (isMobileDevice ? setCameraOpen(true) : setScanOpen(true));
 
   // foto abierta a pantalla completa desde la tabla o las tarjetas (los dos
   // modales abren la suya por su cuenta, para que quede encima de ellos)
