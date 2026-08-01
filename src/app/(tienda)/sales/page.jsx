@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import { useIsClient } from "@/hooks/useIsClient";
 import { getProducts, updateProduct } from "@/services/products.service";
@@ -13,6 +14,7 @@ import {
 import { openPrintWindow } from "@/utils/print";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
+import { usePhoneScannerLink } from "@/hooks/usePhoneScanner";
 import { useToasts } from "@/hooks/useToasts";
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
@@ -41,16 +43,24 @@ import {
     descuentos por línea (%/$), métodos de pago (efectivo/tarjeta/
     transferencia/fiado), recibo de éxito y anulación de ventas con
     devolución real de stock.
-  - Dos maneras de escanear, y ninguna estorba a la otra: lectores que
+  - Tres maneras de escanear, y ninguna estorba a la otra: lectores que
     funcionan como teclado (apps como Barcode to PC, o un lector USB físico),
-    ver useBarcodeScanner; y la cámara del propio aparato, ver
-    useCameraScanner, que solo se ofrece donde de verdad funciona. Mientras la
-    cámara está abierta el lector de teclado se apaga, para no procesar el
-    mismo código dos veces. El buscador de todas formas empareja por código de
-    barras si se escribe o se pega a mano.
+    ver useBarcodeScanner; la cámara del propio aparato, ver useCameraScanner,
+    que solo se ofrece donde de verdad funciona; y el celular emparejado como
+    lector remoto, ver usePhoneScanner, que es el camino del computador de
+    mostrador sin cámara. Mientras la cámara está abierta el lector de teclado
+    se apaga, para no procesar el mismo código dos veces. El buscador de todas
+    formas empareja por código de barras si se escribe o se pega a mano.
   - Esta página coordina el estado; el dibujo vive en los componentes de
     components/sales y los cálculos compartidos en salesUtils.
 */
+
+// Solo se baja cuando alguien va a emparejar: trae el generador de QR y esa
+// pantalla se abre una vez, no en cada venta.
+const PhoneScannerModal = dynamic(
+  () => import("@/components/ui/PhoneScannerModal"),
+  { ssr: false },
+);
 
 // Mismas claves ("products", "sales") y mismas opciones que useProductsCatalog
 // y useDashboardData: comparten caché con Productos e Inicio, así que llegar
@@ -94,6 +104,7 @@ export default function SalePageEnhanced() {
   const [focusTarget, setFocusTarget] = useState(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const cameraAvailable = useCameraScannerAvailable();
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
 
   // descuento por línea
   const [discountEditingKey, setDiscountEditingKey] = useState(null);
@@ -224,11 +235,12 @@ export default function SalePageEnhanced() {
     return added;
   };
 
-  // Callback de los dos escáneres: el lector de teclado (celular con Barcode
-  // to PC, o un lector USB el día de mañana) y la cámara. Los dos entregan lo
-  // mismo —el código— y de aquí en adelante el camino es idéntico: busca
-  // coincidencia exacta por código de barras y avisa siempre el resultado,
-  // porque quien escanea suele estar mirando la mercancía, no la pantalla.
+  // Callback de los tres escáneres: el lector de teclado (celular con Barcode
+  // to PC, o un lector USB el día de mañana), la cámara de este aparato y el
+  // celular emparejado por Realtime. Los tres entregan lo mismo —el código— y
+  // de aquí en adelante el camino es idéntico: busca coincidencia exacta por
+  // código de barras y avisa siempre el resultado, porque quien escanea suele
+  // estar mirando la mercancía, no la pantalla.
   const handleBarcodeScan = (code, { fromCamera = false } = {}) => {
     const match = allProducts.find(
       (p) => (p.barcode || "").trim() === code.trim(),
@@ -248,6 +260,15 @@ export default function SalePageEnhanced() {
     // vista y dejarlo escuchando solo abre la puerta a agregar dos veces.
     enabled:
       mode === "transaccion" && !receiptData && !voidConfirmId && !cameraOpen,
+  });
+
+  // El celular emparejado entra por el mismo camino que el lector de teclado,
+  // incluido el foco de vuelta al buscador: desde el punto de vista de esta
+  // pantalla es un lector más, solo que la lectura llega por el canal en vez
+  // de por el teclado.
+  const phoneScanner = usePhoneScannerLink({
+    onScan: handleBarcodeScan,
+    pairing: phoneModalOpen,
   });
 
   const handleSearchKeyDown = (e) => {
@@ -548,6 +569,9 @@ export default function SalePageEnhanced() {
               scanning={barcodeScanning}
               cameraAvailable={cameraAvailable}
               onOpenCamera={() => setCameraOpen(true)}
+              phoneAvailable={phoneScanner.available}
+              phoneConnected={phoneScanner.phoneConnected}
+              onOpenPhone={() => setPhoneModalOpen(true)}
             />
 
             <CartLines
@@ -620,6 +644,18 @@ export default function SalePageEnhanced() {
           title="Escanear productos"
           onScan={(code) => handleBarcodeScan(code, { fromCamera: true })}
           onClose={() => setCameraOpen(false)}
+        />
+      )}
+
+      {/* Solo para emparejar y ver el estado: una vez hecho, el celular manda
+          códigos con esta pantalla abierta aunque el modal esté cerrado. */}
+      {phoneModalOpen && (
+        <PhoneScannerModal
+          pairingId={phoneScanner.pairingId}
+          status={phoneScanner.status}
+          phoneConnected={phoneScanner.phoneConnected}
+          onReset={phoneScanner.reset}
+          onClose={() => setPhoneModalOpen(false)}
         />
       )}
 

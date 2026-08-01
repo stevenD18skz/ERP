@@ -14,6 +14,7 @@
 import { useCallback } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { clearPersistedSWRCache } from "@/lib/swrLocalStorageProvider";
+import { clearPhoneScannerPairing } from "@/lib/phoneScanner";
 import { useIsClient } from "@/hooks/useIsClient";
 
 export type SessionTienda = {
@@ -62,6 +63,9 @@ export function useSession() {
       globalMutate(key, undefined, { revalidate: false });
     }
     clearPersistedSWRCache();
+    // Y el celular emparejado: si no, el que quedó vinculado con esta tienda
+    // seguiría metiendo códigos en la pantalla de la que inicie sesión después.
+    clearPhoneScannerPairing();
     window.location.href = "/login";
   }, [cache, globalMutate]);
 

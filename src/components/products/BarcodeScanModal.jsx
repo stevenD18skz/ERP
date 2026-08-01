@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   AlertTriangle,
   ArrowRight,
@@ -18,8 +19,10 @@ import {
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import ImageViewer from "@/components/ui/ImageViewer";
+import PhoneScannerButton from "@/components/ui/PhoneScannerButton";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
+import { usePhoneScannerLink } from "@/hooks/usePhoneScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 
 /*
@@ -38,6 +41,13 @@ import { lookupBarcode } from "@/services/barcode.service";
   Funciona con lector de teclado (la app del celular o un lector USB) por
   useBarcodeScanner, y también escribiendo el código a mano y dando Enter.
 */
+
+// El generador de QR solo hace falta mientras alguien empareja el celular, que
+// es un rato y una vez: se baja en ese momento y no en el primer cargue.
+const PhoneScannerModal = dynamic(
+  () => import("@/components/ui/PhoneScannerModal"),
+  { ssr: false },
+);
 
 // EAN-8, UPC-A, EAN-13 y los ITF-14 de las cajas del proveedor.
 const BARCODE_RE = /^\d{8,14}$/;
@@ -64,6 +74,7 @@ export default function BarcodeScanModal({
   const [photoOpen, setPhotoOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const cameraAvailable = useCameraScannerAvailable();
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const inputRef = useRef(null);
   // Cada consulta lleva un número. Si alguien escanea otra cosa mientras la
   // anterior venía en camino, la respuesta vieja llega y se descarta en vez de
@@ -105,6 +116,15 @@ export default function BarcodeScanModal({
   // vista y dejarlo escuchando solo abre la puerta a procesar el mismo código
   // dos veces.
   const { scanning } = useBarcodeScanner({ onScan: run, enabled: !cameraOpen });
+
+  // El celular emparejado entra por run() igual que el lector: revisa
+  // duplicados y sale a consultar la ficha. Acá no es continuo -cada código
+  // trae una ficha que hay que mirar- así que el teléfono manda de a uno y
+  // esta pantalla se queda con el último.
+  const phoneScanner = usePhoneScannerLink({
+    onScan: run,
+    pairing: phoneModalOpen,
+  });
 
   const handleKeyDown = (e) => {
     // useBarcodeScanner ya resolvió este Enter en fase de captura y lo canceló.
@@ -201,6 +221,16 @@ export default function BarcodeScanModal({
                 <Camera className="h-4 w-4" aria-hidden />
                 Escanear con la cámara
               </button>
+            )}
+
+            {/* El complemento del anterior: en el computador del mostrador,
+                que no tiene con qué leer, el lector es el celular. */}
+            {phoneScanner.available && (
+              <PhoneScannerButton
+                phoneConnected={phoneScanner.phoneConnected}
+                onClick={() => setPhoneModalOpen(true)}
+                className="mt-2 w-full"
+              />
             )}
 
               <p className="mt-1.5 text-sm text-slate-400 ">
@@ -420,6 +450,18 @@ export default function BarcodeScanModal({
         title="Escanear el producto"
         onScan={(scanned) => run(scanned)}
         onClose={() => setCameraOpen(false)}
+      />
+    )}
+
+    {/* Solo para emparejar y ver el estado: hecho eso, el celular manda
+        códigos con esta pantalla abierta aunque el modal esté cerrado. */}
+    {phoneModalOpen && (
+      <PhoneScannerModal
+        pairingId={phoneScanner.pairingId}
+        status={phoneScanner.status}
+        phoneConnected={phoneScanner.phoneConnected}
+        onReset={phoneScanner.reset}
+        onClose={() => setPhoneModalOpen(false)}
       />
     )}
 

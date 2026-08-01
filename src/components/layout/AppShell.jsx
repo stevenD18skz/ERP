@@ -12,6 +12,18 @@ import TopBar from "./TopBar";
 // sesión / simulación.
 const BARE_ROUTES = ["/", "/simulacion", "/login", "/signup", "/manual"];
 
+// El celular emparejado como lector (/scan y /scan/<id>) va sin marco y por
+// prefijo, no por igualdad: el identificador del emparejamiento va en la
+// dirección. Ahí la pantalla entera es la cámara, y una barra lateral de
+// navegación solo quitaría sitio a lo único que se hace en esa página.
+const BARE_PREFIXES = ["/scan"];
+
+const isBare = (pathname) =>
+  BARE_ROUTES.includes(pathname) ||
+  BARE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+
 // El menú tiene dos comportamientos según el tamaño de pantalla, y por eso dos
 // estados separados:
 //
@@ -58,7 +70,7 @@ const AppShell = ({ children }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  if (BARE_ROUTES.includes(pathname)) {
+  if (isBare(pathname)) {
     return <>{children}</>;
   }
 

@@ -10,9 +10,17 @@ import { SIM_COOKIE } from "@/lib/simulation/cookie";
 const PUBLIC_PAGES = new Set(["/", "/simulacion", "/login", "/signup", "/manual"]);
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/health"];
 
+// El celular que hace de lector entra por acá desde otro navegador, sin la
+// cookie de sesión de la tienda (el QR se apunta con el teléfono, no se
+// comparte la sesión). Puede ser pública porque esa pantalla no lee ni escribe
+// nada del negocio: abre la cámara y emite el código leído al canal de
+// Realtime cuyo identificador va en la propia dirección, que es un UUID
+// aleatorio e imposible de adivinar. Ver src/lib/phoneScanner.ts.
+const PUBLIC_PAGE_PREFIXES = ["/scan"];
+
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PAGES.has(pathname)) return true;
-  return PUBLIC_API_PREFIXES.some(
+  return [...PUBLIC_PAGE_PREFIXES, ...PUBLIC_API_PREFIXES].some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
