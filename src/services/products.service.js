@@ -116,11 +116,39 @@ export const getBrands = async () => {
   }));
 };
 
+// Mismas reglas que valida el servidor (src/app/api/products/photo/route.ts).
+// Se repiten acá para poder avisar al instante, sin esperar la subida, y
+// para poder mostrarlas como ayuda fija en el formulario.
+export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+export const PHOTO_ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
+export const PHOTO_REQUIREMENTS_LABEL = "JPEG, PNG, WEBP o GIF · máximo 5MB";
+
+function validatePhotoFile(file) {
+  if (!PHOTO_ALLOWED_TYPES.includes(file.type)) {
+    throw new Error(
+      `Ese archivo es ${file.type || "de un tipo no reconocido"}. La foto debe ser JPEG, PNG, WEBP o GIF.`,
+    );
+  }
+  if (file.size > PHOTO_MAX_BYTES) {
+    const mb = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(
+      `La foto pesa ${mb}MB y el máximo permitido es 5MB. Prueba con una foto de menor resolución o comprímela antes de subirla.`,
+    );
+  }
+}
+
 // Sube la foto que la tienda toma o elige (no la del catálogo público, esa ya
 // llega como URL) y devuelve dónde quedó guardada. No pasa por apiFetch
 // porque ese fuerza Content-Type: application/json; con FormData hay que
 // dejar que el navegador ponga su propio boundary de multipart.
 export const uploadProductPhoto = async (file) => {
+  validatePhotoFile(file);
+
   if (isSimulationOn()) {
     // Sin backend a mano: se guarda tal cual como URL de datos, igual que
     // antes. Solo vive mientras dure la pestaña, como el resto de la
@@ -135,9 +163,25 @@ export const uploadProductPhoto = async (file) => {
 
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch("/api/products/photo", { method: "POST", body: form });
+
+  let res;
+  try {
+    res = await fetch("/api/products/photo", { method: "POST", body: form });
+  } catch {
+    // fetch solo rechaza así por red caída/CORS, no por lo que responda el
+    // servidor: eso ya lo cubre la rama de abajo.
+    throw new Error(
+      "No se pudo conectar con el servidor para subir la foto. Revisa tu conexión a internet e inténtalo de nuevo.",
+    );
+  }
+
   const body = await res.json().catch(() => null);
   if (!res.ok) {
+    if (!body) {
+      throw new Error(
+        `El servidor respondió con un error inesperado (${res.status}) al subir la foto. Inténtalo de nuevo en un momento.`,
+      );
+    }
     throw new Error(body?.error?.message ?? "No se pudo subir la foto");
   }
   return body.data.url;

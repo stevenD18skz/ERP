@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertCircle,
   Camera,
   ExternalLink,
   Loader2,
@@ -17,7 +18,10 @@ import ImageViewer from "@/components/ui/ImageViewer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { lookupBarcode } from "@/services/barcode.service";
-import { uploadProductPhoto } from "@/services/products.service";
+import {
+  PHOTO_REQUIREMENTS_LABEL,
+  uploadProductPhoto,
+} from "@/services/products.service";
 import { currency } from "@/utils/converts";
 import { BARCODE_RE, FIELD_LABELS, LOOKUP_FIELDS } from "./productsUtils";
 
@@ -777,6 +781,9 @@ export default function ProductForm({
                     ? "Queda como enlace: se ve mientras haya internet. Sube una propia si prefieres no depender de eso."
                     : "Ayuda a reconocerlo rápido en la lista y en Ventas."}
                 </p>
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  {PHOTO_REQUIREMENTS_LABEL}
+                </p>
                 <button
                   type="button"
                   disabled={photoUploading}
@@ -790,8 +797,12 @@ export default function ProductForm({
                       : "Elegir archivo"}
                 </button>
                 {photoError && (
-                  <p className="mt-1.5 text-xs font-semibold text-red-600">
-                    {photoError}
+                  <p className="mt-1.5 flex items-start gap-1.5 rounded-md bg-red-50 px-2 py-1.5 text-xs font-medium text-red-700">
+                    <AlertCircle
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                      aria-hidden
+                    />
+                    <span>{photoError}</span>
                   </p>
                 )}
               </div>

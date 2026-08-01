@@ -51,7 +51,10 @@ export default function TrendCard({
           <Icon className="h-4 w-4" aria-hidden />
         </span>
       </div>
-      <div className={`mt-2 text-2xl font-bold tabular-nums ${valueColor}`}>
+      <div
+        className={`mt-2 truncate text-2xl font-bold tabular-nums ${valueColor}`}
+        title={value}
+      >
         {value}
       </div>
       <div className="mt-2">

@@ -7,7 +7,7 @@ import {
   ClipboardList,
   BarChart3,
   Wallet,
-  CalendarClock,
+  Trophy,
   PiggyBank,
 } from "lucide-react";
 
@@ -36,8 +36,7 @@ export default function Home() {
     ventasDelta,
     gananciaHoy,
     gananciaDelta,
-    promedioSemana,
-    tendenciaPct,
+    topProductToday,
     dayBreakdown,
     lastRecorded,
     recentCloses,
@@ -102,11 +101,14 @@ export default function Home() {
                 valueColor="text-emerald-600"
               />
               <TrendCard
-                icon={CalendarClock}
-                label="Promedio diario (últimos 7 días)"
-                value={currency(promedioSemana)}
-                pct={promedioSemana > 0 ? tendenciaPct : undefined}
-                hint={promedioSemana > 0 ? undefined : "Sin ventas esta semana"}
+                icon={Trophy}
+                label="Más vendido hoy"
+                value={topProductToday ? topProductToday.name : "Sin ventas todavía"}
+                hint={
+                  topProductToday
+                    ? `${topProductToday.quantity} ${topProductToday.quantity === 1 ? "unidad vendida" : "unidades vendidas"} hoy`
+                    : "Aún no hay ventas registradas hoy"
+                }
                 accent="bg-indigo-50 text-indigo-600"
               />
               <LowStockCard count={lowStockCount} />

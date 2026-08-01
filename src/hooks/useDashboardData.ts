@@ -109,6 +109,13 @@ export function useDashboardData() {
     // los gastos de hoy. Las compras a proveedores no tienen una fecha de
     // "recibido" que seguir, así que quedan en cero hasta que el día se
     // cierre con ese dato puesto a mano.
+    // Se usa tanto para armar el día en vivo (cuando no hay cierre manual)
+    // como para saber qué producto se movió más hoy, sin importar si el día
+    // ya se cerró: eso pasa por caja, no por el cierre.
+    const salesToday = sales.filter(
+      (s) => !s.voided && localDateKey(new Date(s.sale_date)) === todayIsoValue,
+    );
+
     let liveToday: {
       ventas: number;
       gain: number;
@@ -116,10 +123,6 @@ export function useDashboardData() {
       compra: number;
     } | null = null;
     if (!todayClose) {
-      const salesToday = sales.filter(
-        (s) =>
-          !s.voided && localDateKey(new Date(s.sale_date)) === todayIsoValue,
-      );
       if (salesToday.length > 0) {
         const gastoHoy = expenses
           .filter((e) => e.kind === "gasto" && e.date === todayIsoValue)
@@ -142,23 +145,30 @@ export function useDashboardData() {
         }
       : liveToday;
 
-    // Promedio de los 7 días que terminan hoy, contando en cero los días sin
-    // registro: si no se anotó nada, ese día no vendió nada que sepamos. El
-    // día de hoy usa lo que ya se vendió aunque no se haya cerrado.
-    const windowAvg = (offset: number) => {
-      let sum = 0;
-      for (let i = offset; i < offset + 7; i++) {
-        const iso = dayAgo(i);
-        sum +=
-          byDate.get(iso)?.sales_total ??
-          (iso === todayIsoValue ? (effectiveToday?.ventas ?? 0) : 0);
-      }
-      return sum / 7;
-    };
-
     const ordered = [...dailyCloses].sort((a, b) =>
       b.date.localeCompare(a.date),
     );
+
+    // El más vendido de HOY en unidades, no en plata: junta las líneas de
+    // todas las ventas del día por producto y se queda con la de mayor
+    // cantidad.
+    const qtyByProduct = new Map<string, { name: string; quantity: number }>();
+    for (const s of salesToday) {
+      for (const line of s.products) {
+        const key = line.product_id ?? line.product;
+        const prev = qtyByProduct.get(key);
+        qtyByProduct.set(key, {
+          name: line.product,
+          quantity: (prev?.quantity ?? 0) + line.quantity,
+        });
+      }
+    }
+    let topProductToday: { name: string; quantity: number } | null = null;
+    for (const entry of qtyByProduct.values()) {
+      if (!topProductToday || entry.quantity > topProductToday.quantity) {
+        topProductToday = entry;
+      }
+    }
 
     const breakdown: DayBreakdown | null = effectiveToday
       ? {
@@ -206,8 +216,7 @@ export function useDashboardData() {
         effectiveToday?.gain ?? 0,
         yesterdayClose?.gain ?? 0,
       ),
-      promedioSemana: windowAvg(0),
-      tendenciaPct: pctDelta(windowAvg(0), windowAvg(7)),
+      topProductToday,
       dayBreakdown: breakdown,
       lastRecorded: ordered[0] ?? null,
       recentCloses: recentClosesBase.slice(0, 7),
