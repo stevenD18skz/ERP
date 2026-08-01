@@ -116,6 +116,33 @@ export const getBrands = async () => {
   }));
 };
 
+// Sube la foto que la tienda toma o elige (no la del catálogo público, esa ya
+// llega como URL) y devuelve dónde quedó guardada. No pasa por apiFetch
+// porque ese fuerza Content-Type: application/json; con FormData hay que
+// dejar que el navegador ponga su propio boundary de multipart.
+export const uploadProductPhoto = async (file) => {
+  if (isSimulationOn()) {
+    // Sin backend a mano: se guarda tal cual como URL de datos, igual que
+    // antes. Solo vive mientras dure la pestaña, como el resto de la
+    // simulación.
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/products/photo", { method: "POST", body: form });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(body?.error?.message ?? "No se pudo subir la foto");
+  }
+  return body.data.url;
+};
+
 export const deleteProduct = async (id) => {
   if (isSimulationOn()) {
     const products = all();

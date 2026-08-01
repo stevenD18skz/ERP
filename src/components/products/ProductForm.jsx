@@ -17,6 +17,7 @@ import ImageViewer from "@/components/ui/ImageViewer";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { lookupBarcode } from "@/services/barcode.service";
+import { uploadProductPhoto } from "@/services/products.service";
 import { currency } from "@/utils/converts";
 import { BARCODE_RE, FIELD_LABELS, LOOKUP_FIELDS } from "./productsUtils";
 
@@ -98,6 +99,8 @@ export default function ProductForm({
   );
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState(null);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const isMobileDevice = useIsMobileDevice();
@@ -249,15 +252,21 @@ export default function ProductForm({
     enabled: !photoOpen && !cameraOpen,
   });
 
-  const onPhotoChange = (e) => {
+  const onPhotoChange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhoto(reader.result);
+    setPhotoError(null);
+    setPhotoUploading(true);
+    try {
+      const url = await uploadProductPhoto(file);
+      setPhoto(url);
       confirmField("photo");
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setPhotoError(err.message ?? "No se pudo subir la foto");
+    } finally {
+      setPhotoUploading(false);
+    }
   };
 
   const costNum = Number(form.cost_price);
@@ -695,17 +704,20 @@ export default function ProductForm({
                     atajo para subir, que es lo único que se puede hacer ahí. */}
                 <button
                   type="button"
+                  disabled={photoUploading}
                   onClick={() =>
                     photo
                       ? setPhotoOpen(true)
                       : photoCameraInputRef.current?.click()
                   }
                   aria-label={photo ? "Ver la foto en grande" : "Tomar foto"}
-                  className={`group flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  className={`group flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white transition-colors hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 ${
                     photo ? "relative cursor-zoom-in" : ""
                   }`}
                 >
-                  {photo ? (
+                  {photoUploading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                  ) : photo ? (
                     <>
                       <img
                         src={photo}
@@ -723,7 +735,7 @@ export default function ProductForm({
                     </span>
                   )}
                 </button>
-                {photo && (
+                {photo && !photoUploading && (
                   <button
                     type="button"
                     onClick={() => {
@@ -767,11 +779,21 @@ export default function ProductForm({
                 </p>
                 <button
                   type="button"
+                  disabled={photoUploading}
                   onClick={() => fileInputRef.current?.click()}
-                  className="mt-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="mt-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {photo ? "Cambiar foto" : "Elegir archivo"}
+                  {photoUploading
+                    ? "Subiendo…"
+                    : photo
+                      ? "Cambiar foto"
+                      : "Elegir archivo"}
                 </button>
+                {photoError && (
+                  <p className="mt-1.5 text-xs font-semibold text-red-600">
+                    {photoError}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -800,7 +822,7 @@ export default function ProductForm({
           </button>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || photoUploading}
             className="flex flex-[2] items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
