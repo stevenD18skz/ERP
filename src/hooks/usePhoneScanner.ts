@@ -243,11 +243,20 @@ export function usePhoneScannerHost({
 export function usePhoneScannerLink({
   onScan,
   pairing = false,
+  active = true,
   onIdle,
 }: {
   onScan: (code: string) => void;
   /** Si el modal del QR está abierto ahora mismo. */
   pairing?: boolean;
+  /**
+   * Compuerta de afuera, para cuando la pantalla tiene más de un sitio que
+   * escucha. En Productos el escaneo suelto se apaga mientras hay un modal
+   * abierto, porque ese modal trae el suyo propio; es el mismo trato que ya
+   * tiene el lector de teclado (ver el enabled de useBarcodeScanner allá).
+   * Con dos escuchando el mismo canal, un código entraría dos veces.
+   */
+  active?: boolean;
   /**
    * Se llama cuando pasa IDLE_TIMEOUT_MS con el celular conectado y sin leer
    * nada. La cámara del teléfono ya se apagó por su cuenta para entonces; esto
@@ -304,7 +313,7 @@ export function usePhoneScannerLink({
 
   const { status, phoneConnected, stopPhone } = usePhoneScannerHost({
     pairingId,
-    enabled: pairing || everPaired,
+    enabled: active && (pairing || everPaired),
     onScan: handleScan,
   });
   stopPhoneRef.current = stopPhone;

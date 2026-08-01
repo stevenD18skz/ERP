@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   createProduct,
@@ -15,6 +16,7 @@ import { useProductFilters } from "@/hooks/useProductFilters";
 import { useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
+import { usePhoneScannerLink } from "@/hooks/usePhoneScanner";
 import { lookupBarcode } from "@/services/barcode.service";
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
@@ -63,6 +65,12 @@ const errorText = (err, fallback) => {
   const message = err instanceof Error ? err.message.trim() : "";
   return message ? `${fallback}: ${message}` : fallback;
 };
+
+// Trae el generador de QR: se baja al emparejar, no en el primer cargue.
+const PhoneScannerModal = dynamic(
+  () => import("@/components/ui/PhoneScannerModal"),
+  { ssr: false },
+);
 
 // EAN-8, UPC-A, EAN-13 y los ITF-14 de las cajas del proveedor. Mismo patrón
 // que usa BarcodeScanModal.
@@ -124,6 +132,9 @@ export default function ProductsPage() {
   // foto abierta a pantalla completa desde la tabla o las tarjetas (los dos
   // modales abren la suya por su cuenta, para que quede encima de ellos)
   const [zoomed, setZoomed] = useState(null);
+
+  // el celular emparejado como lector de esta pantalla
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
 
   // importación
   const [importOpen, setImportOpen] = useState(false);
@@ -411,6 +422,17 @@ export default function ProductsPage() {
     );
   };
 
+  // stopPhone nace del hook del celular, más abajo, pero hace falta acá arriba:
+  // se guarda en un ref para no pelear con el orden de las declaraciones.
+  const stopPhoneRef = useRef(null);
+
+  // Con un formulario abierto ya no hay nada que escanear: lo que sigue es
+  // revisar la ficha en el computador. Se le dice al celular que apague la
+  // cámara -queda emparejado, solo en pausa, con su botón para volver- en vez
+  // de dejarlo encendido mandando códigos que nadie va a escuchar, porque el
+  // escaneo suelto se apaga mientras haya un modal abierto.
+  const restPhone = () => stopPhoneRef.current?.("done");
+
   // Lo que trajo la consulta pasa al formulario como propuesta, no como hecho:
   // queda marcado en pantalla y quien registra lo confirma antes de guardar.
   const openScannedForm = (found) => {
@@ -425,6 +447,7 @@ export default function ProductsPage() {
     })) {
       if (value) values[key] = value;
     }
+    restPhone();
     setScanOpen(false);
     setEditing(null);
     setPrefill({ values, source: found.source });
@@ -434,6 +457,7 @@ export default function ProductsPage() {
   // Sin ficha pública, pero el código escaneado sirve igual: se arrastra al
   // formulario para no tener que volver a pasar el lector.
   const openManualForm = (barcode) => {
+    restPhone();
     setScanOpen(false);
     setEditing(null);
     setPrefill(barcode ? { values: { barcode }, source: null } : null);
@@ -441,6 +465,7 @@ export default function ProductsPage() {
   };
 
   const openExistingFromScan = (product) => {
+    restPhone();
     setScanOpen(false);
     setPrefill(null);
     setEditing(product);
@@ -489,11 +514,30 @@ export default function ProductsPage() {
   // formulario ya tienen su propio lector de teclado (o su propio campo de
   // código), y dejar este prendido a la vez procesaría el mismo escaneo dos
   // veces.
-  useBarcodeScanner({
+  const noModalOpen =
+    !scanOpen && !cameraOpen && !showForm && !importOpen && !confirm && !zoomed;
+
+  useBarcodeScanner({ onScan: handleGlobalScan, enabled: noModalOpen });
+
+  // El celular emparejado entra por el mismo handleGlobalScan que el lector de
+  // teclado, así que hereda todo su comportamiento: si el código ya es de un
+  // producto tuyo filtra la tabla y ahí se queda -puedes seguir pasando varios
+  // para mirar existencias-, y si no lo es, consulta la ficha y abre el
+  // formulario, momento en el que restPhone() manda a descansar la cámara.
+  //
+  // Apagado mientras haya un modal abierto, por el mismo motivo que el lector
+  // de teclado: el modal de escaneo trae su propio puente y dos escuchando el
+  // mismo canal procesarían el código dos veces.
+  const phoneScanner = usePhoneScannerLink({
     onScan: handleGlobalScan,
-    enabled:
-      !scanOpen && !cameraOpen && !showForm && !importOpen && !confirm && !zoomed,
+    pairing: phoneModalOpen,
+    active: noModalOpen || phoneModalOpen,
+    onIdle: () => {
+      setPhoneModalOpen(false);
+      push("Se pausó el escaneo con el celular por inactividad", "info");
+    },
   });
+  stopPhoneRef.current = phoneScanner.stopPhone;
 
   /* --- importar CSV --- */
 
@@ -583,6 +627,9 @@ export default function ProductsPage() {
           onExportPDF={exportPDF}
           onScan={openScan}
           onNew={openNewForm}
+          phoneScanAvailable={phoneScanner.available}
+          phoneConnected={phoneScanner.phoneConnected}
+          onPhoneScan={() => setPhoneModalOpen(true)}
         />
 
         {/* Buscar y filtrar sobre un catálogo vacío no puede dar otro
@@ -775,6 +822,19 @@ export default function ProductsPage() {
           src={zoomed.photo}
           title={zoomed.name}
           onClose={() => setZoomed(null)}
+        />
+      )}
+
+      {/* A nivel de página y no dentro del modal de escaneo: emparejado una
+          vez, se puede escanear desde el catálogo sin abrir nada, igual que
+          con un lector de mano. */}
+      {phoneModalOpen && (
+        <PhoneScannerModal
+          pairingId={phoneScanner.pairingId}
+          status={phoneScanner.status}
+          phoneConnected={phoneScanner.phoneConnected}
+          onReset={phoneScanner.reset}
+          onClose={() => setPhoneModalOpen(false)}
         />
       )}
 
