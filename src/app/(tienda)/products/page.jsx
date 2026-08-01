@@ -701,6 +701,7 @@ export default function ProductsPage() {
           onUse={openScannedForm}
           onManual={openManualForm}
           onEditExisting={openExistingFromScan}
+          onNotice={push}
         />
       )}
 

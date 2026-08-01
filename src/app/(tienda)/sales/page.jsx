@@ -269,6 +269,13 @@ export default function SalePageEnhanced() {
   const phoneScanner = usePhoneScannerLink({
     onScan: handleBarcodeScan,
     pairing: phoneModalOpen,
+    // Un minuto sin pasar nada: la cámara del teléfono ya se apagó sola, así
+    // que el modal del QR se cierra para no dejar en pantalla algo que ya no
+    // está funcionando, y se dice por qué.
+    onIdle: () => {
+      setPhoneModalOpen(false);
+      push("Se pausó el escaneo con el celular por inactividad", "info");
+    },
   });
 
   const handleSearchKeyDown = (e) => {

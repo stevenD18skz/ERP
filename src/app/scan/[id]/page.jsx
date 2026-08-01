@@ -8,6 +8,7 @@ import {
   Flashlight,
   FlashlightOff,
   Loader2,
+  Play,
   Smartphone,
   WifiOff,
 } from "lucide-react";
@@ -15,7 +16,7 @@ import {
 import CameraViewport from "@/components/ui/CameraViewport";
 import { useCameraScanner } from "@/hooks/useCameraScanner";
 import { usePhoneScannerClient } from "@/hooks/usePhoneScanner";
-import { rememberClientPairingId } from "@/lib/phoneScanner";
+import { IDLE_TIMEOUT_MS, rememberClientPairingId } from "@/lib/phoneScanner";
 
 /*
   El celular haciendo de lector para la pantalla del computador.
@@ -30,12 +31,34 @@ import { rememberClientPairingId } from "@/lib/phoneScanner";
   La página no busca el producto ni decide nada: eso pasa del otro lado, en la
   pantalla que ya tiene el catálogo cargado y la sesión abierta. Acá solo se
   lee y se manda, igual que haría un lector de mano.
+
+  La cámara no se queda encendida sola. Se apaga por dos caminos, y los dos
+  terminan en la misma pantalla de pausa con su botón para reanudar:
+  - Por su propio reloj, al pasar un minuto sin leer nada. Es un reloj de acá y
+    no un aviso del computador, para que funcione incluso si se cayó la
+    conexión: una cámara encendida y olvidada calienta el teléfono y se come la
+    carga en una tarde.
+  - Porque el computador avisó que ya terminó. En Productos alcanza con un
+    código: se lee, se trae la ficha y lo que sigue se revisa allá.
 */
 
 const STATUS_STYLES = {
   connected: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
   waiting: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
   broken: "bg-red-500/15 text-red-300 ring-red-500/30",
+};
+
+const PAUSE_COPY = {
+  idle: {
+    title: "Cámara en pausa",
+    detail:
+      "Pasó un minuto sin leer nada y se apagó para no gastar la batería del teléfono.",
+  },
+  done: {
+    title: "Código recibido",
+    detail:
+      "El computador ya lo tiene y el registro sigue allá. Puedes volver a escanear cuando lo necesites.",
+  },
 };
 
 export default function PhoneScannerPage() {
@@ -47,9 +70,18 @@ export default function PhoneScannerPage() {
   // decir si el código llegó de verdad, no solo que se leyó.
   const [lastSent, setLastSent] = useState(null);
   const [sentCount, setSentCount] = useState(0);
+  // null = escaneando. Con un motivo dentro = cámara apagada.
+  const [pause, setPause] = useState(null);
+  // Cambia con cada lectura y es lo que reinicia el reloj de inactividad.
+  const [lastScanAt, setLastScanAt] = useState(() => Date.now());
+
+  const handleRemoteStop = useCallback((reason) => {
+    setPause({ reason: reason === "idle" ? "idle" : "done" });
+  }, []);
 
   const { status, desktopConnected, sendCode } = usePhoneScannerClient({
     pairingId,
+    onStop: handleRemoteStop,
   });
 
   // Se recuerda el emparejamiento apenas se abre: la próxima vez basta entrar
@@ -60,6 +92,7 @@ export default function PhoneScannerPage() {
 
   const handleScan = useCallback(
     async (code) => {
+      setLastScanAt(Date.now());
       setLastSent({ code, state: "sending" });
       const ok = await sendCode(code);
       setLastSent({ code, state: ok ? "sent" : "failed" });
@@ -68,13 +101,26 @@ export default function PhoneScannerPage() {
     [sendCode],
   );
 
-  const camera = useCameraScanner({ active: true, onScan: handleScan });
+  const camera = useCameraScanner({ active: !pause, onScan: handleScan });
   const { torchOn, torchAvailable, toggleTorch } = camera;
+
+  // El reloj de inactividad. Se rearma con cada lectura porque lastScanAt
+  // cambia, así que el minuto cuenta desde el último código y no desde que se
+  // abrió la página.
+  useEffect(() => {
+    if (pause) return;
+    const timer = setTimeout(
+      () => setPause({ reason: "idle" }),
+      IDLE_TIMEOUT_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [pause, lastScanAt]);
 
   // Sin esto la pantalla se apaga sola a los treinta segundos y hay que
   // despertarla en cada producto, que es justo lo que este atajo venía a
-  // evitar. No todos los navegadores la traen; donde no esté, se sigue igual.
+  // evitar. Se suelta al pausar: con la cámara apagada no hay nada que mirar.
   useEffect(() => {
+    if (pause) return;
     let lock = null;
     let cancelled = false;
 
@@ -100,7 +146,13 @@ export default function PhoneScannerPage() {
       document.removeEventListener("visibilitychange", onVisibility);
       lock?.release().catch(() => {});
     };
-  }, []);
+  }, [pause]);
+
+  const resume = () => {
+    setPause(null);
+    setLastSent(null);
+    setLastScanAt(Date.now());
+  };
 
   const link =
     status === "error" || status === "unavailable"
@@ -137,7 +189,7 @@ export default function PhoneScannerPage() {
           <span className="truncate">{link.text}</span>
         </span>
 
-        {torchAvailable && (
+        {torchAvailable && !pause && (
           <button
             type="button"
             onClick={toggleTorch}
@@ -158,39 +210,84 @@ export default function PhoneScannerPage() {
         )}
       </div>
 
-      <CameraViewport
-        camera={camera}
-        errorHint="Sin cámara este teléfono no puede servir de lector. En el computador puedes seguir escribiendo el código a mano."
-        notice={
-          lastSent ? (
-            lastSent.state === "failed" ? (
-              <p className="flex animate-fade-slide-up items-center gap-2 rounded-full bg-red-500/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
-                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
-                No se pudo enviar {lastSent.code}
-              </p>
-            ) : lastSent.state === "sending" ? (
-              <p className="flex items-center gap-2 rounded-full bg-slate-800/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                Enviando {lastSent.code}
-              </p>
+      {pause ? (
+        /* La cámara está apagada de verdad acá (active=false), no solo tapada:
+           ese es el punto de toda esta pantalla. */
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <span
+            className={`flex h-14 w-14 items-center justify-center rounded-full ${
+              pause.reason === "done" ? "bg-emerald-500/15" : "bg-slate-800"
+            }`}
+          >
+            {pause.reason === "done" ? (
+              <Check className="h-7 w-7 text-emerald-400" aria-hidden />
             ) : (
-              <p className="flex animate-fade-slide-up items-center gap-2 rounded-full bg-emerald-500/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
-                <Check className="h-4 w-4 shrink-0" aria-hidden />
-                Enviado {lastSent.code}
-              </p>
-            )
-          ) : null
-        }
-      />
+              <Smartphone className="h-7 w-7 text-slate-400" aria-hidden />
+            )}
+          </span>
+          <p className="text-base font-bold text-white">
+            {PAUSE_COPY[pause.reason].title}
+          </p>
+          <p className="max-w-sm text-sm leading-relaxed text-slate-400">
+            {PAUSE_COPY[pause.reason].detail}
+          </p>
+          {sentCount > 0 && (
+            <p className="text-xs text-slate-500">
+              {sentCount}{" "}
+              {sentCount === 1 ? "código enviado" : "códigos enviados"} en esta
+              sesión
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={resume}
+            autoFocus
+            className="mt-2 flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-7 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <Play className="h-4 w-4" aria-hidden />
+            Volver a escanear
+          </button>
+        </div>
+      ) : (
+        <CameraViewport
+          camera={camera}
+          errorHint="Sin cámara este teléfono no puede servir de lector. En el computador puedes seguir escribiendo el código a mano."
+          notice={
+            lastSent ? (
+              lastSent.state === "failed" ? (
+                <p className="flex animate-fade-slide-up items-center gap-2 rounded-full bg-red-500/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
+                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+                  No se pudo enviar {lastSent.code}
+                </p>
+              ) : lastSent.state === "sending" ? (
+                <p className="flex items-center gap-2 rounded-full bg-slate-800/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
+                  <Loader2
+                    className="h-4 w-4 shrink-0 animate-spin"
+                    aria-hidden
+                  />
+                  Enviando {lastSent.code}
+                </p>
+              ) : (
+                <p className="flex animate-fade-slide-up items-center gap-2 rounded-full bg-emerald-500/95 px-4 py-2 text-sm font-bold text-white shadow-lg">
+                  <Check className="h-4 w-4 shrink-0" aria-hidden />
+                  Enviado {lastSent.code}
+                </p>
+              )
+            ) : null
+          }
+        />
+      )}
 
-      <div className="shrink-0 px-4 pb-5 pt-3 text-center">
-        <p className="flex items-center justify-center gap-1.5 text-xs leading-relaxed text-white/50">
-          <Smartphone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {sentCount > 0
-            ? `${sentCount} ${sentCount === 1 ? "código enviado" : "códigos enviados"} · sigue pasando productos`
-            : "Apunta al código de barras. Cada lectura entra en el computador."}
-        </p>
-      </div>
+      {!pause && (
+        <div className="shrink-0 px-4 pb-5 pt-3 text-center">
+          <p className="flex items-center justify-center gap-1.5 text-xs leading-relaxed text-white/50">
+            <Smartphone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {sentCount > 0
+              ? `${sentCount} ${sentCount === 1 ? "código enviado" : "códigos enviados"} · sigue pasando productos`
+              : "Apunta al código de barras. Cada lectura entra en el computador."}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

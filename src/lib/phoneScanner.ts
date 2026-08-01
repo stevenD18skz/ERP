@@ -37,6 +37,35 @@ const PAIRED_KEY = "boxes.phone-scanner.paired";
 export const SCAN_EVENT = "code";
 
 /*
+  El aviso que va en sentido contrario, del computador al celular: "ya puedes
+  apagar la cámara".
+
+  Hace falta porque el celular no tiene forma de saber solo cuándo terminó el
+  trabajo. En Productos basta un código -se lee, se trae la ficha y lo que
+  sigue es revisarla en el computador-, así que dejar la cámara encendida
+  después de eso es gastar batería por nada.
+*/
+export const STOP_EVENT = "stop";
+
+export type StopReason =
+  /** Se leyó lo que hacía falta; no hay nada más que escanear por ahora. */
+  | "done"
+  /** Pasó el rato de inactividad sin leer nada. */
+  | "idle";
+
+export type StopPayload = { reason: StopReason };
+
+/*
+  Cuánto se espera sin leer nada antes de apagar la cámara y cerrar el modal.
+
+  Los dos lados lo cuentan por su cuenta con este mismo número, en vez de que
+  uno le avise al otro: si se cae la conexión, el celular igual apaga la cámara
+  en vez de quedarse encendido hasta que alguien se acuerde. El aviso de arriba
+  es para el otro caso, el de "ya terminamos" que solo el computador sabe.
+*/
+export const IDLE_TIMEOUT_MS = 60_000;
+
+/*
   Si hay con qué armar el puente, mirando las variables de entorno y no el
   cliente ya construido.
 

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  IDLE_TIMEOUT_MS,
   SCAN_EVENT,
+  STOP_EVENT,
   channelName,
   getOrCreateHostPairingId,
   hasPairedPhone,
@@ -13,6 +15,8 @@ import {
   newScanId,
   resetHostPairingId,
   type ScanPayload,
+  type StopPayload,
+  type StopReason,
 } from "@/lib/phoneScanner";
 
 /*
@@ -59,6 +63,8 @@ type UseChannelOptions = {
   peerRole: "host" | "phone";
   enabled?: boolean;
   onScan?: (payload: ScanPayload) => void;
+  /** Solo lo usa el celular: el computador avisando que ya puede apagar. */
+  onStop?: (payload: StopPayload) => void;
 };
 
 function usePhoneScannerChannel({
@@ -67,6 +73,7 @@ function usePhoneScannerChannel({
   peerRole,
   enabled = true,
   onScan,
+  onStop,
 }: UseChannelOptions) {
   const [status, setStatus] = useState<LinkStatus>("connecting");
   const [peerPresent, setPeerPresent] = useState(false);
@@ -77,6 +84,8 @@ function usePhoneScannerChannel({
   // vez que la pantalla se redibuja.
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
+  const onStopRef = useRef(onStop);
+  onStopRef.current = onStop;
   // El último envío procesado. Broadcast puede entregar el mismo mensaje dos
   // veces al reconectar; el mismo CÓDIGO repetido sí es legítimo (dos unidades
   // del mismo producto), por eso se compara el id del envío y no el código.
@@ -129,6 +138,10 @@ function usePhoneScannerChannel({
         onScanRef.current?.(scan);
       });
 
+      channel.on("broadcast", { event: STOP_EVENT }, ({ payload }) => {
+        onStopRef.current?.(payload as StopPayload);
+      });
+
       const syncPeer = () => {
         if (channel) setPeerPresent(rolesInChannel(channel).has(peerRole));
       };
@@ -155,23 +168,25 @@ function usePhoneScannerChannel({
     };
   }, [pairingId, role, peerRole, enabled]);
 
-  const send = useCallback(async (code: string): Promise<boolean> => {
-    const channel = channelRef.current;
-    if (!channel) return false;
-    const payload: ScanPayload = { code, id: newScanId() };
-    try {
-      const result = await channel.send({
-        type: "broadcast",
-        event: SCAN_EVENT,
-        payload,
-      });
-      return result === "ok";
-    } catch {
-      return false;
-    }
-  }, []);
+  const emit = useCallback(
+    async (event: string, payload: unknown): Promise<boolean> => {
+      const channel = channelRef.current;
+      if (!channel) return false;
+      try {
+        const result = await channel.send({
+          type: "broadcast",
+          event,
+          payload,
+        });
+        return result === "ok";
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
 
-  return { status, peerPresent, send };
+  return { status, peerPresent, emit };
 }
 
 /*
@@ -194,7 +209,7 @@ export function usePhoneScannerHost({
     [onScan],
   );
 
-  const { status, peerPresent } = usePhoneScannerChannel({
+  const { status, peerPresent, emit } = usePhoneScannerChannel({
     pairingId,
     role: "host",
     peerRole: "phone",
@@ -202,7 +217,17 @@ export function usePhoneScannerHost({
     onScan: handleScan,
   });
 
-  return { status, phoneConnected: peerPresent };
+  // Apagar la cámara del celular desde acá. El teléfono no puede saber solo
+  // que el trabajo terminó: eso solo lo sabe la pantalla que recibió el código.
+  const stopPhone = useCallback(
+    (reason: StopReason) => {
+      const payload: StopPayload = { reason };
+      return emit(STOP_EVENT, payload);
+    },
+    [emit],
+  );
+
+  return { status, phoneConnected: peerPresent, stopPhone };
 }
 
 /*
@@ -218,10 +243,17 @@ export function usePhoneScannerHost({
 export function usePhoneScannerLink({
   onScan,
   pairing = false,
+  onIdle,
 }: {
   onScan: (code: string) => void;
   /** Si el modal del QR está abierto ahora mismo. */
   pairing?: boolean;
+  /**
+   * Se llama cuando pasa IDLE_TIMEOUT_MS con el celular conectado y sin leer
+   * nada. La cámara del teléfono ya se apagó por su cuenta para entonces; esto
+   * es para que la pantalla cierre el modal y lo diga.
+   */
+  onIdle?: () => void;
 }) {
   // Ambos arrancan apagados y se resuelven al montar: localStorage no existe
   // en el servidor, y el botón no debe aparecer en el HTML del servidor para
@@ -234,11 +266,59 @@ export function usePhoneScannerLink({
     setEverPaired(hasPairedPhone());
   }, []);
 
-  const { status, phoneConnected } = usePhoneScannerHost({
+  const onScanRef = useRef(onScan);
+  onScanRef.current = onScan;
+  const onIdleRef = useRef(onIdle);
+  onIdleRef.current = onIdle;
+  // stopPhone nace del hook de abajo, que a su vez necesita handleScan: se
+  // guarda en un ref para poder llamarlo desde el temporizador sin pelear con
+  // el orden en que se declaran.
+  const stopPhoneRef = useRef<((reason: StopReason) => unknown) | null>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearIdle = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = null;
+  }, []);
+
+  // Se rearma con cada lectura, así que el reloj cuenta desde el último código
+  // y no desde que se conectó el teléfono.
+  const armIdle = useCallback(() => {
+    clearIdle();
+    idleTimerRef.current = setTimeout(() => {
+      idleTimerRef.current = null;
+      // El celular ya se apagó solo con su propio reloj; este aviso es el
+      // respaldo para cuando el suyo no llegó a correr.
+      stopPhoneRef.current?.("idle");
+      onIdleRef.current?.();
+    }, IDLE_TIMEOUT_MS);
+  }, [clearIdle]);
+
+  const handleScan = useCallback(
+    (code: string) => {
+      armIdle();
+      onScanRef.current(code);
+    },
+    [armIdle],
+  );
+
+  const { status, phoneConnected, stopPhone } = usePhoneScannerHost({
     pairingId,
     enabled: pairing || everPaired,
-    onScan,
+    onScan: handleScan,
   });
+  stopPhoneRef.current = stopPhone;
+
+  // El reloj solo corre mientras hay un celular del otro lado: sin nadie
+  // conectado no hay cámara que apagar ni modal que cerrar.
+  useEffect(() => {
+    if (!phoneConnected) {
+      clearIdle();
+      return;
+    }
+    armIdle();
+    return clearIdle;
+  }, [phoneConnected, armIdle, clearIdle]);
 
   // La primera vez que se ve un celular del otro lado queda anotado, para que
   // a partir de la próxima carga el canal se abra solo.
@@ -258,6 +338,12 @@ export function usePhoneScannerLink({
     status,
     phoneConnected,
     reset,
+    /**
+     * Apaga la cámara del celular. Lo usa Productos apenas entra un código:
+     * ahí un escaneo es todo el trabajo, y lo que sigue es revisar la ficha en
+     * el computador.
+     */
+    stopPhone,
     /** Si tiene sentido ofrecer el atajo en esta pantalla. */
     available: pairingId !== null && isPhoneScannerConfigured,
   };
@@ -267,16 +353,30 @@ export function usePhoneScannerLink({
 export function usePhoneScannerClient({
   pairingId,
   enabled = true,
+  onStop,
 }: {
   pairingId: string | null;
   enabled?: boolean;
+  /** El computador avisa que ya se puede apagar la cámara. */
+  onStop?: (reason: StopReason) => void;
 }) {
-  const { status, peerPresent, send } = usePhoneScannerChannel({
+  const handleStop = useCallback(
+    (payload: StopPayload) => onStop?.(payload?.reason ?? "done"),
+    [onStop],
+  );
+
+  const { status, peerPresent, emit } = usePhoneScannerChannel({
     pairingId,
     role: "phone",
     peerRole: "host",
     enabled,
+    onStop: handleStop,
   });
 
-  return { status, desktopConnected: peerPresent, sendCode: send };
+  const sendCode = useCallback(
+    (code: string) => emit(SCAN_EVENT, { code, id: newScanId() } as ScanPayload),
+    [emit],
+  );
+
+  return { status, desktopConnected: peerPresent, sendCode };
 }

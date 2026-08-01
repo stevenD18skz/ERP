@@ -68,6 +68,8 @@ export default function BarcodeScanModal({
   onManual,
   onEditExisting,
   findByBarcode,
+  /** Toast de la página de Productos, para avisos que no caben en el modal. */
+  onNotice,
 }) {
   const [code, setCode] = useState("");
   const [state, setState] = useState({ status: "idle" });
@@ -118,13 +120,28 @@ export default function BarcodeScanModal({
   const { scanning } = useBarcodeScanner({ onScan: run, enabled: !cameraOpen });
 
   // El celular emparejado entra por run() igual que el lector: revisa
-  // duplicados y sale a consultar la ficha. Acá no es continuo -cada código
-  // trae una ficha que hay que mirar- así que el teléfono manda de a uno y
-  // esta pantalla se queda con el último.
+  // duplicados y sale a consultar la ficha.
+  //
+  // Acá un código es todo el trabajo, a diferencia de Ventas donde se pasa
+  // mercancía sin parar. Apenas entra uno se cierra el QR y se le dice al
+  // teléfono que apague la cámara: lo que sigue es mirar la ficha en el
+  // computador, y el celular ya no pinta nada.
   const phoneScanner = usePhoneScannerLink({
-    onScan: run,
+    onScan: (code) => {
+      setPhoneModalOpen(false);
+      phoneScannerRef.current?.stopPhone("done");
+      run(code);
+    },
     pairing: phoneModalOpen,
+    onIdle: () => {
+      setPhoneModalOpen(false);
+      onNotice?.("Se pausó el escaneo con el celular por inactividad", "info");
+    },
   });
+  // El propio objeto que devuelve el hook, para poder usar stopPhone desde el
+  // onScan que se le pasa a ese mismo hook.
+  const phoneScannerRef = useRef(null);
+  phoneScannerRef.current = phoneScanner;
 
   const handleKeyDown = (e) => {
     // useBarcodeScanner ya resolvió este Enter en fase de captura y lo canceló.
