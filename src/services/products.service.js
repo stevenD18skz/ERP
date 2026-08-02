@@ -128,12 +128,15 @@ export const PHOTO_ALLOWED_TYPES = [
 ];
 export const PHOTO_REQUIREMENTS_LABEL = "JPEG, PNG, WEBP o GIF · máximo 5MB";
 
-function validatePhotoFile(file) {
+function validatePhotoType(file) {
   if (!PHOTO_ALLOWED_TYPES.includes(file.type)) {
     throw new Error(
       `Ese archivo es ${file.type || "de un tipo no reconocido"}. La foto debe ser JPEG, PNG, WEBP o GIF.`,
     );
   }
+}
+
+function validatePhotoSize(file) {
   if (file.size > PHOTO_MAX_BYTES) {
     const mb = (file.size / (1024 * 1024)).toFixed(1);
     throw new Error(
@@ -142,12 +145,36 @@ function validatePhotoFile(file) {
   }
 }
 
+// Las fotos de celular suelen venir de 12+ megapíxeles (4-6MB) cuando para
+// verse bien en la lista y en Ventas alcanza con mucho menos, así que se
+// reducen acá antes de que el archivo viaje a ningún lado. Los GIF se dejan
+// intactos porque comprimirlos por canvas los aplana a una sola imagen fija
+// (pierden la animación). Si la compresión falla por algo (navegador viejo,
+// formato raro), se sigue con el archivo original y es la validación de
+// tamaño la que decide si pasa o no.
+async function compressPhotoFile(file) {
+  if (file.type === "image/gif") return file;
+  try {
+    const imageCompression = (await import("browser-image-compression"))
+      .default;
+    return await imageCompression(file, {
+      maxWidthOrHeight: 1600,
+      initialQuality: 0.8,
+      useWebWorker: true,
+    });
+  } catch {
+    return file;
+  }
+}
+
 // Sube la foto que la tienda toma o elige (no la del catálogo público, esa ya
 // llega como URL) y devuelve dónde quedó guardada. No pasa por apiFetch
 // porque ese fuerza Content-Type: application/json; con FormData hay que
 // dejar que el navegador ponga su propio boundary de multipart.
 export const uploadProductPhoto = async (file) => {
-  validatePhotoFile(file);
+  validatePhotoType(file);
+  const photo = await compressPhotoFile(file);
+  validatePhotoSize(photo);
 
   if (isSimulationOn()) {
     // Sin backend a mano: se guarda tal cual como URL de datos, igual que
@@ -157,12 +184,12 @@ export const uploadProductPhoto = async (file) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
       reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(photo);
     });
   }
 
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", photo, file.name);
 
   let res;
   try {
