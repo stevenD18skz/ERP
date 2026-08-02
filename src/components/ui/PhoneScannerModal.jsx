@@ -60,8 +60,7 @@ export default function PhoneScannerModal({
     if (phoneConnected && !wasConnectedRef.current) {
       wasConnectedRef.current = true;
       onConnected?.();
-      const timer = setTimeout(onClose, 900);
-      return () => clearTimeout(timer);
+      onClose();
     }
     wasConnectedRef.current = phoneConnected;
   }, [phoneConnected, onConnected, onClose]);
