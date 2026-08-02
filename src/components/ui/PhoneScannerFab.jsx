@@ -25,7 +25,10 @@ export default function PhoneScannerFab({ phoneConnected, onClick }) {
           ? "Celular conectado: ya puedes escanear con él"
           : "Vincular el celular como lector"
       }
-      className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-105 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      className={`fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${phoneConnected
+          ? 'bg-green-600 shadow-lg shadow-green-600/30 hover:bg-green-700 focus-visible:ring-green-500'
+          : 'bg-blue-600 shadow-lg shadow-blue-600/30 hover:bg-blue-700 focus-visible:ring-blue-500'
+        } hover:scale-105 text-white`}
     >
       <Smartphone className="h-6 w-6" aria-hidden />
       {phoneConnected && (
