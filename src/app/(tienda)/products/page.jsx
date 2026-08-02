@@ -101,6 +101,7 @@ export default function ProductsPage() {
     loading,
     refreshing,
     productsError,
+    lastUpdated,
     setProducts,
     refresh,
     refreshTaxonomies,
@@ -643,6 +644,7 @@ export default function ProductsPage() {
         <ProductsHeader
           loading={refreshing}
           canExport={filtered.length > 0}
+          lastUpdated={lastUpdated}
           onRefresh={refresh}
           onImport={() => setImportOpen(true)}
           onExportCSV={exportCSV}

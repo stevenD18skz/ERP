@@ -29,28 +29,18 @@ const menuItems = [
 // El logo, el nombre y el botón de colapsar viven en el TopBar; este
 // componente solo resuelve la navegación entre secciones.
 //
-// La misma barra sirve para los dos tamaños, pero se comporta distinto y el
-// reparto es a propósito:
-//  - `isExpanded` solo manda de `md` para arriba, donde la barra siempre está y
-//    lo único que cambia es si se ven las etiquetas o solo los iconos.
-//  - `mobileOpen` solo manda por debajo de `md`, donde la barra entra y sale
-//    deslizándose por encima de la página, siempre con las etiquetas visibles
-//    (un cajón que tapa media pantalla para mostrar seis iconos sueltos no le
-//    sirve a nadie).
-//
-// El estado se decide con clases y no en JavaScript para que no haya un salto
-// al hidratar ni que un `resize` deje la barra pintada del tamaño equivocado.
-const SideBar = ({ isExpanded, mobileOpen = false, onNavigate }) => {
+// Solo existe de `md` para arriba: la barra siempre está y lo único que
+// cambia es si se ven las etiquetas o solo los iconos (`isExpanded`). Por
+// debajo de `md` la navegación es BottomNav, no esta barra -avoid-mixed-
+// patterns, adaptive-navigation-.
+const SideBar = ({ isExpanded }) => {
   const router = useRouter();
   const pathname = usePathname();
   const { active: isSimulating } = useSimulation();
   const { tienda, logout } = useSession();
 
-  // En móvil el cajón tapa la pantalla, así que tiene que cerrarse solo apenas
-  // lleva a alguna parte; en escritorio `onNavigate` no cambia nada.
   const go = (path) => {
     router.push(path);
-    onNavigate?.();
   };
 
   // Igual que en useSimulation.ts: se recarga la página a propósito para que
@@ -64,7 +54,6 @@ const SideBar = ({ isExpanded, mobileOpen = false, onNavigate }) => {
   // real, cerrarla en el servidor (logout ya redirige a /login); si es
   // simulación, apagarla en la pestaña y volver al inicio.
   const handleExit = () => {
-    onNavigate?.();
     if (tienda) {
       logout();
       return;
@@ -75,14 +64,9 @@ const SideBar = ({ isExpanded, mobileOpen = false, onNavigate }) => {
 
   return (
     <aside
-      // `visibility` va en la transición junto con `transform` para que al
-      // cerrar el cajón termine de salir antes de desaparecer. Sin eso se corta
-      // la animación a la mitad; y sin `invisible`, los enlaces de un cajón
-      // cerrado siguen recibiendo el tabulador y el lector de pantalla aunque
-      // estén fuera de la vista.
-      className={`fixed left-0 top-16 z-40 flex h-[calc(100dvh-4rem)] w-48 flex-col border-r border-slate-200 bg-white shadow-xl transition-[transform,width,visibility] duration-300 motion-reduce:transition-none md:visible md:translate-x-0 md:shadow-sm ${
-        mobileOpen ? "visible translate-x-0" : "invisible -translate-x-full"
-      } ${isExpanded ? "md:w-48" : "md:w-16"}`}
+      className={`fixed left-0 top-16 z-30 hidden h-[calc(100dvh-4rem)] w-48 flex-col border-r border-slate-200 bg-white shadow-sm transition-[width] duration-300 md:flex ${
+        isExpanded ? "md:w-48" : "md:w-16"
+      }`}
       aria-label="Navegación principal"
     >
       <nav

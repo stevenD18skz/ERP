@@ -3,16 +3,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu } from "lucide-react";
 import SimulationChip from "@/components/simulation/SimulationChip";
 import { useSession } from "@/hooks/useSession";
 
-const TopBar = ({
-  sidebarExpanded,
-  onToggleSidebar,
-  mobileOpen,
-  onToggleMobile,
-}) => {
+const TopBar = ({ sidebarExpanded, onToggleSidebar }) => {
   const router = useRouter();
   // useSession ya se encarga de no mostrar la sesión cacheada hasta montar
   // (ver useIsClient), así que tienda es seguro de pintar directo: coincide
@@ -46,26 +41,8 @@ const TopBar = ({
   return (
     <header className="sticky top-0 z-40 h-16 border-b border-slate-200 bg-white">
       <div className="flex h-full items-center gap-3 px-4 md:px-6">
-        {/* Izquierda: menú + marca. Son dos botones y no uno porque en cada
-            tamaño el menú hace algo distinto, y decirlo con clases en vez de
-            preguntarle el ancho a JavaScript deja bien el aria-label sin
-            arriesgar un desajuste al hidratar. */}
-
-        {/* Móvil: abre y cierra el cajón que va por encima de la página. */}
-        <button
-          onClick={onToggleMobile}
-          aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={Boolean(mobileOpen)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 md:hidden"
-        >
-          {mobileOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </button>
-
-        {/* Escritorio: la barra siempre está, solo cambia de ancho. */}
+        {/* Solo en escritorio: en móvil la navegación es BottomNav, no un
+            cajón que colapsar, así que no hace falta el botón de menú ahí. */}
         <button
           onClick={onToggleSidebar}
           aria-label={sidebarExpanded ? "Colapsar menú" : "Expandir menú"}

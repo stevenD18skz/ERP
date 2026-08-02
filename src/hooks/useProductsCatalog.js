@@ -14,6 +14,7 @@
 // `revalidateIfStale/OnFocus/OnReconnect: false` es lo que apaga esas
 // revalidaciones automáticas; `shouldRetryOnError: false` evita que un error
 // (por ejemplo la sesión vencida) dispare reintentos solos en cadena.
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useIsClient } from "@/hooks/useIsClient";
 import {
@@ -49,13 +50,29 @@ export function useProductsCatalog() {
     swrOptions,
   );
 
+  // Hora de la última vez que el catálogo trajo datos frescos de verdad: se
+  // pone sola en la primera carga y de nuevo cada vez que "Actualizar"
+  // termina. No se mueve con una edición optimista (setProducts) ni con
+  // refreshTaxonomies, que no traen productos nuevos, así que el texto del
+  // botón dice siempre la verdad sobre cuándo se consultó el catálogo.
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  useEffect(() => {
+    if (isClient && !productsSWR.isLoading && productsSWR.data && !lastUpdated) {
+      setLastUpdated(new Date());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isClient, productsSWR.isLoading, productsSWR.data]);
+
   // Fuerza a volver a pedir las tres cosas (botón "Actualizar").
-  const refresh = () =>
-    Promise.all([
+  const refresh = async () => {
+    await Promise.all([
       productsSWR.mutate(),
       categoriesSWR.mutate(),
       brandsSWR.mutate(),
     ]);
+    setLastUpdated(new Date());
+  };
 
   // Solo categorías y marcas: se usa después de crear/editar un producto o
   // importar un CSV, que es lo único que puede haber agregado una categoría o
@@ -75,6 +92,7 @@ export function useProductsCatalog() {
     // revalidación: para el ícono del botón "Actualizar".
     refreshing: productsSWR.isValidating,
     productsError: productsSWR.error,
+    lastUpdated,
     // Actualiza el catálogo en memoria sin pedirle nada a Supabase (updates
     // optimistas, o pintar la respuesta real después de guardar). Mismo uso
     // que un setState: acepta el valor nuevo o una función (lista actual) =>

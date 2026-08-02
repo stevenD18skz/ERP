@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Clock,
   Download,
   PlusCircle,
   Printer,
@@ -12,12 +13,16 @@ import {
 const ACTION_CLASS =
   "flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60";
 
+const formatUpdatedAt = (date) =>
+  date.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
 // Título + fila de acciones del catálogo. Exportar e imprimir se apagan cuando
 // no hay nada filtrado en pantalla: trabajan sobre lo que se está viendo, no
 // sobre todo el catálogo.
 export default function ProductsHeader({
   loading,
   canExport,
+  lastUpdated,
   onRefresh,
   onImport,
   onExportCSV,
@@ -27,10 +32,19 @@ export default function ProductsHeader({
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">
-        Tabla con todos los productos
-      </h2>
-
+      <div>
+        <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">
+          Tabla con todos los productos
+        </h2>
+        {/* Solo aparece cuando ya hubo una carga real: nada que decir sobre
+            "última actualización" antes de que exista una. */}
+        {lastUpdated && (
+          <p className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Última actualización: {formatUpdatedAt(lastUpdated)}
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
         <button onClick={onRefresh} disabled={loading} className={ACTION_CLASS}>
