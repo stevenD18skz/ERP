@@ -23,6 +23,7 @@ import CameraScannerModal from "@/components/ui/CameraScannerModal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import ImageViewer from "@/components/ui/ImageViewer";
 import Pagination from "@/components/ui/Pagination";
+import PhoneScannerFab from "@/components/ui/PhoneScannerFab";
 import ToastStack from "@/components/ui/ToastStack";
 import BarcodeScanModal from "@/components/products/BarcodeScanModal";
 import ImportModal from "@/components/products/ImportModal";
@@ -426,6 +427,12 @@ export default function ProductsPage() {
   // se guarda en un ref para no pelear con el orden de las declaraciones.
   const stopPhoneRef = useRef(null);
 
+  // Cuando el formulario (Nuevo/Editar producto) está abierto, ProductForm
+  // deja acá su propio handleScan: un código que llega del celular se mete en
+  // el campo del formulario y dispara su búsqueda, en vez de abrir un
+  // formulario nuevo por encima. Null mientras el formulario está cerrado.
+  const formScanHandlerRef = useRef(null);
+
   // Con un formulario abierto ya no hay nada que escanear: lo que sigue es
   // revisar la ficha en el computador. Se le dice al celular que apague la
   // cámara -queda emparejado, solo en pausa, con su botón para volver- en vez
@@ -525,13 +532,28 @@ export default function ProductsPage() {
   // para mirar existencias-, y si no lo es, consulta la ficha y abre el
   // formulario, momento en el que restPhone() manda a descansar la cámara.
   //
-  // Apagado mientras haya un modal abierto, por el mismo motivo que el lector
-  // de teclado: el modal de escaneo trae su propio puente y dos escuchando el
-  // mismo canal procesarían el código dos veces.
+  // Con el formulario abierto el código no pasa por handleGlobalScan -eso
+  // abriría un formulario nuevo encima del que ya está abierto-, sino que se
+  // le entrega al propio ProductForm por formScanHandlerRef, igual que ya
+  // hace con el lector de teclado: se mete en su campo de código y dispara su
+  // búsqueda.
+  //
+  // Apagado mientras haya OTRO modal abierto (escaneo, importar...), por el
+  // mismo motivo que el lector de teclado: cada uno trae su propio puente y
+  // dos escuchando el mismo canal procesarían el código dos veces. El
+  // formulario es la excepción: se queda encendido para poder escanear
+  // directo sobre él sin perder el emparejamiento.
   const phoneScanner = usePhoneScannerLink({
-    onScan: handleGlobalScan,
+    onScan: (code) => {
+      if (showForm) {
+        formScanHandlerRef.current?.(code);
+        restPhone();
+        return;
+      }
+      handleGlobalScan(code);
+    },
     pairing: phoneModalOpen,
-    active: noModalOpen || phoneModalOpen,
+    active: noModalOpen || phoneModalOpen || showForm,
     onIdle: () => {
       setPhoneModalOpen(false);
       push("Se pausó el escaneo con el celular por inactividad", "info");
@@ -627,9 +649,6 @@ export default function ProductsPage() {
           onExportPDF={exportPDF}
           onScan={openScan}
           onNew={openNewForm}
-          phoneScanAvailable={phoneScanner.available}
-          phoneConnected={phoneScanner.phoneConnected}
-          onPhoneScan={() => setPhoneModalOpen(true)}
         />
 
         {/* Buscar y filtrar sobre un catálogo vacío no puede dar otro
@@ -772,6 +791,7 @@ export default function ProductsPage() {
           skuOwner={skuOwner}
           categories={categories}
           brands={brands}
+          phoneScanRef={formScanHandlerRef}
           onClose={closeForm}
           onSave={async (p) => {
             await handleSave(p);
@@ -835,6 +855,17 @@ export default function ProductsPage() {
           phoneConnected={phoneScanner.phoneConnected}
           onReset={phoneScanner.reset}
           onClose={() => setPhoneModalOpen(false)}
+          onConnected={() => push("Celular vinculado correctamente", "success")}
+        />
+      )}
+
+      {/* Botón flotante y no en la cabecera: es un atajo de emparejar, no una
+          acción del catálogo. En celular no tiene sentido -el aparato ya está
+          en la mano de quien escanea, no hay a quién vincular-. */}
+      {phoneScanner.available && !isMobileDevice && (
+        <PhoneScannerFab
+          phoneConnected={phoneScanner.phoneConnected}
+          onClick={() => setPhoneModalOpen(true)}
         />
       )}
 

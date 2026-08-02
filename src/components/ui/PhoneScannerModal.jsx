@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { AlertTriangle, Check, Loader2, Unlink, X } from "lucide-react";
 
@@ -30,6 +30,10 @@ export default function PhoneScannerModal({
   phoneConnected,
   onReset,
   onClose,
+  /** Se llama una sola vez, justo cuando el celular pasa de desconectado a
+   *  conectado mientras el modal está abierto (no si ya estaba conectado al
+   *  abrirlo). Pensado para que quien lo use dispare un toast. */
+  onConnected,
 }) {
   // window no existe en el servidor. El modal solo se monta tras un clic, pero
   // se arma la dirección después del montaje para no depender de eso.
@@ -45,6 +49,22 @@ export default function PhoneScannerModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Ya cumplió su propósito: una vez el celular queda del otro lado no hay
+  // nada más que emparejar, así que se avisa y se cierra solo. El ref (y no un
+  // useState) es porque esto es "ya pasó una vez", no algo que deba redibujar
+  // nada. No dispara si el modal se abre con el celular ya conectado -por
+  // ejemplo, para desvincularlo-, solo en la transición de verdad.
+  const wasConnectedRef = useRef(phoneConnected);
+  useEffect(() => {
+    if (phoneConnected && !wasConnectedRef.current) {
+      wasConnectedRef.current = true;
+      onConnected?.();
+      const timer = setTimeout(onClose, 900);
+      return () => clearTimeout(timer);
+    }
+    wasConnectedRef.current = phoneConnected;
+  }, [phoneConnected, onConnected, onClose]);
 
   const unavailable = status === "unavailable";
 

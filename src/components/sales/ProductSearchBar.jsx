@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ScanLine, Search, Smartphone } from "lucide-react";
+import { Camera, ScanLine, Search } from "lucide-react";
 import { currency } from "@/utils/converts";
 
 /*
@@ -19,9 +19,6 @@ export default function ProductSearchBar({
   scanning,
   cameraAvailable = false,
   onOpenCamera,
-  phoneAvailable = false,
-  phoneConnected = false,
-  onOpenPhone,
 }) {
   return (
     <div className="relative rounded-xl bg-white p-3.5 shadow-sm ring-1 ring-slate-100">
@@ -62,36 +59,6 @@ export default function ProductSearchBar({
               className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-teal-200 bg-teal-50 text-teal-700 transition-colors hover:bg-teal-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             >
               <Camera className="h-[18px] w-[18px]" aria-hidden />
-            </button>
-          )}
-
-          {/* El complemento del anterior, y justo para el caso contrario: el
-              computador del mostrador, que no tiene con qué leer. El celular
-              hace de lector y los códigos entran acá. El punto verde dice que
-              ya hay un teléfono escuchando y que basta con levantarlo. */}
-          {phoneAvailable && (
-            <button
-              type="button"
-              onClick={onOpenPhone}
-              aria-label={
-                phoneConnected
-                  ? "Escanear con el celular (hay uno conectado)"
-                  : "Escanear con el celular"
-              }
-              title={
-                phoneConnected
-                  ? "Celular conectado: ya puedes escanear con él"
-                  : "Escanear con el celular"
-              }
-              className="relative flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-            >
-              <Smartphone className="h-[18px] w-[18px]" aria-hidden />
-              {phoneConnected && (
-                <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-              )}
             </button>
           )}
         </div>

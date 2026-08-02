@@ -479,6 +479,9 @@ export default function BarcodeScanModal({
         phoneConnected={phoneScanner.phoneConnected}
         onReset={phoneScanner.reset}
         onClose={() => setPhoneModalOpen(false)}
+        onConnected={() =>
+          onNotice?.("Celular vinculado correctamente", "success")
+        }
       />
     )}
 

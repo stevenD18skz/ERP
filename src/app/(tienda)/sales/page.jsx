@@ -14,10 +14,12 @@ import {
 import { openPrintWindow } from "@/utils/print";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
+import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { usePhoneScannerLink } from "@/hooks/usePhoneScanner";
 import { useToasts } from "@/hooks/useToasts";
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
+import PhoneScannerFab from "@/components/ui/PhoneScannerFab";
 import ToastStack from "@/components/ui/ToastStack";
 import CartLines from "@/components/sales/CartLines";
 import DailyCloseMode from "@/components/sales/DailyCloseMode";
@@ -105,6 +107,9 @@ export default function SalePageEnhanced() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const cameraAvailable = useCameraScannerAvailable();
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  // El botón para vincular el celular no tiene sentido en el propio celular:
+  // ahí el aparato ya es el lector, no hay a quién emparejar.
+  const isMobileDevice = useIsMobileDevice();
 
   // descuento por línea
   const [discountEditingKey, setDiscountEditingKey] = useState(null);
@@ -576,9 +581,6 @@ export default function SalePageEnhanced() {
               scanning={barcodeScanning}
               cameraAvailable={cameraAvailable}
               onOpenCamera={() => setCameraOpen(true)}
-              phoneAvailable={phoneScanner.available}
-              phoneConnected={phoneScanner.phoneConnected}
-              onOpenPhone={() => setPhoneModalOpen(true)}
             />
 
             <CartLines
@@ -663,6 +665,17 @@ export default function SalePageEnhanced() {
           phoneConnected={phoneScanner.phoneConnected}
           onReset={phoneScanner.reset}
           onClose={() => setPhoneModalOpen(false)}
+          onConnected={() => push("Celular vinculado correctamente", "success")}
+        />
+      )}
+
+      {/* Botón flotante y no en la barra de búsqueda: es un atajo de
+          emparejar, no algo que se toque venta a venta. En celular no
+          aparece -el aparato ya está en la mano de quien escanea-. */}
+      {phoneScanner.available && !isMobileDevice && (
+        <PhoneScannerFab
+          phoneConnected={phoneScanner.phoneConnected}
+          onClick={() => setPhoneModalOpen(true)}
         />
       )}
 

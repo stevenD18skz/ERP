@@ -76,6 +76,10 @@ export default function ProductForm({
   skuOwner = () => null,
   categories = [],
   brands = [],
+  /** Ref donde este formulario deja su handleScan mientras está montado, para
+   *  que la página le pueda entregar un código leído por el celular
+   *  emparejado -el mismo camino que ya usa el lector de teclado. */
+  phoneScanRef = null,
   onClose,
   onSave,
 }) {
@@ -254,6 +258,20 @@ export default function ProductForm({
         key && key !== "barcode" ? { key, value: form[key] ?? "" } : null;
     },
     enabled: !photoOpen && !cameraOpen,
+  });
+
+  // El celular emparejado no llega por teclado sino por el canal de la
+  // página, así que no lo agarra useBarcodeScanner de arriba. Se deja
+  // handleScan disponible en el ref mientras el formulario está montado y la
+  // página lo llama con el código que reciba; se limpia al desmontar para que
+  // un escaneo que llegue justo después de cerrar el formulario no encuentre
+  // un handleScan de un formulario que ya no está.
+  useEffect(() => {
+    if (!phoneScanRef) return;
+    phoneScanRef.current = handleScan;
+    return () => {
+      phoneScanRef.current = null;
+    };
   });
 
   const onPhotoChange = async (e) => {
