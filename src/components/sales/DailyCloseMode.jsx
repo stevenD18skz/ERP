@@ -14,7 +14,6 @@ import {
   TrendingUp,
   Receipt,
   Package,
-  Info,
   Loader2,
   ChevronLeft,
   ChevronRight,
