@@ -165,14 +165,8 @@ export default function DailyCloseMode({ onNotify }) {
 
   return (
     <div className="space-y-4 min-h-screen">
-      <div className="flex gap-3 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900 ring-1 ring-blue-100">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-        <p>
-          Este modo anota <strong>un solo total al cerrar el día</strong>, como se
-          venía llevando en el Excel. Sirve cuando no alcanzaste a registrar venta
-          por venta. La ganancia se calcula al 19% de la venta y se puede corregir.
-        </p>
-      </div>
+
+
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Formulario */}
