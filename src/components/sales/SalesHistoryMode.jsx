@@ -98,7 +98,7 @@ export default function SalesHistoryMode({ sales, loading, onVoid }) {
   const toggleDetail = (id) => setExpandedId((prev) => (prev === id ? null : id));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-h-screen">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Vendido" value={currency(totals.vendido)} tone="teal" />
         <Stat label="Ganancia" value={currency(totals.ganancia)} tone="emerald" />

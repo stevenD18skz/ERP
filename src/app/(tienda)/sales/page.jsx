@@ -567,7 +567,7 @@ export default function SalePageEnhanced() {
           onVoid={requestVoid}
         />
       ) : (
-        <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <div className="mx-auto min-h-screen grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* MAIN */}
           <div className="flex flex-col gap-4 lg:col-span-3">
             <ProductSearchBar

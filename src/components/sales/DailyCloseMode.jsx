@@ -164,7 +164,7 @@ export default function DailyCloseMode({ onNotify }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-h-screen">
       <div className="flex gap-3 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900 ring-1 ring-blue-100">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
         <p>
