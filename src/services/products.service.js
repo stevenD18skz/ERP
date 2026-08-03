@@ -115,6 +115,56 @@ export const getBrands = async () => {
   }));
 };
 
+// Renombrar una categoría/marca desde el select del formulario (el lápiz
+// junto a cada opción). En simulación no hay tabla propia -son las mismas que
+// deriveFromProducts saca de los productos-, así que "renombrar" es reescribir
+// el campo en cada producto que la tenía; option.id sigue en null y no sirve
+// para identificarla, por eso se busca por el nombre de antes.
+const renameByField = async (field, path, mapRow, option, name) => {
+  const nextName = String(name ?? "").trim();
+  if (isSimulationOn()) {
+    const oldKey = String(option.name ?? "").trim().toLowerCase();
+    for (const product of all()) {
+      if (String(product[field] ?? "").trim().toLowerCase() === oldKey) {
+        product[field] = nextName;
+      }
+    }
+    commit("products");
+    return { id: option.id, name: nextName, product_count: option.product_count };
+  }
+  const { data } = await apiFetch(`${path}/${option.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name: nextName }),
+  });
+  return mapRow(data);
+};
+
+export const renameCategory = (option, name) =>
+  renameByField(
+    "category",
+    "/api/products/categories",
+    (row) => ({
+      id: row.category_id,
+      name: row.category,
+      product_count: row.product_count,
+    }),
+    option,
+    name,
+  );
+
+export const renameBrand = (option, name) =>
+  renameByField(
+    "brand",
+    "/api/products/brands",
+    (row) => ({
+      id: row.brand_id,
+      name: row.brand,
+      product_count: row.product_count,
+    }),
+    option,
+    name,
+  );
+
 // Mismas reglas que valida el servidor (src/app/api/products/photo/route.ts).
 // Se repiten acá para poder avisar al instante, sin esperar la subida, y
 // para poder mostrarlas como ayuda fija en el formulario.

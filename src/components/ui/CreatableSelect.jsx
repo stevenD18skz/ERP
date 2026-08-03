@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Pencil, Plus, X } from "lucide-react";
 
 // Select con creación, del estilo del de Notion: se abre, se elige de la lista
 // o se escribe. Mientras se escribe algo que todavía no existe, arriba de la
@@ -29,10 +29,19 @@ export default function CreatableSelect({
   createHint,
   disabled = false,
   className = "",
+  /** Cuando se pasa, cada opción de la lista muestra un lápiz para
+   *  renombrarla sin abandonar el select. Firma: (option, nextName) =>
+   *  Promise<{ id, name }>. Si tira, el error se muestra junto al campo de
+   *  edición y la fila se queda abierta para reintentar. */
+  onRename,
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [highlight, setHighlight] = useState(0);
+  // Fila que se está renombrando ahora mismo, o null. `key` identifica la
+  // fila (id si existe, si no el nombre de antes de tocarla) para saber cuál
+  // pintar en modo edición aunque la lista se reordene por debajo.
+  const [renaming, setRenaming] = useState(null);
 
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
@@ -103,6 +112,7 @@ export default function CreatableSelect({
   const close = () => {
     setOpen(false);
     setText("");
+    setRenaming(null);
   };
 
   const choose = (row) => {
@@ -118,6 +128,54 @@ export default function CreatableSelect({
   const clear = () => {
     onChange(null);
     close();
+  };
+
+  const startRename = (event, option) => {
+    // No es la fila la que se está eligiendo: si el clic llegara al botón de
+    // la opción, elegiría esa categoría/marca en vez de abrir su edición.
+    event.preventDefault();
+    event.stopPropagation();
+    setRenaming({
+      key: option.id ?? option.name,
+      option,
+      text: option.name,
+      saving: false,
+      error: null,
+    });
+  };
+
+  const submitRename = async () => {
+    if (!renaming || renaming.saving) return;
+    const nextName = renaming.text.trim();
+    if (!nextName) {
+      setRenaming((r) => (r ? { ...r, error: "No puede quedar vacío" } : r));
+      return;
+    }
+    if (norm(nextName) === norm(renaming.option.name)) {
+      setRenaming(null);
+      return;
+    }
+    setRenaming((r) => (r ? { ...r, saving: true, error: null } : r));
+    try {
+      // Si lo que se está renombrando es justo lo elegido, el campo tiene que
+      // mostrar el nombre nuevo apenas se guarda y no el viejo hasta que
+      // vuelva a abrirse el select.
+      const wasSelected = norm(selectedName) === norm(renaming.option.name);
+      const updated = await onRename(renaming.option, nextName);
+      if (wasSelected) {
+        onChange({
+          id: updated?.id ?? renaming.option.id ?? null,
+          name: updated?.name ?? nextName,
+        });
+      }
+      setRenaming(null);
+    } catch (err) {
+      setRenaming((r) =>
+        r
+          ? { ...r, saving: false, error: err?.message || "No se pudo guardar" }
+          : r,
+      );
+    }
   };
 
   const onKeyDown = (event) => {
@@ -258,33 +316,108 @@ export default function CreatableSelect({
               const rowIndex = index + (canCreate ? 1 : 0);
               const active = highlight === rowIndex;
               const picked = norm(option.name) === norm(selectedName);
+              const optionKey = option.id ?? option.name;
+
+              if (renaming?.key === optionKey) {
+                return (
+                  <li key={optionKey} role="none" className="px-2 py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={renaming.text}
+                        disabled={renaming.saving}
+                        onChange={(event) =>
+                          setRenaming((r) =>
+                            r
+                              ? { ...r, text: event.target.value, error: null }
+                              : r,
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            submitRename();
+                          } else if (event.key === "Escape") {
+                            event.preventDefault();
+                            setRenaming(null);
+                          }
+                        }}
+                        className="w-full rounded-md border border-blue-300 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
+                      />
+                      <button
+                        type="button"
+                        onClick={submitRename}
+                        disabled={renaming.saving}
+                        aria-label="Guardar nombre"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
+                      >
+                        {renaming.saving ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRenaming(null)}
+                        disabled={renaming.saving}
+                        aria-label="Cancelar"
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {renaming.error && (
+                      <p className="mt-1 px-0.5 text-xs font-medium text-red-600">
+                        {renaming.error}
+                      </p>
+                    )}
+                  </li>
+                );
+              }
+
               return (
-                <li key={option.id ?? option.name} role="none">
-                  <button
-                    type="button"
-                    role="option"
-                    id={`${id}-row-${rowIndex}`}
-                    data-active={active}
-                    aria-selected={picked}
-                    onMouseEnter={() => setHighlight(rowIndex)}
-                    onClick={() => choose(rows[rowIndex])}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                <li key={optionKey} role="none">
+                  <div
+                    className={`flex items-center gap-1 pr-1.5 ${
                       active ? "bg-slate-100" : "hover:bg-slate-50"
                     }`}
                   >
-                    <Check
-                      className={`h-3.5 w-3.5 shrink-0 ${picked ? "text-blue-600" : "text-transparent"}`}
-                      aria-hidden
-                    />
-                    <span className="truncate text-slate-700">
-                      {option.name}
-                    </span>
-                    {option.product_count > 0 && (
-                      <span className="ml-auto shrink-0 text-xs text-slate-400">
-                        {option.product_count}
+                    <button
+                      type="button"
+                      role="option"
+                      id={`${id}-row-${rowIndex}`}
+                      data-active={active}
+                      aria-selected={picked}
+                      onMouseEnter={() => setHighlight(rowIndex)}
+                      onClick={() => choose(rows[rowIndex])}
+                      className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm"
+                    >
+                      <Check
+                        className={`h-3.5 w-3.5 shrink-0 ${picked ? "text-blue-600" : "text-transparent"}`}
+                        aria-hidden
+                      />
+                      <span className="truncate text-slate-700">
+                        {option.name}
                       </span>
+                      {option.product_count > 0 && (
+                        <span className="ml-auto shrink-0 pl-2 text-xs text-slate-400">
+                          {option.product_count}
+                        </span>
+                      )}
+                    </button>
+                    {onRename && (
+                      <button
+                        type="button"
+                        onClick={(event) => startRename(event, option)}
+                        aria-label={`Editar «${option.name}»`}
+                        title="Editar nombre"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-300 hover:bg-slate-200 hover:text-slate-600"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </li>
               );
             })}

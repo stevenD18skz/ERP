@@ -107,6 +107,8 @@ export default function ProductsPage() {
     setProducts,
     refresh,
     refreshTaxonomies,
+    renameCategory,
+    renameBrand,
   } = useProductsCatalog();
 
   const filters = useProductFilters(products);
@@ -326,6 +328,35 @@ export default function ProductsPage() {
         push(errorText(err, "Error creando producto"), "error");
         throw err;
       }
+    }
+  };
+
+  // Renombrar categoría/marca desde el lápiz del select del formulario (ver
+  // CreatableSelect). El error se relanza para que el select se quede abierto
+  // en modo edición con el motivo debajo del campo -"Ya tienes una categoría
+  // con ese nombre"-, en vez de solo un toast que ya se cerró para cuando se
+  // vuelve a mirar.
+  const handleRenameCategory = async (option, name) => {
+    try {
+      const updated = await renameCategory(option, name);
+      push(`Categoría renombrada a "${updated.name}"`, "success");
+      return updated;
+    } catch (err) {
+      console.error(err);
+      push(errorText(err, "Error renombrando la categoría"), "error");
+      throw err;
+    }
+  };
+
+  const handleRenameBrand = async (option, name) => {
+    try {
+      const updated = await renameBrand(option, name);
+      push(`Marca renombrada a "${updated.name}"`, "success");
+      return updated;
+    } catch (err) {
+      console.error(err);
+      push(errorText(err, "Error renombrando la marca"), "error");
+      throw err;
     }
   };
 
@@ -809,6 +840,8 @@ export default function ProductsPage() {
           suggestSku={suggestSku}
           categories={categories}
           brands={brands}
+          onRenameCategory={handleRenameCategory}
+          onRenameBrand={handleRenameBrand}
           phoneScanRef={formScanHandlerRef}
           onClose={closeForm}
           onSave={async (p) => {

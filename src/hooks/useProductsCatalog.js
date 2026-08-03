@@ -21,6 +21,8 @@ import {
   getProducts,
   getCategories,
   getBrands,
+  renameCategory as renameCategoryService,
+  renameBrand as renameBrandService,
 } from "@/services/products.service";
 
 const swrOptions = {
@@ -80,6 +82,22 @@ export function useProductsCatalog() {
   const refreshTaxonomies = () =>
     Promise.all([categoriesSWR.mutate(), brandsSWR.mutate()]);
 
+  // Renombrar una categoría/marca desde el lápiz del select (ver
+  // CreatableSelect). Al terminar se pide todo de nuevo -productos incluidos-
+  // porque los productos que ya la tenían llegan con el nombre de fábrica
+  // pegado (row.category / row.brand de v_products) y no se enteran solos de
+  // que cambió.
+  const renameCategory = async (option, name) => {
+    const updated = await renameCategoryService(option, name);
+    await refresh();
+    return updated;
+  };
+  const renameBrand = async (option, name) => {
+    const updated = await renameBrandService(option, name);
+    await refresh();
+    return updated;
+  };
+
   return {
     products: productsSWR.data ?? [],
     categories: categoriesSWR.data ?? [],
@@ -101,6 +119,8 @@ export function useProductsCatalog() {
       productsSWR.mutate(updater, { revalidate: false }),
     refresh,
     refreshTaxonomies,
+    renameCategory,
+    renameBrand,
   };
 }
 

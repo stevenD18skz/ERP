@@ -78,6 +78,8 @@ export default function ProductForm({
   suggestSku = () => "",
   categories = [],
   brands = [],
+  onRenameCategory,
+  onRenameBrand,
   /** Ref donde este formulario deja su handleScan mientras está montado, para
    *  que la página le pueda entregar un código leído por el celular
    *  emparejado -el mismo camino que ya usa el lector de teclado. */
@@ -643,6 +645,7 @@ export default function ProductForm({
                       : null
                   }
                   onChange={setChoice("category")}
+                  onRename={onRenameCategory}
                   options={categories}
                   placeholder="Sin categoría"
                   createHint={
@@ -671,6 +674,7 @@ export default function ProductForm({
                       : null
                   }
                   onChange={setChoice("brand")}
+                  onRename={onRenameBrand}
                   options={brands}
                   placeholder="Sin marca"
                   createHint={

@@ -13,7 +13,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { fromPostgrest, badRequest } from "./errors";
+import { fromPostgrest, badRequest, notFound } from "./errors";
 import type { ProductRow } from "@/types/database";
 
 export type TaxonomyKind = "categories" | "brands";
@@ -21,6 +21,17 @@ export type TaxonomyKind = "categories" | "brands";
 const LABELS: Record<TaxonomyKind, string> = {
   categories: "la categoría",
   brands: "la marca",
+};
+
+// La vista con el conteo de productos (ver 01_schema.sql) y la columna que en
+// ella identifica la fila: mismo par que usan las rutas GET de listado.
+const COUNT_VIEWS: Record<TaxonomyKind, string> = {
+  categories: "v_product_categories",
+  brands: "v_product_brands",
+};
+const COUNT_ID_COLUMNS: Record<TaxonomyKind, string> = {
+  categories: "category_id",
+  brands: "brand_id",
 };
 
 // La misma comparación que hace el índice único de Postgres
@@ -131,6 +142,46 @@ async function listTaxonomy(
     .eq("tienda_id", tiendaId);
   if (error) throw fromPostgrest(error, `el listado de ${LABELS[kind]}`);
   return (data ?? []) as Array<{ id: string; name: string }>;
+}
+
+/**
+ * Cambia el nombre de una categoría o marca existente. No toca los productos
+ * que la usan: como el id no cambia, la próxima vez que se lean (v_products,
+ * o esta misma respuesta) van a traer el nombre nuevo solos.
+ *
+ * Devuelve la fila tal como la arma la vista de listado (con product_count),
+ * para que quien llama pueda actualizar su caché sin pedir la lista entera de
+ * nuevo.
+ */
+export async function renameTaxonomy(
+  db: Db,
+  kind: TaxonomyKind,
+  tiendaId: string,
+  id: string,
+  name: string,
+): Promise<Record<string, unknown>> {
+  const { error: updateError } = await db
+    .from(kind)
+    .update({ name })
+    .eq("id", id)
+    .eq("tienda_id", tiendaId);
+  if (updateError) {
+    throw fromPostgrest(updateError, `el cambio de nombre de ${LABELS[kind]}`);
+  }
+
+  const { data, error } = await db
+    .from(COUNT_VIEWS[kind])
+    .select("*")
+    .eq(COUNT_ID_COLUMNS[kind], id)
+    .eq("tienda_id", tiendaId)
+    .maybeSingle();
+  if (error) throw fromPostgrest(error, `la consulta de ${LABELS[kind]}`);
+  if (!data) {
+    throw notFound(
+      `No existe ${LABELS[kind]} que se quiere renombrar. Puede que alguien la haya borrado.`,
+    );
+  }
+  return data;
 }
 
 /**
