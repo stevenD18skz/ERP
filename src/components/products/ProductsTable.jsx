@@ -7,12 +7,7 @@ import { currency } from "@/utils/converts";
 import StockBadge from "./StockBadge";
 import StockStepper from "./StockStepper";
 import Thumb from "./Thumb";
-import {
-  categoryOf,
-  getMargin,
-  getMarginPct,
-  isCostEstimated,
-} from "./productsUtils";
+import { categoryOf, getMargin, getMarginPct } from "./productsUtils";
 
 // Tabla de escritorio. En móvil se esconde y toma su lugar ProductsCardList:
 // diez columnas no caben en un teléfono ni con scroll horizontal.
@@ -175,19 +170,8 @@ export default function ProductsTable({
               <td className="px-2 py-2.5 font-mono text-[12.5px] text-slate-600">
                 {p.barcode || <span className="text-slate-300">—</span>}
               </td>
-              <td className="px-2 py-2.5 text-right tabular-nums">
-                {isCostEstimated(p) ? (
-                  <span
-                    className="text-slate-400"
-                    title="Costo estimado: precio x 0.81. Confirmar con la factura del proveedor."
-                  >
-                    ~{currency(p.cost_price)}
-                  </span>
-                ) : (
-                  <span className="text-slate-600">
-                    {currency(p.cost_price)}
-                  </span>
-                )}
+              <td className="px-2 py-2.5 text-right tabular-nums text-slate-600">
+                {currency(p.cost_price)}
               </td>
               <td className="px-2 py-2.5 text-right font-bold tabular-nums text-slate-900">
                 {currency(p.price)}
@@ -195,30 +179,15 @@ export default function ProductsTable({
               <td className="px-2 py-2.5 text-right">
                 <div
                   className={`font-bold tabular-nums ${
-                    isCostEstimated(p)
-                      ? "text-slate-400"
-                      : getMargin(p) >= 0
-                        ? "text-emerald-600"
-                        : "text-red-600"
+                    getMargin(p) >= 0 ? "text-emerald-600" : "text-red-600"
                   }`}
-                  title={
-                    isCostEstimated(p)
-                      ? "Sale del costo estimado, no de una factura"
-                      : undefined
-                  }
                 >
-                  {isCostEstimated(p) ? "~" : getMargin(p) >= 0 ? "+" : ""}
+                  {getMargin(p) >= 0 ? "+" : ""}
                   {currency(getMargin(p))}
                 </div>
                 <div className="text-[11.5px] text-slate-400">
-                  {isCostEstimated(p) ? (
-                    "estimado"
-                  ) : (
-                    <>
-                      {getMarginPct(p) >= 0 ? "+" : ""}
-                      {getMarginPct(p)}%
-                    </>
-                  )}
+                  {getMarginPct(p) >= 0 ? "+" : ""}
+                  {getMarginPct(p)}%
                 </div>
               </td>
               <td className="px-2 py-2.5">

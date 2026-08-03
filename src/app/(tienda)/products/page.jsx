@@ -17,6 +17,7 @@ import { useProductsCatalog } from "@/hooks/useProductsCatalog";
 import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { usePhoneScannerLink } from "@/hooks/usePhoneScanner";
+import { useSettings } from "@/hooks/useSettings";
 import { lookupBarcode } from "@/services/barcode.service";
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
@@ -41,6 +42,7 @@ import {
   CSV_TEMPLATE_ROWS,
   buildProductsCSV,
   buildProductsPrintHTML,
+  nextAvailableSku,
   validateImportRow,
 } from "@/components/products/productsUtils";
 
@@ -424,6 +426,15 @@ export default function ProductsPage() {
     );
   };
 
+  // El siguiente SKU libre para una categoría, calculado sobre el catálogo ya
+  // cargado (mismo dato que usa skuOwner arriba, así que no hace falta otra
+  // consulta a Supabase).
+  const suggestSku = (categoryName, exceptId) =>
+    nextAvailableSku(
+      categoryName,
+      products.filter((p) => p.id !== exceptId).map((p) => p.sku),
+    );
+
   // stopPhone nace del hook del celular, más abajo, pero hace falta acá arriba:
   // se guarda en un ref para no pelear con el orden de las declaraciones.
   const stopPhoneRef = useRef(null);
@@ -544,6 +555,12 @@ export default function ProductsPage() {
   // dos escuchando el mismo canal procesarían el código dos veces. El
   // formulario es la excepción: se queda encendido para poder escanear
   // directo sobre él sin perder el emparejamiento.
+  // Ahorro de batería de Configuración: null es "nunca desconectar".
+  const { settings } = useSettings();
+  const idleSeconds = settings.phoneScannerAutoDisconnect
+    ? settings.phoneScannerIdleSeconds
+    : null;
+
   const phoneScanner = usePhoneScannerLink({
     onScan: (code) => {
       if (showForm) {
@@ -555,6 +572,7 @@ export default function ProductsPage() {
     },
     pairing: phoneModalOpen,
     active: noModalOpen || phoneModalOpen || showForm,
+    idleTimeoutMs: idleSeconds == null ? null : idleSeconds * 1000,
     onIdle: () => {
       setPhoneModalOpen(false);
       push("Se pausó el escaneo con el celular por inactividad", "info");
@@ -593,9 +611,6 @@ export default function ProductsPage() {
             category: obj.category || "",
             brand: obj.brand || "",
             cost_price: Number(obj.cost_price),
-            // Un costo que viene en el archivo importado es un dato aportado,
-            // no el estimado que calcula el importador del Excel.
-            cost_is_estimated: false,
             price: Number(obj.price),
             stock: Number(obj.stock),
             description: obj.description || "",
@@ -791,6 +806,7 @@ export default function ProductsPage() {
           prefill={prefill}
           barcodeOwner={barcodeOwner}
           skuOwner={skuOwner}
+          suggestSku={suggestSku}
           categories={categories}
           brands={brands}
           phoneScanRef={formScanHandlerRef}
@@ -858,6 +874,7 @@ export default function ProductsPage() {
           onReset={phoneScanner.reset}
           onClose={() => setPhoneModalOpen(false)}
           onConnected={() => push("Celular vinculado correctamente", "success")}
+          idleSeconds={idleSeconds}
         />
       )}
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   Check,
@@ -16,7 +16,11 @@ import {
 import CameraViewport from "@/components/ui/CameraViewport";
 import { useCameraScanner } from "@/hooks/useCameraScanner";
 import { usePhoneScannerClient } from "@/hooks/usePhoneScanner";
-import { IDLE_TIMEOUT_MS, rememberClientPairingId } from "@/lib/phoneScanner";
+import { rememberClientPairingId } from "@/lib/phoneScanner";
+import {
+  DEFAULT_PHONE_SCANNER_IDLE_SECONDS,
+  formatIdleDuration,
+} from "@/lib/settings";
 
 /*
   El celular haciendo de lector para la pantalla del computador.
@@ -34,10 +38,12 @@ import { IDLE_TIMEOUT_MS, rememberClientPairingId } from "@/lib/phoneScanner";
 
   La cámara no se queda encendida sola. Se apaga por dos caminos, y los dos
   terminan en la misma pantalla de pausa con su botón para reanudar:
-  - Por su propio reloj, al pasar un minuto sin leer nada. Es un reloj de acá y
-    no un aviso del computador, para que funcione incluso si se cayó la
-    conexión: una cámara encendida y olvidada calienta el teléfono y se come la
-    carga en una tarde.
+  - Por su propio reloj, al pasar el rato de inactividad configurado en
+    Configuración > Ahorro de batería sin leer nada (?idle=... en la URL, ver
+    pairingUrl en src/lib/phoneScanner.ts). Es un reloj de acá y no un aviso
+    del computador, para que funcione incluso si se cayó la conexión: una
+    cámara encendida y olvidada calienta el teléfono y se come la carga en una
+    tarde. Con ?idle=0 el ahorro está apagado y este reloj no corre.
   - Porque el computador avisó que ya terminó. En Productos alcanza con un
     código: se lee, se trae la ficha y lo que sigue se revisa allá.
 */
@@ -49,21 +55,33 @@ const STATUS_STYLES = {
 };
 
 const PAUSE_COPY = {
-  idle: {
+  idle: (idleSeconds) => ({
     title: "Cámara en pausa",
-    detail:
-      "Pasó un minuto sin leer nada y se apagó para no gastar la batería del teléfono.",
-  },
-  done: {
+    detail: `Pasaron ${formatIdleDuration(idleSeconds)} sin leer nada y se apagó para no gastar la batería del teléfono.`,
+  }),
+  done: () => ({
     title: "Código recibido",
     detail:
       "El computador ya lo tiene y el registro sigue allá. Puedes volver a escanear cuando lo necesites.",
-  },
+  }),
 };
 
-export default function PhoneScannerPage() {
+function PhoneScannerScreen() {
   const { id } = useParams();
   const pairingId = typeof id === "string" ? id : null;
+
+  // Sale de la URL (ver pairingUrl en src/lib/phoneScanner.ts): el computador
+  // que armó el QR ya sabe la configuración de Ahorro de batería de la
+  // tienda, y esta página es pública y no tiene sesión con la que pedírsela.
+  // Sin el parámetro (un QR viejo, por ejemplo) se usa el valor por defecto;
+  // con ?idle=0 el ahorro está apagado y la cámara no se apaga sola.
+  const searchParams = useSearchParams();
+  const idleSeconds = useMemo(() => {
+    const raw = searchParams.get("idle");
+    if (raw === null) return DEFAULT_PHONE_SCANNER_IDLE_SECONDS;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [searchParams]);
 
   // Lo último que se intentó mandar, para poder confirmar en pantalla. Quien
   // escanea está mirando la mercancía, no el teléfono: el aviso tiene que
@@ -105,16 +123,17 @@ export default function PhoneScannerPage() {
   const { torchOn, torchAvailable, toggleTorch } = camera;
 
   // El reloj de inactividad. Se rearma con cada lectura porque lastScanAt
-  // cambia, así que el minuto cuenta desde el último código y no desde que se
-  // abrió la página.
+  // cambia, así que el rato configurado cuenta desde el último código y no
+  // desde que se abrió la página. idleSeconds en null es el ahorro apagado:
+  // no hay reloj que armar.
   useEffect(() => {
-    if (pause) return;
+    if (pause || idleSeconds == null) return;
     const timer = setTimeout(
       () => setPause({ reason: "idle" }),
-      IDLE_TIMEOUT_MS,
+      idleSeconds * 1000,
     );
     return () => clearTimeout(timer);
-  }, [pause, lastScanAt]);
+  }, [pause, lastScanAt, idleSeconds]);
 
   // Sin esto la pantalla se apaga sola a los treinta segundos y hay que
   // despertarla en cada producto, que es justo lo que este atajo venía a
@@ -226,10 +245,16 @@ export default function PhoneScannerPage() {
             )}
           </span>
           <p className="text-base font-bold text-white">
-            {PAUSE_COPY[pause.reason].title}
+            {PAUSE_COPY[pause.reason](
+              idleSeconds ?? DEFAULT_PHONE_SCANNER_IDLE_SECONDS,
+            ).title}
           </p>
           <p className="max-w-sm text-sm leading-relaxed text-slate-400">
-            {PAUSE_COPY[pause.reason].detail}
+            {
+              PAUSE_COPY[pause.reason](
+                idleSeconds ?? DEFAULT_PHONE_SCANNER_IDLE_SECONDS,
+              ).detail
+            }
           </p>
           {sentCount > 0 && (
             <p className="text-xs text-slate-500">
@@ -289,5 +314,16 @@ export default function PhoneScannerPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// useSearchParams exige un límite de Suspense alrededor: sin esto el build
+// falla con "should be wrapped in a suspense boundary". Mismo patrón que
+// src/app/(auth)/login/page.jsx.
+export default function PhoneScannerPage() {
+  return (
+    <Suspense fallback={null}>
+      <PhoneScannerScreen />
+    </Suspense>
   );
 }

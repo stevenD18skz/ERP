@@ -47,7 +47,6 @@ export function toProduct(row: ProductRow): Product {
     photo: row.photo ?? null,
     price: n(row.price),
     cost_price: n(row.cost_price),
-    cost_is_estimated: Boolean(row.cost_is_estimated),
     stock: n(row.stock),
     // Sin categoría el nombre viaja vacío y no como "Sin categoría": el texto
     // que se lee en pantalla lo pone la pantalla, que es donde se puede

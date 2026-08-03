@@ -158,14 +158,9 @@ Crear la categoría junto con el producto es a propósito: en el mostrador,
 Obligatorios: `name` y `price`. El SKU es opcional y, si se manda repetido
 dentro de la misma tienda, da `409`.
 
-Mandar `cost_price` marca el costo como real (`cost_is_estimated: false`), que
-es justo lo que significa corregirlo a mano. Para forzar lo contrario hay que
-mandar `cost_is_estimated` explícito.
-
 ### `GET` · `PATCH` · `DELETE /api/products/:id`
 
-`PATCH` cambia solo lo que se mande. Igual que en el `POST`, tocar `cost_price`
-apaga `cost_is_estimated`.
+`PATCH` cambia solo lo que se mande.
 
 Borrar un producto no borra el historial: las líneas de ventas y pedidos viejos
 se quedan con el nombre del producto y su `product_id` en null.

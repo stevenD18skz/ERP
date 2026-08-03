@@ -42,7 +42,6 @@ export const createProduct = async (product) => {
       brand: "",
       brand_id: null,
       description: "",
-      cost_is_estimated: false,
       ...product,
     };
     products.push(created);

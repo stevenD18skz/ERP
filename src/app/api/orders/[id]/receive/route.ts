@@ -4,9 +4,8 @@
 // Cuerpo opcional:
 //   { "adjust_stock": false }  recibe sin tocar el inventario
 //   { "update_cost": true }    además actualiza el costo del catálogo con el
-//                              costo del pedido y lo marca como costo real
-//                              (cost_is_estimated = false). Va apagado por
-//                              defecto porque pisa datos del negocio.
+//                              costo del pedido. Va apagado por defecto
+//                              porque pisa datos del negocio.
 //
 // Es idempotente: recibir dos veces el mismo pedido no suma el stock dos veces.
 

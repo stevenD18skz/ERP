@@ -86,7 +86,6 @@ const N = (v) =>
   v === null || v === undefined || v === "" || Number.isNaN(Number(v))
     ? "null"
     : String(Number(v));
-const B = (v) => (v ? "true" : "false");
 
 // Un INSERT por bloque de filas: el editor SQL de Supabase se atora con
 // sentencias gigantes de miles de VALUES.
@@ -210,7 +209,6 @@ const productRows = products.map((p) => [
   p.photo ? Stext(p.photo) : "null::text",
   N(p.price),
   N(p.cost_price),
-  B(p.cost_is_estimated),
   N(p.stock ?? 0),
   Stext(p.category),
   Stext(p.description ?? ""),
@@ -238,7 +236,6 @@ const categoriesInsert = [
   "on conflict do nothing;",
 ].join("\n");
 
-const estimated = products.filter((p) => p.cost_is_estimated).length;
 fs.writeFileSync(
   path.join(OUT, "10_seed_products.sql"),
   header("Boxes · Catálogo de productos", [
@@ -246,9 +243,9 @@ fs.writeFileSync(
     "completo y la tienda ya creada. El archivo lo comprueba y avisa si falta algo.",
     "",
     `${products.length} productos importados del Excel de 2025 (Hoja2), a la tienda "${TIENDA}".`,
-    `${products.length - estimated} tienen costo real de factura; ${estimated} lo tienen estimado`,
-    "en precio x 0.81 (el margen del 19% de la contabilidad) y están marcados",
-    "con cost_is_estimated = true.",
+    "El costo real de factura se guardó cuando lo traía el Excel; el resto es",
+    "precio x 0.81 (el margen del 19% de la contabilidad), un número circular",
+    "que no se muestra como dato firme en la UI.",
     "",
     `Primero se crean las ${categoryNames.length} categorías y después los productos, que la`,
     "buscan por nombre. La MARCA queda vacía en los 435: el Excel no la traía y",
@@ -277,7 +274,6 @@ fs.writeFileSync(
         "photo",
         "price",
         "cost_price",
-        "cost_is_estimated",
         "stock",
         "category_id",
         "description",
@@ -291,7 +287,6 @@ fs.writeFileSync(
         "photo",
         "price",
         "cost_price",
-        "cost_is_estimated",
         "stock",
         "category",
         "description",
@@ -306,7 +301,6 @@ fs.writeFileSync(
         "v.photo::text",
         "v.price::numeric",
         "v.cost_price::numeric",
-        "v.cost_is_estimated::boolean",
         "v.stock::numeric",
         "c.id",
         "v.description::text",

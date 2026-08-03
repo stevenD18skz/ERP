@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Menu } from "lucide-react";
+import { ChevronDown, LogOut, Menu, Settings } from "lucide-react";
 import SimulationChip from "@/components/simulation/SimulationChip";
 import { useSession } from "@/hooks/useSession";
 
@@ -155,9 +155,18 @@ const TopBar = ({ sidebarExpanded, onToggleSidebar }) => {
                 <button
                   onClick={() => {
                     setUserOpen(false);
+                    router.push("/settings");
+                  }}
+                  className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  <Settings className="h-4 w-4" /> Configuración
+                </button>
+                <button
+                  onClick={() => {
+                    setUserOpen(false);
                     logout();
                   }}
-                  className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                  className="flex w-full items-center gap-2 border-t border-slate-100 px-3.5 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" /> Cerrar sesión
                 </button>

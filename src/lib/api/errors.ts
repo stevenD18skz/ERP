@@ -141,6 +141,7 @@ export function fromPostgrest(
 
     case "42P01": // undefined_table
     case "42883": // undefined_function
+    case "42703": // undefined_column
       return new ApiError(503, SCHEMA_HINT, "schema_missing", error.message);
 
     case "42501": // insufficient_privilege

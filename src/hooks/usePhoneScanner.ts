@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import {
-  IDLE_TIMEOUT_MS,
   SCAN_EVENT,
   STOP_EVENT,
   channelName,
@@ -18,6 +17,7 @@ import {
   type StopPayload,
   type StopReason,
 } from "@/lib/phoneScanner";
+import { DEFAULT_PHONE_SCANNER_IDLE_SECONDS } from "@/lib/settings";
 
 /*
   Los dos extremos del puente entre el celular y la pantalla del computador.
@@ -245,6 +245,7 @@ export function usePhoneScannerLink({
   pairing = false,
   active = true,
   onIdle,
+  idleTimeoutMs = DEFAULT_PHONE_SCANNER_IDLE_SECONDS * 1000,
 }: {
   onScan: (code: string) => void;
   /** Si el modal del QR está abierto ahora mismo. */
@@ -258,11 +259,16 @@ export function usePhoneScannerLink({
    */
   active?: boolean;
   /**
-   * Se llama cuando pasa IDLE_TIMEOUT_MS con el celular conectado y sin leer
+   * Se llama cuando pasa idleTimeoutMs con el celular conectado y sin leer
    * nada. La cámara del teléfono ya se apagó por su cuenta para entonces; esto
    * es para que la pantalla cierre el modal y lo diga.
    */
   onIdle?: () => void;
+  /**
+   * Sale de Configuración > Ahorro de batería (ver src/lib/settings.ts).
+   * `null` lo desactiva: el celular queda conectado sin límite de tiempo.
+   */
+  idleTimeoutMs?: number | null;
 }) {
   // Ambos arrancan apagados y se resuelven al montar: localStorage no existe
   // en el servidor, y el botón no debe aparecer en el HTML del servidor para
@@ -291,17 +297,19 @@ export function usePhoneScannerLink({
   }, []);
 
   // Se rearma con cada lectura, así que el reloj cuenta desde el último código
-  // y no desde que se conectó el teléfono.
+  // y no desde que se conectó el teléfono. Con idleTimeoutMs en null (ahorro
+  // de batería apagado) no se arma nada: el celular se queda conectado.
   const armIdle = useCallback(() => {
     clearIdle();
+    if (idleTimeoutMs == null) return;
     idleTimerRef.current = setTimeout(() => {
       idleTimerRef.current = null;
       // El celular ya se apagó solo con su propio reloj; este aviso es el
       // respaldo para cuando el suyo no llegó a correr.
       stopPhoneRef.current?.("idle");
       onIdleRef.current?.();
-    }, IDLE_TIMEOUT_MS);
-  }, [clearIdle]);
+    }, idleTimeoutMs);
+  }, [clearIdle, idleTimeoutMs]);
 
   const handleScan = useCallback(
     (code: string) => {

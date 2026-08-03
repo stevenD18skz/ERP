@@ -34,13 +34,20 @@ export default function PhoneScannerModal({
    *  conectado mientras el modal está abierto (no si ya estaba conectado al
    *  abrirlo). Pensado para que quien lo use dispare un toast. */
   onConnected,
+  /**
+   * Ahorro de batería de Configuración: cuánto rato sin leer nada antes de
+   * que el celular apague su cámara solo, en segundos (null = nunca). Viaja
+   * en la URL del QR porque /scan es pública y no tiene sesión con la que
+   * pedirle la configuración a la tienda.
+   */
+  idleSeconds,
 }) {
   // window no existe en el servidor. El modal solo se monta tras un clic, pero
   // se arma la dirección después del montaje para no depender de eso.
   const [url, setUrl] = useState(null);
   useEffect(() => {
-    if (pairingId) setUrl(pairingUrl(pairingId));
-  }, [pairingId]);
+    if (pairingId) setUrl(pairingUrl(pairingId, idleSeconds));
+  }, [pairingId, idleSeconds]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -124,7 +131,7 @@ export default function PhoneScannerModal({
                 )}
               </div>
 
-              <p className="max-w-xs text-center text-sm leading-relaxed text-slate-600">
+              <p className="max-w-sm text-center text-sm leading-relaxed text-slate-600">
                 Apunta la cámara de tu celular a este código. Queda emparejado
                 también para las próximas veces.
               </p>

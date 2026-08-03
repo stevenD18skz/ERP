@@ -55,7 +55,6 @@ export async function PATCH(request: NextRequest, context: Context) {
     const sku = f.string("sku", { max: 60, allowEmpty: true });
     const price = f.number("price", { min: 0 });
     const costPrice = f.number("cost_price", { min: 0 });
-    const costIsEstimated = f.boolean("cost_is_estimated");
     const barcode = f.string("barcode", { max: 60, allowEmpty: true });
     const photo = f.string("photo", { nullable: true, max: 2000 });
     const stock = f.number("stock");
@@ -87,7 +86,6 @@ export async function PATCH(request: NextRequest, context: Context) {
       sku,
       price,
       cost_price: costPrice,
-      cost_is_estimated: costIsEstimated,
       barcode,
       photo,
       stock,
@@ -96,14 +94,6 @@ export async function PATCH(request: NextRequest, context: Context) {
       brand_id: resolvedBrand,
     });
     requireNonEmpty(patch);
-
-    // Corregir el costo a mano es justamente lo que lo vuelve un dato firme.
-    if (
-      patch.cost_price !== undefined &&
-      patch.cost_is_estimated === undefined
-    ) {
-      patch.cost_is_estimated = false;
-    }
 
     const { data, error } = await db
       .from("products")

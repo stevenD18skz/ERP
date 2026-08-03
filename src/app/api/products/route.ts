@@ -82,12 +82,6 @@ export async function GET(request: NextRequest) {
     if (inStock === true) query = query.gt("stock", 0);
     if (inStock === false) query = query.lte("stock", 0);
 
-    // ?estimatedCost=true -> los que todavía tienen el costo calculado con el
-    // margen del 19% y hay que confirmar contra factura.
-    const estimatedCost = boolParam(params.get("estimatedCost"));
-    if (estimatedCost !== null)
-      query = query.eq("cost_is_estimated", estimatedCost);
-
     const { data, error, count } = await query
       .order(sort, { ascending })
       .range(offset, rangeEnd);
@@ -128,13 +122,7 @@ export async function POST(request: NextRequest) {
       allowEmpty: true,
       max: 4000,
     });
-    const costIsEstimated = f.boolean("cost_is_estimated");
     f.check();
-
-    // Un costo escrito a mano es un costo real: deja de estar estimado en el
-    // 81% del precio, salvo que quien llama diga explícitamente lo contrario.
-    const estimated =
-      costIsEstimated ?? (costPrice === undefined ? true : false);
 
     const db = getSupabaseAdmin();
     const resolvedCategory = await resolveTaxonomyId(db, "categories", tiendaId, {
@@ -154,7 +142,6 @@ export async function POST(request: NextRequest) {
         sku: sku ?? "",
         price,
         cost_price: costPrice ?? 0,
-        cost_is_estimated: estimated,
         barcode: barcode ?? "",
         photo: photo ?? null,
         stock: stock ?? 0,

@@ -38,10 +38,48 @@ export const getMargin = (p) =>
 export const getMarginPct = (p) =>
   Number(p.price) ? Math.round((getMargin(p) / Number(p.price)) * 100) : 0;
 
-// Un costo estimado sale de multiplicar el precio por 0.81, así que su margen
-// siempre devuelve 19%: es la suposición, no una medición. Se muestra en gris
-// para que no se lea como un dato de factura.
-export const isCostEstimated = (p) => Boolean(p.cost_is_estimated);
+/* --- SKU sugerido --- */
+
+// Del nombre de la categoría a las tres letras que van antes del guion, igual
+// que ya escribía a mano el catálogo importado del Excel (ver
+// src/lib/data/products.data.ts): "Lácteos" -> "LAC". Sin tilde, sin espacios,
+// mayúsculas.
+export const skuCategoryPrefix = (categoryName) => {
+  const clean = String(categoryName || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-zA-Z]/g, "")
+    .toUpperCase();
+  return clean.slice(0, 3) || "PRD";
+};
+
+// El siguiente consecutivo libre para esa categoría dentro de existingSkus (el
+// catálogo ya cargado de la tienda, o el que sea al editar). Arranca justo
+// después del más alto que ya exista con ese prefijo -no desde 0 cada vez- y,
+// si por lo que sea ese ya está tomado, sigue subiendo hasta encontrar uno
+// libre: es lo mismo que valida el guardado (ver skuOwner en products/page),
+// solo que acá se hace antes, para no ofrecer un SKU que de todas formas va a
+// rebotar.
+export const nextAvailableSku = (categoryName, existingSkus = []) => {
+  const prefix = skuCategoryPrefix(categoryName);
+  const taken = new Set(
+    existingSkus.map((s) => String(s || "").trim().toUpperCase()).filter(Boolean),
+  );
+
+  const re = new RegExp(`^${prefix}-(\\d+)$`);
+  let n = 1;
+  for (const sku of taken) {
+    const match = re.exec(sku);
+    if (match) n = Math.max(n, Number(match[1]) + 1);
+  }
+
+  let candidate = `${prefix}-${String(n).padStart(4, "0")}`;
+  while (taken.has(candidate)) {
+    n += 1;
+    candidate = `${prefix}-${String(n).padStart(4, "0")}`;
+  }
+  return candidate;
+};
 
 /* --- consulta por código de barras --- */
 

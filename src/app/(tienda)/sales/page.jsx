@@ -16,6 +16,7 @@ import { useBarcodeScanner } from "@/hooks/useBarcodeScanner";
 import { useCameraScannerAvailable } from "@/hooks/useCameraScanner";
 import { useIsMobileDevice } from "@/hooks/useIsMobileDevice";
 import { usePhoneScannerLink } from "@/hooks/usePhoneScanner";
+import { useSettings } from "@/hooks/useSettings";
 import { useToasts } from "@/hooks/useToasts";
 
 import CameraScannerModal from "@/components/ui/CameraScannerModal";
@@ -267,6 +268,12 @@ export default function SalePageEnhanced() {
       mode === "transaccion" && !receiptData && !voidConfirmId && !cameraOpen,
   });
 
+  // Ahorro de batería de Configuración: null es "nunca desconectar".
+  const { settings } = useSettings();
+  const idleSeconds = settings.phoneScannerAutoDisconnect
+    ? settings.phoneScannerIdleSeconds
+    : null;
+
   // El celular emparejado entra por el mismo camino que el lector de teclado,
   // incluido el foco de vuelta al buscador: desde el punto de vista de esta
   // pantalla es un lector más, solo que la lectura llega por el canal en vez
@@ -274,9 +281,10 @@ export default function SalePageEnhanced() {
   const phoneScanner = usePhoneScannerLink({
     onScan: handleBarcodeScan,
     pairing: phoneModalOpen,
-    // Un minuto sin pasar nada: la cámara del teléfono ya se apagó sola, así
-    // que el modal del QR se cierra para no dejar en pantalla algo que ya no
-    // está funcionando, y se dice por qué.
+    idleTimeoutMs: idleSeconds == null ? null : idleSeconds * 1000,
+    // Pasó el rato de inactividad configurado: la cámara del teléfono ya se
+    // apagó sola, así que el modal del QR se cierra para no dejar en pantalla
+    // algo que ya no está funcionando, y se dice por qué.
     onIdle: () => {
       setPhoneModalOpen(false);
       push("Se pausó el escaneo con el celular por inactividad", "info");
@@ -666,6 +674,7 @@ export default function SalePageEnhanced() {
           onReset={phoneScanner.reset}
           onClose={() => setPhoneModalOpen(false)}
           onConnected={() => push("Celular vinculado correctamente", "success")}
+          idleSeconds={idleSeconds}
         />
       )}
 

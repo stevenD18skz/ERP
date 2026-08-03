@@ -27,7 +27,6 @@ export interface ProductRow {
   photo: string | null;
   price: number | string;
   cost_price: number | string;
-  cost_is_estimated: boolean;
   stock: number | string;
   category_id: string | null;
   category: string | null;

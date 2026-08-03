@@ -6,7 +6,7 @@ import { currency } from "@/utils/converts";
 import StockBadge from "./StockBadge";
 import StockStepper from "./StockStepper";
 import Thumb from "./Thumb";
-import { categoryOf, getMargin, isCostEstimated } from "./productsUtils";
+import { categoryOf, getMargin } from "./productsUtils";
 
 // La misma información de la tabla, apilada para el teléfono: identificación
 // arriba, la plata en una tira de tres, y stock y acciones al pie. El margen en
@@ -75,15 +75,7 @@ export default function ProductsCardList({
               <div className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
                 Costo
               </div>
-              <div
-                className={`mt-0.5 text-[14px] font-semibold tabular-nums ${isCostEstimated(p) ? "text-slate-400" : "text-slate-700"}`}
-                title={
-                  isCostEstimated(p)
-                    ? "Costo estimado: precio x 0.81. Confirmar con la factura."
-                    : undefined
-                }
-              >
-                {isCostEstimated(p) ? "~" : ""}
+              <div className="mt-0.5 text-[14px] font-semibold tabular-nums text-slate-700">
                 {currency(p.cost_price)}
               </div>
             </div>
@@ -97,18 +89,14 @@ export default function ProductsCardList({
             </div>
             <div>
               <div className="text-[10.5px] font-bold uppercase tracking-wide text-slate-400">
-                {isCostEstimated(p) ? "Margen est." : "Margen"}
+                Margen
               </div>
               <div
                 className={`mt-0.5 text-[14px] font-bold tabular-nums ${
-                  isCostEstimated(p)
-                    ? "text-slate-400"
-                    : getMargin(p) >= 0
-                      ? "text-emerald-600"
-                      : "text-red-600"
+                  getMargin(p) >= 0 ? "text-emerald-600" : "text-red-600"
                 }`}
               >
-                {isCostEstimated(p) ? "~" : getMargin(p) >= 0 ? "+" : ""}
+                {getMargin(p) >= 0 ? "+" : ""}
                 {currency(getMargin(p))}
               </div>
             </div>

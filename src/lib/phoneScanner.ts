@@ -56,14 +56,17 @@ export type StopReason =
 export type StopPayload = { reason: StopReason };
 
 /*
-  Cuánto se espera sin leer nada antes de apagar la cámara y cerrar el modal.
+  Cuánto se espera sin leer nada antes de apagar la cámara y cerrar el modal:
+  ver Configuración > Ahorro de batería (src/lib/settings.ts), ya no es un
+  número fijo acá.
 
-  Los dos lados lo cuentan por su cuenta con este mismo número, en vez de que
+  Los dos lados lo cuentan por su cuenta con el mismo número, en vez de que
   uno le avise al otro: si se cae la conexión, el celular igual apaga la cámara
   en vez de quedarse encendido hasta que alguien se acuerde. El aviso de arriba
-  es para el otro caso, el de "ya terminamos" que solo el computador sabe.
+  es para el otro caso, el de "ya terminamos" que solo el computador sabe. Por
+  eso el número viaja en la propia URL del QR (ver pairingUrl) y no hay que
+  pedírselo a la tienda desde /scan, que es una página pública y sin sesión.
 */
-export const IDLE_TIMEOUT_MS = 60_000;
 
 /*
   Si hay con qué armar el puente, mirando las variables de entorno y no el
@@ -188,7 +191,20 @@ export function clearPhoneScannerPairing(): void {
   }
 }
 
-/** La dirección que se pinta en el QR para que la abra el celular. */
-export function pairingUrl(pairingId: string): string {
-  return `${window.location.origin}/scan/${pairingId}`;
+/**
+ * La dirección que se pinta en el QR para que la abra el celular.
+ *
+ * @param idleSeconds Cuánto rato sin leer nada antes de que el celular apague
+ *   su cámara solo (ver Configuración > Ahorro de batería). `null` es "nunca",
+ *   `undefined` deja que /scan use su propio valor por defecto. Va en la URL
+ *   y no en el canal porque /scan es una página pública, sin sesión con la
+ *   que pedirle la configuración a la tienda.
+ */
+export function pairingUrl(
+  pairingId: string,
+  idleSeconds?: number | null,
+): string {
+  const base = `${window.location.origin}/scan/${pairingId}`;
+  if (idleSeconds === undefined) return base;
+  return `${base}?idle=${idleSeconds === null ? 0 : Math.round(idleSeconds)}`;
 }

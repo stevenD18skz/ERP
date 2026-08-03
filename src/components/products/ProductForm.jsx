@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Loader2,
   Maximize2,
+  RefreshCw,
   ScanLine,
   Sparkles,
   X,
@@ -74,6 +75,7 @@ export default function ProductForm({
   prefill = null,
   barcodeOwner = () => null,
   skuOwner = () => null,
+  suggestSku = () => "",
   categories = [],
   brands = [],
   /** Ref donde este formulario deja su handleScan mientras está montado, para
@@ -176,6 +178,34 @@ export default function ProductForm({
       [`${key}_id`]: next?.id ?? null,
     }));
     confirmField(key);
+  };
+
+  // SKU automático: en cuanto hay nombre y categoría, y el campo sigue vacío,
+  // se sugiere uno (ver nextAvailableSku en productsUtils). Con debounce y no
+  // en cada letra, para no generar y descartar uno por tecla mientras se
+  // termina de escribir. La comprobación de "sigue vacío" se hace adentro del
+  // setForm -con el estado más nuevo- para no pisar algo que se haya escrito
+  // a mano justo mientras corría el temporizador.
+  useEffect(() => {
+    const name = form.name.trim();
+    const category = form.category.trim();
+    if (!name || !category) return;
+    const timer = setTimeout(() => {
+      setForm((s) =>
+        s.sku.trim() ? s : { ...s, sku: suggestSku(category, initial?.id) },
+      );
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.name, form.category]);
+
+  // Botón "regenerar": recalcula sin importar si ya había algo, para cuando
+  // cambia la categoría después de escrito y quieren que el SKU la refleje.
+  const regenerateSku = () => {
+    const category = form.category.trim();
+    if (!category) return;
+    setForm((s) => ({ ...s, sku: suggestSku(category, initial?.id) }));
+    setErrors((er) => (er.sku ? { ...er, sku: undefined } : er));
   };
 
   // Consulta desde el propio formulario, para cuando el código se escribe o se
@@ -340,8 +370,6 @@ export default function ProductForm({
         photo,
         price: Number(form.price),
         cost_price: Number(form.cost_price),
-        // Si el costo se escribió a mano deja de ser el estimado del importador.
-        cost_is_estimated: false,
         stock: Number(form.stock),
       });
     } catch {
@@ -713,6 +741,7 @@ export default function ProductForm({
           </div>
 
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <span className="text-sm font-semibold text-slate-700">Foto</span>
             {autofilled.has("photo") && (
@@ -825,6 +854,52 @@ export default function ProductForm({
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="text-sm">
+            <div className="flex items-center justify-between">
+              <label htmlFor="form-sku" className="font-semibold text-slate-700">
+                SKU
+              </label>
+              <button
+                type="button"
+                onClick={regenerateSku}
+                disabled={!form.category.trim()}
+                title={
+                  form.category.trim()
+                    ? "Recalcular a partir de la categoría"
+                    : "Elige una categoría primero"
+                }
+                aria-label="Regenerar SKU"
+                className="flex items-center gap-1 text-xs font-semibold text-blue-700 hover:text-blue-900 disabled:cursor-not-allowed disabled:text-slate-300"
+              >
+                <RefreshCw className="h-3 w-3" aria-hidden />
+                Regenerar
+              </button>
+            </div>
+            <input
+              id="form-sku"
+              value={form.sku}
+              onChange={setField("sku")}
+              placeholder="Ej. LAC-0012"
+              aria-invalid={!!errors.sku}
+              aria-describedby={errors.sku ? "error-sku" : "hint-sku"}
+              className={fieldClass("sku")}
+            />
+            {errors.sku ? (
+              <p
+                id="error-sku"
+                className="mt-1 text-xs font-semibold text-red-600"
+              >
+                {errors.sku}
+              </p>
+            ) : (
+              <p id="hint-sku" className="mt-1 text-xs text-slate-500">
+                Se sugiere solo con el nombre y la categoría; puedes
+                escribir el tuyo.
+              </p>
+            )}
+          </div>
           </div>
 
           <label className="text-sm">
