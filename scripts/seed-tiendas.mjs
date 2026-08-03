@@ -1,11 +1,17 @@
-// Uso único: crea las tiendas iniciales y les asigna los datos que ya existen
-// en la base (todos son de Jose's Market; The Sunny Go arranca vacía).
+// Crea las tiendas de la base: las dos reales y una de demo. Se puede correr
+// las veces que haga falta -si la tienda ya existe por nombre, no la toca de
+// nuevo, así que no pisa una contraseña que ya esté en uso.
 //
 // node scripts/seed-tiendas.mjs
 //
 // Requiere NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY en .env.local.
 // El hash de password usa el mismo formato que src/lib/auth/password.ts
 // (scrypt, "salt:hash" en hex) para que el login pueda verificarlo después.
+// Va en Node y no en supabase/sql/*.sql justamente por eso: Postgres no trae
+// scrypt.
+//
+// Después de correr esto, supabase/sql/10_seed_demo.sql le mete catálogo y
+// ventas de ejemplo solo a la tienda de demo.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -33,16 +39,26 @@ function hashPassword(password) {
 }
 
 const TIENDAS = [
-  { nombre: "Jose's Market", dueno: "Jose", password: "Jing-2004" },
-  { nombre: "The Sunny Go", dueno: "Steven", password: "The1-piece" },
-];
-
-const TABLES_TO_BACKFILL = [
-  "products",
-  "sales",
-  "orders",
-  "expenses",
-  "daily_closes",
+  {
+    nombre: "Jose's Market",
+    dueno: "Jose",
+    email: "jing253436@gmail.com",
+    password: "Jing-2004",
+  },
+  {
+    nombre: "The Sunny Go",
+    dueno: "Steven",
+    email: "brayanss2018@gmail.com",
+    password: "The1-piece",
+  },
+  // Tienda de demo: la única que supabase/sql/10_seed_demo.sql llena con
+  // catálogo y ventas de ejemplo. Las otras dos arrancan vacías.
+  {
+    nombre: "Nikka",
+    dueno: "Luffy",
+    email: "nbrayan720@gmail.com",
+    password: "Manchitas0905",
+  },
 ];
 
 async function main() {
@@ -57,7 +73,6 @@ async function main() {
 
   const db = createClient(url, key, { auth: { persistSession: false } });
 
-  const ids = {};
   for (const t of TIENDAS) {
     const { data: existing, error: findError } = await db
       .from("tiendas")
@@ -68,7 +83,6 @@ async function main() {
 
     if (existing) {
       console.log(`Ya existía: ${t.nombre} (${existing.id})`);
-      ids[t.nombre] = existing.id;
       continue;
     }
 
@@ -77,6 +91,7 @@ async function main() {
       .insert({
         nombre: t.nombre,
         dueno: t.dueno,
+        email: t.email,
         password_hash: hashPassword(t.password),
       })
       .select("id")
@@ -84,20 +99,11 @@ async function main() {
     if (insertError) throw insertError;
 
     console.log(`Creada: ${t.nombre} (${created.id})`);
-    ids[t.nombre] = created.id;
   }
 
-  const joseMarketId = ids["Jose's Market"];
-  for (const table of TABLES_TO_BACKFILL) {
-    const { error, count } = await db
-      .from(table)
-      .update({ tienda_id: joseMarketId }, { count: "exact" })
-      .is("tienda_id", null);
-    if (error) throw error;
-    console.log(`${table}: ${count ?? "?"} filas asignadas a Jose's Market`);
-  }
-
-  console.log("\nListo. The Sunny Go queda vacía a propósito.");
+  console.log(
+    "\nListo. Corre supabase/sql/10_seed_demo.sql para llenar la tienda de demo con catálogo y ventas de ejemplo.",
+  );
 }
 
 main().catch((err) => {

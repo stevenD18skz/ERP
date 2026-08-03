@@ -2,26 +2,28 @@
 -- DESTRUCTIVO · Borra el esquema completo de Boxes
 -- =============================================================================
 -- Esto elimina las tablas de negocio con todo lo que tengan adentro: ventas,
--- pedidos, gastos, cierres, catálogo, categorías y marcas. No hay deshacer.
+-- pedidos, gastos, cierres, catálogo, categorías y marcas, de TODAS las
+-- tiendas. No hay deshacer.
 --
 -- Sirve para volver a empezar de cero mientras se está armando el proyecto:
--- correr este archivo y después la carpeta en orden numérico (01, 06, 07, 08,
--- 09, seed-tiendas.mjs, 10, 11, 12).
+-- correr este archivo y después, en orden, 01_schema.sql,
+-- node scripts/seed-tiendas.mjs y 10_seed_demo.sql.
 --
--- No borra `tiendas`: las contraseñas y los dueños sobreviven al reset, que es
--- casi siempre lo que se quiere. Para llevárselas también hay que borrarla a
--- mano, sabiendo que después toca volver a correr scripts/seed-tiendas.mjs.
+-- No borra `tiendas`: las contraseñas y los dueños sobreviven al reset, que
+-- es casi siempre lo que se quiere. Para llevárselas también hay que
+-- borrarla a mano, sabiendo que después toca volver a correr
+-- scripts/seed-tiendas.mjs.
 --
 -- Está en 99 y no en 00 justamente para que no se ejecute por costumbre al ir
 -- de arriba abajo por la carpeta.
 -- =============================================================================
 
-drop function if exists public.get_summary(date, date);
-drop function if exists public.cancel_order(uuid, boolean);
-drop function if exists public.receive_order(uuid, boolean, boolean);
-drop function if exists public.create_order(jsonb, jsonb);
-drop function if exists public.void_sale(uuid, boolean);
-drop function if exists public.create_sale(jsonb, jsonb, boolean);
+drop function if exists public.get_summary(uuid, date, date);
+drop function if exists public.cancel_order(uuid, uuid, boolean);
+drop function if exists public.receive_order(uuid, uuid, boolean, boolean);
+drop function if exists public.create_order(jsonb, jsonb, uuid);
+drop function if exists public.void_sale(uuid, uuid, boolean);
+drop function if exists public.create_sale(jsonb, jsonb, uuid, boolean);
 
 drop view if exists public.v_products;
 drop view if exists public.v_product_categories;

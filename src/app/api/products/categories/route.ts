@@ -1,11 +1,9 @@
 // GET /api/products/categories
 // Las categorías de la tienda, con cuántos productos tiene cada una. Sirve para
-// armar los filtros y el select del formulario sin traerse los 435 productos.
+// armar los filtros y el select del formulario sin traerse todo el catálogo.
 //
-// Desde que las categorías son una tabla propia
-// (supabase/sql/09_categorias_y_marcas.sql), acá aparecen también las que
-// todavía no tienen ningún producto adentro: antes una categoría solo existía
-// mientras algún producto la mencionara.
+// Las categorías son una tabla propia (supabase/sql/01_schema.sql), así que
+// acá aparecen también las que todavía no tienen ningún producto adentro.
 //
 // Next resuelve primero los segmentos fijos, así que esta ruta gana sobre
 // /api/products/[id] y "categories" nunca llega como id.

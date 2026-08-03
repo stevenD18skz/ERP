@@ -40,10 +40,8 @@ export const getMarginPct = (p) =>
 
 /* --- SKU sugerido --- */
 
-// Del nombre de la categoría a las tres letras que van antes del guion, igual
-// que ya escribía a mano el catálogo importado del Excel (ver
-// src/lib/data/products.data.ts): "Lácteos" -> "LAC". Sin tilde, sin espacios,
-// mayúsculas.
+// Del nombre de la categoría a las tres letras que van antes del guion:
+// "Lácteos" -> "LAC". Sin tilde, sin espacios, mayúsculas.
 export const skuCategoryPrefix = (categoryName) => {
   const clean = String(categoryName || "")
     .normalize("NFD")
@@ -107,8 +105,8 @@ export const FIELD_LABELS = {
 // Devuelve el motivo del rechazo, o null si la fila sirve.
 //
 // El SKU no se exige: es opcional en toda la aplicación (ver
-// supabase/sql/08_products_sku_por_tienda.sql). Si viene, la base rechaza el
-// repetido dentro de la misma tienda.
+// supabase/sql/01_schema.sql). Si viene, la base rechaza el repetido dentro
+// de la misma tienda.
 export const validateImportRow = (obj) => {
   if (!obj.name?.trim()) return "Falta el nombre";
   if (

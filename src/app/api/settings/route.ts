@@ -1,7 +1,7 @@
 // GET   /api/settings   configuración de la tienda de la sesión
 // PATCH /api/settings   actualiza uno o varios campos
 //
-// La fila de tiendas guarda un solo jsonb (ver supabase/sql/15_tienda_settings.sql);
+// La fila de tiendas guarda un solo jsonb (ver supabase/sql/01_schema.sql);
 // mergeSettings es lo que le pone forma completa, tanto al leer como después
 // de escribir, para que un settings viejo o a medio llenar nunca llegue
 // incompleto a la pantalla.

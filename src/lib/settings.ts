@@ -1,5 +1,5 @@
 // Configuración de la tienda: la forma del jsonb que vive en tiendas.settings
-// (ver supabase/sql/15_tienda_settings.sql) y las reglas para leerlo sin que
+// (ver supabase/sql/01_schema.sql) y las reglas para leerlo sin que
 // un valor viejo o a medio llenar rompa nada.
 //
 // Isomórfico a propósito: lo importan tanto la ruta /api/settings (servidor)

@@ -44,14 +44,14 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   tiendas_nombre_lower_idx: "Ya existe una tienda con ese nombre",
   tiendas_email_lower_idx: "Ya existe una tienda con ese correo",
   tiendas_email_format_check: "El correo no tiene un formato válido",
-  // Es por tienda: ver supabase/sql/08_products_sku_por_tienda.sql. El nombre
+  // El SKU es único por tienda (ver supabase/sql/01_schema.sql). El nombre
   // viejo (products_sku_key, único en toda la base) se deja mapeado por si
-  // alguien corre la app contra una base a la que no se le aplicó esa
-  // migración; el mensaje avisa qué falta en vez de acusar a un producto que
-  // no se puede ver.
+  // alguien corre la app contra una base que quedó con el esquema anterior a
+  // la reorganización de supabase/sql; el mensaje avisa qué falta en vez de
+  // acusar a un producto que no se puede ver.
   products_tienda_sku_idx: "Ya tienes otro producto con ese SKU",
   products_sku_key:
-    "Ese SKU ya existe en otra tienda. Falta correr supabase/sql/08_products_sku_por_tienda.sql en Supabase.",
+    "Ese SKU ya existe en otra tienda. Falta actualizar el esquema: correr supabase/sql/01_schema.sql en Supabase.",
   categories_tienda_name_idx: "Ya tienes una categoría con ese nombre",
   brands_tienda_name_idx: "Ya tienes una marca con ese nombre",
   sales_fiado_needs_client:
