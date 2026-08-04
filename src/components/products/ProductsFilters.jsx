@@ -70,8 +70,10 @@ export default function ProductsFilters({
 }) {
   return (
     <div
-      className={`mt-4 grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+      className={`grid transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out ${
+        open
+          ? "mt-4 grid-rows-[1fr] opacity-100"
+          : "mt-0 grid-rows-[0fr] opacity-0"
       }`}
     >
       <div className="overflow-hidden">

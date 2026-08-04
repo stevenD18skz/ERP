@@ -54,25 +54,41 @@ export default function ProductsToolbar({
         </button>
       </div>
 
-      {(query.trim() || filterChips.length > 0) && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-          <span className="text-xs font-medium text-slate-400">
-            Filtros activos:
-          </span>
-          {query.trim() && (
-            <Chip label={`"${query.trim()}"`} onRemove={() => onQueryChange("")} />
-          )}
-          {filterChips.map((c) => (
-            <Chip key={c.key} label={c.label} onRemove={c.onRemove} />
-          ))}
-          <button
-            onClick={onClearAll}
-            className="text-xs font-semibold text-slate-500 underline hover:text-slate-700"
+      {(() => {
+        const hasActive = query.trim() || filterChips.length > 0;
+        return (
+          <div
+            className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+              hasActive
+                ? "grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0"
+            }`}
           >
-            Limpiar todo
-          </button>
-        </div>
-      )}
+            <div className="overflow-hidden">
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                <span className="text-xs font-medium text-slate-400">
+                  Filtros activos:
+                </span>
+                {query.trim() && (
+                  <Chip
+                    label={`"${query.trim()}"`}
+                    onRemove={() => onQueryChange("")}
+                  />
+                )}
+                {filterChips.map((c) => (
+                  <Chip key={c.key} label={c.label} onRemove={c.onRemove} />
+                ))}
+                <button
+                  onClick={onClearAll}
+                  className="text-xs font-semibold text-slate-500 underline hover:text-slate-700"
+                >
+                  Limpiar todo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

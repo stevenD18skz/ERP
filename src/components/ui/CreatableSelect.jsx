@@ -285,7 +285,7 @@ export default function CreatableSelect({
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 origin-top animate-dropdown-in overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg motion-reduce:animate-none">
           {/* El botón de crear va afuera de la lista y antes que ella, para que
               se vea siempre aunque haya que hacer scroll entre las opciones. */}
           {canCreate && (
