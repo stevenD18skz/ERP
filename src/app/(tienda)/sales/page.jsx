@@ -105,6 +105,18 @@ export default function SalePageEnhanced() {
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
   const [lines, setLines] = useState([]);
   const [focusTarget, setFocusTarget] = useState(null);
+  // Línea que se acaba de agregar o sumar: se pinta un instante en CartLines
+  // y se apaga sola. Es la confirmación visual de que el escaneo sí pegó,
+  // pensada para cuando se pasan varios códigos seguidos sin mirar el
+  // teclado ni esperar a leer el toast.
+  const [justAddedKey, setJustAddedKey] = useState(null);
+  const justAddedTimeoutRef = useRef(null);
+  const flashLine = (key) => {
+    setJustAddedKey(key);
+    if (justAddedTimeoutRef.current) clearTimeout(justAddedTimeoutRef.current);
+    justAddedTimeoutRef.current = setTimeout(() => setJustAddedKey(null), 900);
+  };
+  useEffect(() => () => clearTimeout(justAddedTimeoutRef.current), []);
   const [cameraOpen, setCameraOpen] = useState(false);
   const cameraAvailable = useCameraScannerAvailable();
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
@@ -215,11 +227,13 @@ export default function SalePageEnhanced() {
           setFocusTarget(
             focusQty ? { type: "qty", key: existing._key } : { type: "search" },
           );
+        flashLine(existing._key);
         return next;
       }
       const key = uid();
       if (focus)
         setFocusTarget(focusQty ? { type: "qty", key } : { type: "search" });
+      flashLine(key);
       return [
         ...prev,
         {
@@ -600,6 +614,12 @@ export default function SalePageEnhanced() {
               onQtyKeyDown={handleQtyKeyDown}
               onRemove={removeLine}
               discount={discountProps}
+              justAddedKey={justAddedKey}
+              cameraAvailable={cameraAvailable}
+              onOpenCamera={() => setCameraOpen(true)}
+              phoneAvailable={phoneScanner.available && !isMobileDevice}
+              phoneConnected={phoneScanner.phoneConnected}
+              onOpenPhoneModal={() => setPhoneModalOpen(true)}
             />
 
             {lines.length > 0 && (

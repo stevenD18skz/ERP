@@ -1,29 +1,135 @@
 "use client";
 
 import {
+  Camera,
   DollarSign,
   Minus,
   Percent,
   Plus,
+  ScanLine,
+  Search,
   ShoppingCart,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import { currency, formatMoney } from "@/utils/converts";
 import Thumb from "@/components/products/Thumb";
 import { lineBase, lineSubtotal } from "./salesUtils";
 
-export function CartEmptyState() {
+// Ancho fijo (no columnas de grid) a propósito: con flex-wrap + justify-center,
+// una tarjeta suelta en la última fila queda centrada en vez de pegada a la
+// izquierda, que es lo que se veía mal cuando el número de tarjetas era impar.
+const METHOD_CARD_CLASS =
+  "flex w-full min-h-[44px] items-start gap-2.5 rounded-lg border border-slate-200 p-3 text-left sm:w-[calc(50%-5px)]";
+const METHOD_CARD_BUTTON_CLASS =
+  `${METHOD_CARD_CLASS} group transition-colors hover:border-teal-300 hover:bg-teal-50/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500`;
+const METHOD_ICON_CLASS =
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 transition-colors group-hover:bg-white";
+
+// Carrito vacío: además de decir que no hay nada, enseña las formas de
+// llenarlo. El escaneo es el camino rápido para quien está de pie en el
+// mostrador -por eso se explica primero, incluso antes de que exista una
+// línea que lo demuestre-, y las tarjetas de cámara/celular sólo aparecen
+// cuando ese aparato de verdad puede usarlas (mismos props que ya decidían
+// esto en la barra de búsqueda, ver ProductSearchBar).
+export function CartEmptyState({
+  cameraAvailable = false,
+  onOpenCamera,
+  phoneAvailable = false,
+  phoneConnected = false,
+  onOpenPhoneModal,
+}) {
   return (
-    <div className="flex flex-col items-center gap-2.5 rounded-xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-        <ShoppingCart className="h-6 w-6 text-slate-400" />
+    <div className="flex flex-col items-center gap-3.5 rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-100 sm:p-12">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-50 ring-1 ring-teal-100">
+        <ShoppingCart className="h-8 w-8 text-teal-600" aria-hidden />
       </div>
-      <p className="text-[16px] font-bold text-slate-900">
+      <p className="text-lg font-bold text-slate-900">
         Aún no agregas productos
       </p>
-      <p className="text-sm text-slate-500">
-        Busca por nombre, SKU o código de barras.
+      <p className="max-w-sm text-sm leading-relaxed text-slate-500">
+        Escribe arriba para buscar, o escanea el código de barras: el
+        producto se agrega solo, con la cantidad y el precio correctos.
       </p>
+
+      <div className="mt-2 flex w-full max-w-lg flex-col items-center gap-2.5">
+        {/* Destacado, solo y centrado arriba: es el camino que de verdad
+            ahorra tiempo en el mostrador, así que va antes que el resto. */}
+        <div className={METHOD_CARD_CLASS}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50">
+            <ScanLine className="h-[18px] w-[18px] text-teal-600" aria-hidden />
+          </span>
+          <span>
+            <span className="block text-[13px] font-semibold text-slate-900">
+              Lector o app de escaneo
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
+              Pasa el código y listo, sin tocar nada más.
+            </span>
+          </span>
+        </div>
+
+        {/* El resto se envuelve centrado: si son dos quedan una junto a la
+            otra, y si sobra una sola en la última fila queda centrada en vez
+            de pegada a la izquierda. */}
+        <div className="flex w-full flex-wrap justify-center gap-2.5">
+          <div className={METHOD_CARD_CLASS}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+              <Search className="h-[18px] w-[18px] text-slate-500" aria-hidden />
+            </span>
+            <span>
+              <span className="block text-[13px] font-semibold text-slate-900">
+                Buscar a mano
+              </span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
+                Por nombre, SKU o código de barras.
+              </span>
+            </span>
+          </div>
+
+          {cameraAvailable && (
+            <button
+              type="button"
+              onClick={onOpenCamera}
+              className={METHOD_CARD_BUTTON_CLASS}
+            >
+              <span className={METHOD_ICON_CLASS}>
+                <Camera className="h-[18px] w-[18px] text-teal-600" aria-hidden />
+              </span>
+              <span>
+                <span className="block text-[13px] font-semibold text-slate-900">
+                  Cámara de este aparato
+                </span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
+                  Toca para abrir el visor y escanear varios seguidos.
+                </span>
+              </span>
+            </button>
+          )}
+
+          {phoneAvailable && (
+            <button
+              type="button"
+              onClick={onOpenPhoneModal}
+              className={METHOD_CARD_BUTTON_CLASS}
+            >
+              <span className={METHOD_ICON_CLASS}>
+                <Smartphone className="h-[18px] w-[18px] text-teal-600" aria-hidden />
+              </span>
+              <span>
+                <span className="block text-[13px] font-semibold text-slate-900">
+                  {phoneConnected ? "Celular vinculado" : "Usar el celular como lector"}
+                </span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">
+                  {phoneConnected
+                    ? "Ya está listo: escanea desde ahí."
+                    : "Empareja tu celular y úsalo de lector remoto."}
+                </span>
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -86,11 +192,24 @@ function DiscountEditor({
   );
 }
 
-function CartLine({ line, qtyRefs, onQtyChange, onQtyStep, onQtyKeyDown, onRemove, discount }) {
+function CartLine({
+  line,
+  qtyRefs,
+  onQtyChange,
+  onQtyStep,
+  onQtyKeyDown,
+  onRemove,
+  discount,
+  justAdded,
+}) {
   const hasDiscount = !!line.discountType && line.discountValue > 0;
 
   return (
-    <div className="border-b border-slate-100 p-3 last:border-0">
+    <div
+      className={`border-b border-slate-100 p-3 transition-colors duration-700 last:border-0 ${
+        justAdded ? "bg-teal-50" : "bg-white"
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="flex min-w-[140px] flex-1 items-center gap-2.5">
           <Thumb photo={line.photo} size="h-11 w-11" />
@@ -205,8 +324,23 @@ export default function CartLines({
   onQtyKeyDown,
   onRemove,
   discount,
+  justAddedKey,
+  cameraAvailable,
+  onOpenCamera,
+  phoneAvailable,
+  phoneConnected,
+  onOpenPhoneModal,
 }) {
-  if (lines.length === 0) return <CartEmptyState />;
+  if (lines.length === 0)
+    return (
+      <CartEmptyState
+        cameraAvailable={cameraAvailable}
+        onOpenCamera={onOpenCamera}
+        phoneAvailable={phoneAvailable}
+        phoneConnected={phoneConnected}
+        onOpenPhoneModal={onOpenPhoneModal}
+      />
+    );
 
   return (
     <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-slate-100">
@@ -220,6 +354,7 @@ export default function CartLines({
           onQtyKeyDown={onQtyKeyDown}
           onRemove={onRemove}
           discount={discount}
+          justAdded={line._key === justAddedKey}
         />
       ))}
     </div>

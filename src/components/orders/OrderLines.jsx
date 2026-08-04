@@ -1,11 +1,28 @@
 "use client";
 
-import { Minus, Plus, Trash2, Truck } from "lucide-react";
+import { Minus, PackageSearch, Plus, Trash2 } from "lucide-react";
 import { currency } from "@/utils/converts";
 
 // Líneas del pedido. A diferencia de Ventas no hay tope de cantidad: acá se
 // está pidiendo mercancía que todavía no existe en el estante, así que limitar
 // por el stock actual no tendría sentido.
+function OrderLinesEmptyState() {
+  return (
+    <div className="flex flex-col items-center gap-3.5 rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-100 sm:p-12">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 ring-1 ring-indigo-100">
+        <PackageSearch className="h-8 w-8 text-indigo-600" aria-hidden />
+      </div>
+      <p className="text-lg font-bold text-slate-900">
+        Aún no agregas productos
+      </p>
+      <p className="max-w-sm text-sm leading-relaxed text-slate-500">
+        Busca por nombre, SKU o código de barras lo que quieres pedirle a
+        este proveedor. Cada línea guarda la cantidad y el costo por unidad.
+      </p>
+    </div>
+  );
+}
+
 export default function OrderLines({
   lines,
   qtyRefs,
@@ -13,29 +30,18 @@ export default function OrderLines({
   onQtyStep,
   onQtyKeyDown,
   onRemove,
+  justAddedKey,
 }) {
-  if (lines.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2.5 rounded-xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-          <Truck className="h-6 w-6 text-slate-400" />
-        </div>
-        <p className="text-[16px] font-bold text-slate-900">
-          Aún no agregas productos
-        </p>
-        <p className="text-sm text-slate-500">
-          Busca el producto que quieres pedirle al proveedor.
-        </p>
-      </div>
-    );
-  }
+  if (lines.length === 0) return <OrderLinesEmptyState />;
 
   return (
     <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-slate-100">
       {lines.map((line) => (
         <div
           key={line._key}
-          className="flex flex-wrap items-center gap-2.5 border-b border-slate-100 p-3 last:border-0"
+          className={`flex flex-wrap items-center gap-2.5 border-b border-slate-100 p-3 transition-colors duration-700 last:border-0 ${
+            line._key === justAddedKey ? "bg-indigo-50" : "bg-white"
+          }`}
         >
           <div className="min-w-[140px] flex-1">
             <div className="text-[15px] font-bold text-slate-900">

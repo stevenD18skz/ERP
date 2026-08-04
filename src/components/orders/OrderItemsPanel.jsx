@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Loader2, RotateCcw, Truck } from "lucide-react";
+import { Ban, Loader2, PackageSearch, RotateCcw } from "lucide-react";
 import { currency } from "@/utils/converts";
 
 // Productos ya guardados de un pedido abierto (a diferencia de OrderLines, que
@@ -67,18 +67,25 @@ function ItemStatusControl({ item, onChange }) {
   );
 }
 
-export default function OrderItemsPanel({ items, busyItemId, onChangeStatus }) {
+export default function OrderItemsPanel({
+  items,
+  busyItemId,
+  onChangeStatus,
+  justAddedId,
+}) {
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2.5 rounded-xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
-          <Truck className="h-6 w-6 text-slate-400" />
+      <div className="flex flex-col items-center gap-3.5 rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-100 sm:p-12">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50 ring-1 ring-indigo-100">
+          <PackageSearch className="h-8 w-8 text-indigo-600" aria-hidden />
         </div>
-        <p className="text-[16px] font-bold text-slate-900">
+        <p className="text-lg font-bold text-slate-900">
           Este pedido todavía no tiene productos
         </p>
-        <p className="text-sm text-slate-500">
-          Busca arriba lo que sabes que hay que pedirle a este proveedor.
+        <p className="max-w-sm text-sm leading-relaxed text-slate-500">
+          Busca arriba lo que sabes que hay que pedirle a este proveedor. Cada
+          producto queda guardado apenas lo agregas, sin esperar a cerrar el
+          pedido.
         </p>
       </div>
     );
@@ -89,12 +96,13 @@ export default function OrderItemsPanel({ items, busyItemId, onChangeStatus }) {
       {items.map((item) => {
         const cancelled = item.status === "cancelado";
         const busy = busyItemId === item.id;
+        const justAdded = item.id === justAddedId;
         return (
           <div
             key={item.id}
-            className={`flex flex-wrap items-center gap-2.5 border-b border-slate-100 p-3 transition-opacity last:border-0 ${
+            className={`flex flex-wrap items-center gap-2.5 border-b border-slate-100 p-3 transition-[opacity,background-color] duration-700 last:border-0 ${
               cancelled ? "opacity-50" : ""
-            }`}
+            } ${justAdded ? "bg-indigo-50" : "bg-white"}`}
           >
             <div className="min-w-[140px] flex-1">
               <div

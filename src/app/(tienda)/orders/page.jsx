@@ -70,6 +70,17 @@ export default function OrdersPageEnhanced() {
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
   const [lines, setLines] = useState([]);
   const [focusTarget, setFocusTarget] = useState(null);
+  // Misma idea que en Ventas (ver CartLines/justAddedKey): la línea o el
+  // producto recién agregado se pinta un instante y se apaga solo, como
+  // confirmación visual de que el producto sí entró.
+  const [justAddedKey, setJustAddedKey] = useState(null);
+  const justAddedTimeoutRef = useRef(null);
+  const flashLine = (key) => {
+    setJustAddedKey(key);
+    if (justAddedTimeoutRef.current) clearTimeout(justAddedTimeoutRef.current);
+    justAddedTimeoutRef.current = setTimeout(() => setJustAddedKey(null), 900);
+  };
+  useEffect(() => () => clearTimeout(justAddedTimeoutRef.current), []);
 
   const [orderErrors, setOrderErrors] = useState({});
   const [confirming, setConfirming] = useState(false);
@@ -224,6 +235,10 @@ export default function OrdersPageEnhanced() {
           unit_cost: Number(product.cost_price ?? 0),
         });
         setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+        const newItem = updated.products
+          .filter((it) => String(it.product_id) === String(product.id))
+          .slice(-1)[0];
+        if (newItem) flashLine(newItem.id);
       } catch (err) {
         console.error(err);
         push("No se pudo agregar el producto al pedido", "error");
@@ -240,10 +255,12 @@ export default function OrdersPageEnhanced() {
         const next = prev.slice();
         next[existingIdx] = { ...existing, quantity: existing.quantity + 1 };
         setFocusTarget({ type: "qty", key: existing._key });
+        flashLine(existing._key);
         return next;
       }
       const key = uid();
       setFocusTarget({ type: "qty", key });
+      flashLine(key);
       return [
         ...prev,
         {
@@ -591,6 +608,7 @@ export default function OrdersPageEnhanced() {
                 items={openOrder.products}
                 busyItemId={itemStatusBusyId}
                 onChangeStatus={changeItemStatus}
+                justAddedId={justAddedKey}
               />
             </>
           ) : (
@@ -635,6 +653,7 @@ export default function OrdersPageEnhanced() {
                 onQtyStep={stepQty}
                 onQtyKeyDown={handleQtyKeyDown}
                 onRemove={removeLine}
+                justAddedKey={justAddedKey}
               />
 
               {lines.length > 0 && (
