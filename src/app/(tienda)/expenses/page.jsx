@@ -10,7 +10,7 @@ import {
 } from "@/services/expenses.service";
 import { useToasts } from "@/hooks/useToasts";
 
-import { Info, Plus, Wallet } from "lucide-react";
+import { Plus, Wallet } from "lucide-react";
 
 import DeleteExpenseDialog from "@/components/expenses/DeleteExpenseDialog";
 import ExpenseFilters from "@/components/expenses/ExpenseFilters";
