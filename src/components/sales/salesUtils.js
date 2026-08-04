@@ -10,7 +10,7 @@ import { currency } from "@/utils/converts";
 
 export { uid } from "@/utils/id";
 
-export const QUICK_CASH = [5000, 10000, 20000, 50000];
+export const QUICK_CASH = [2000, 5000, 10000, 20000, 50000];
 
 export const METHOD_LABELS = {
   efectivo: "Efectivo",

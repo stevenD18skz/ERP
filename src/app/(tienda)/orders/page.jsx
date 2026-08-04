@@ -2,25 +2,36 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getProducts, updateProduct } from "@/services/products.service";
+import { CheckCircle2, Loader2, PackagePlus, XCircle } from "lucide-react";
+import { getProducts } from "@/services/products.service";
+import { currency } from "@/utils/converts";
 import {
   getOrders,
   createOrderWithDetails,
-  updateOrder,
+  receiveOrder,
+  cancelOrder,
+  addOrderItem,
+  updateOrderItemStatus,
 } from "@/services/orders.service";
 import { uid } from "@/utils/id";
 import { openPrintWindow } from "@/utils/print";
 import { useToasts } from "@/hooks/useToasts";
 
 import ToastStack from "@/components/ui/ToastStack";
+import LowStockOrderWidget from "@/components/orders/LowStockOrderWidget";
 import OrderConfirmedModal from "@/components/orders/OrderConfirmedModal";
 import OrderHeaderForm from "@/components/orders/OrderHeaderForm";
+import OrderItemsPanel from "@/components/orders/OrderItemsPanel";
 import OrderLines from "@/components/orders/OrderLines";
 import OrderProductSearch from "@/components/orders/OrderProductSearch";
 import OrderTotalPanel from "@/components/orders/OrderTotalPanel";
 import OrdersSidebar from "@/components/orders/OrdersSidebar";
 import StatusConfirmDialog from "@/components/orders/StatusConfirmDialog";
-import { buildOrderPrintHTML } from "@/components/orders/ordersUtils";
+import {
+  STATUS_STYLE,
+  buildOrderPrintHTML,
+  formatDeliveryDate,
+} from "@/components/orders/ordersUtils";
 
 /*
  OrdersPageEnhanced
@@ -59,6 +70,13 @@ export default function OrdersPageEnhanced() {
 
   const [statusConfirm, setStatusConfirm] = useState(null); // {orderId, action}
   const [statusUpdating, setStatusUpdating] = useState(false);
+
+  // pedido pendiente abierto para seguir agregándole productos u otro día
+  // más; null mientras se arma un pedido nuevo desde cero (el flujo de
+  // siempre, con lines/OrderHeaderForm más abajo).
+  const [openOrderId, setOpenOrderId] = useState(null);
+  const [addingItem, setAddingItem] = useState(false);
+  const [itemStatusBusyId, setItemStatusBusyId] = useState(null);
 
   const { toasts, push, dismiss } = useToasts();
 
@@ -114,6 +132,11 @@ export default function OrdersPageEnhanced() {
       .slice(0, 5);
   }, [searchQuery, allProducts]);
 
+  const openOrder = useMemo(
+    () => orders.find((o) => o.id === openOrderId) ?? null,
+    [orders, openOrderId],
+  );
+
   const knownSuppliers = useMemo(
     () => Array.from(new Set(orders.map((o) => o.supplier).filter(Boolean))),
     [orders],
@@ -161,7 +184,32 @@ export default function OrdersPageEnhanced() {
     push("Pedido anterior copiado", "success");
   };
 
-  const addLineFromProduct = (product) => {
+  // Con un pedido abierto, agregar es inmediato: la línea ya se guarda en la
+  // base (no hay "Confirmar pedido" que la deje pendiente de enviar), así que
+  // se puede ir sumando productos hoy y seguir mañana. Sin pedido abierto es
+  // el carrito de siempre: local hasta que se registra el pedido completo.
+  const addLineFromProduct = async (product) => {
+    if (openOrder) {
+      setSearchQuery("");
+      setSuggestionIndex(-1);
+      setAddingItem(true);
+      try {
+        const updated = await addOrderItem(openOrder.id, {
+          product_id: product.id,
+          product: product.name,
+          quantity: 1,
+          unit_cost: Number(product.cost_price ?? 0),
+        });
+        setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      } catch (err) {
+        console.error(err);
+        push("No se pudo agregar el producto al pedido", "error");
+      } finally {
+        setAddingItem(false);
+      }
+      return;
+    }
+
     setLines((prev) => {
       const existingIdx = prev.findIndex((l) => l.productId === product.id);
       if (existingIdx >= 0) {
@@ -187,6 +235,35 @@ export default function OrdersPageEnhanced() {
     });
     setSearchQuery("");
     setSuggestionIndex(-1);
+  };
+
+  // Producto elegido desde el widget de "menos stock": va al pedido que esté
+  // abierto ahora mismo, o al carrito nuevo si no hay ninguno. Mismo camino
+  // que elegirlo en el buscador, solo que sin tener que volver a escribirlo.
+  const quickAddLowStock = (product) => addLineFromProduct(product);
+
+  const openOrderForEditing = (order) => {
+    setOpenOrderId(order.id);
+    resetDraft();
+  };
+
+  const startNewOrder = () => {
+    setOpenOrderId(null);
+    resetDraft();
+  };
+
+  const changeItemStatus = async (itemId, status) => {
+    if (!openOrder) return;
+    setItemStatusBusyId(itemId);
+    try {
+      const updated = await updateOrderItemStatus(openOrder.id, itemId, status);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    } catch (err) {
+      console.error(err);
+      push("No se pudo cambiar el estado del producto", "error");
+    } finally {
+      setItemStatusBusyId(null);
+    }
   };
 
   const handleSearchKeyDown = (e) => {
@@ -336,34 +413,23 @@ export default function OrdersPageEnhanced() {
   const cancelStatusConfirm = () => setStatusConfirm(null);
 
   // Marcar "recibido" es el único punto donde Pedidos mueve el inventario:
-  // suma al stock actual lo que traía cada línea del pedido.
+  // receiveOrder ya suma el stock del lado del servidor (excluyendo lo
+  // cancelado dentro del pedido), de una sola vez y de forma idempotente —
+  // acá no hay que sumarlo también a mano.
   const doStatusConfirm = async () => {
     if (!statusConfirm) return;
-    const order = orders.find((o) => o.id === statusConfirm.orderId);
-    if (!order) {
-      setStatusConfirm(null);
-      return;
-    }
     setStatusUpdating(true);
     try {
       if (statusConfirm.action === "recibir") {
-        await updateOrder(order.id, { status: "recibido" });
-        await Promise.all(
-          order.products.map((p) => {
-            const current = allProducts.find(
-              (ap) => String(ap.id) === String(p.product_id),
-            );
-            if (!current) return Promise.resolve();
-            return updateProduct(p.product_id, {
-              stock: current.stock + p.quantity,
-            }).catch((err) => console.error(err));
-          }),
-        );
+        await receiveOrder(statusConfirm.orderId);
         push("Pedido marcado como recibido, stock actualizado", "success");
       } else {
-        await updateOrder(order.id, { status: "cancelado" });
+        await cancelOrder(statusConfirm.orderId);
         push("Pedido cancelado", "info");
       }
+      // Un pedido recibido o cancelado ya no se puede editar: si era el que
+      // estaba abierto, se vuelve a la vista de armar un pedido nuevo.
+      if (openOrderId === statusConfirm.orderId) setOpenOrderId(null);
       const [updatedOrders, updatedProducts] = await Promise.all([
         getOrders(),
         getProducts(),
@@ -384,76 +450,173 @@ export default function OrdersPageEnhanced() {
       <div className="mx-auto grid min-h-screen grid-cols-1 gap-6 lg:grid-cols-3">
         {/* MAIN */}
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">
-              Registrar pedido
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Compra a un proveedor
-            </p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                {openOrder ? "Editar pedido" : "Registrar pedido"}
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {openOrder
+                  ? `A ${openOrder.supplier} — sigue agregando lo que haga falta`
+                  : "Compra a un proveedor"}
+              </p>
+            </div>
+            {openOrder && (
+              <button
+                type="button"
+                onClick={startNewOrder}
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                <PackagePlus className="h-4 w-4" aria-hidden />
+                Nuevo pedido
+              </button>
+            )}
           </div>
 
-          <OrderHeaderForm
-            supplier={supplierInput}
-            onSupplierChange={(value) => {
-              setSupplierInput(value);
-              if (orderErrors.supplier)
-                setOrderErrors((er) => ({ ...er, supplier: undefined }));
-            }}
-            supplierSuggestions={supplierSuggestions}
-            onPickSupplier={setSupplierInput}
-            showRepeatLast={showRepeatLast}
-            lastOrderItemCount={lastMatchingOrder?.products.length ?? 0}
-            onRepeatLast={repeatLastOrder}
-            expectedDelivery={expectedDelivery}
-            onExpectedDeliveryChange={(value) => {
-              setExpectedDelivery(value);
-              if (orderErrors.fecha)
-                setOrderErrors((er) => ({ ...er, fecha: undefined }));
-            }}
-            notes={notes}
-            onNotesChange={setNotes}
-            errors={orderErrors}
-          />
+          {openOrder ? (
+            <>
+              <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11.5px] font-bold ${(STATUS_STYLE[openOrder.status] || STATUS_STYLE.pendiente).chip}`}
+                      >
+                        {(STATUS_STYLE[openOrder.status] || STATUS_STYLE.pendiente).label}
+                      </span>
+                      {openOrder.expected_delivery && (
+                        <span className="text-xs text-slate-400">
+                          Entrega esperada:{" "}
+                          {formatDeliveryDate(openOrder.expected_delivery)}
+                        </span>
+                      )}
+                    </div>
+                    {openOrder.notes && (
+                      <p className="mt-1.5 text-sm text-slate-600">
+                        {openOrder.notes}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[22px] font-extrabold tabular-nums text-slate-900">
+                      {currency(openOrder.total_amount)}
+                    </div>
+                    <div className="text-xs text-slate-400">Costo total</div>
+                  </div>
+                </div>
+                <div className="mt-3.5 flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => requestReceive(openOrder.id)}
+                    className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 text-[13.5px] font-bold text-emerald-800 hover:bg-emerald-100"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Marcar recibido
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => requestCancel(openOrder.id)}
+                    className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-red-50 text-[13.5px] font-bold text-red-700 hover:bg-red-100"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancelar pedido
+                  </button>
+                </div>
+              </div>
 
-          <OrderProductSearch
-            inputRef={searchInputRef}
-            query={searchQuery}
-            onQueryChange={handleQueryChange}
-            onKeyDown={handleSearchKeyDown}
-            suggestions={suggestions}
-            suggestionIndex={suggestionIndex}
-            onPick={addLineFromProduct}
-          />
+              <OrderProductSearch
+                inputRef={searchInputRef}
+                query={searchQuery}
+                onQueryChange={handleQueryChange}
+                onKeyDown={handleSearchKeyDown}
+                suggestions={suggestions}
+                suggestionIndex={suggestionIndex}
+                onPick={addLineFromProduct}
+              />
 
-          <OrderLines
-            lines={lines}
-            qtyRefs={qtyRefs}
-            onQtyChange={changeQty}
-            onQtyStep={stepQty}
-            onQtyKeyDown={handleQtyKeyDown}
-            onRemove={removeLine}
-          />
+              {addingItem && (
+                <p className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                  Agregando producto al pedido…
+                </p>
+              )}
 
-          {lines.length > 0 && (
-            <OrderTotalPanel
-              total={total}
-              attachment={attachment}
-              onAttachmentChange={onAttachmentChange}
-              onRemoveAttachment={() => setAttachment(null)}
-              confirming={confirming}
-              onCancel={cancelOrderDraft}
-              onConfirm={confirmOrder}
-            />
+              <OrderItemsPanel
+                items={openOrder.products}
+                busyItemId={itemStatusBusyId}
+                onChangeStatus={changeItemStatus}
+              />
+            </>
+          ) : (
+            <>
+              <OrderHeaderForm
+                supplier={supplierInput}
+                onSupplierChange={(value) => {
+                  setSupplierInput(value);
+                  if (orderErrors.supplier)
+                    setOrderErrors((er) => ({ ...er, supplier: undefined }));
+                }}
+                supplierSuggestions={supplierSuggestions}
+                onPickSupplier={setSupplierInput}
+                showRepeatLast={showRepeatLast}
+                lastOrderItemCount={lastMatchingOrder?.products.length ?? 0}
+                onRepeatLast={repeatLastOrder}
+                expectedDelivery={expectedDelivery}
+                onExpectedDeliveryChange={(value) => {
+                  setExpectedDelivery(value);
+                  if (orderErrors.fecha)
+                    setOrderErrors((er) => ({ ...er, fecha: undefined }));
+                }}
+                notes={notes}
+                onNotesChange={setNotes}
+                errors={orderErrors}
+              />
+
+              <OrderProductSearch
+                inputRef={searchInputRef}
+                query={searchQuery}
+                onQueryChange={handleQueryChange}
+                onKeyDown={handleSearchKeyDown}
+                suggestions={suggestions}
+                suggestionIndex={suggestionIndex}
+                onPick={addLineFromProduct}
+              />
+
+              <OrderLines
+                lines={lines}
+                qtyRefs={qtyRefs}
+                onQtyChange={changeQty}
+                onQtyStep={stepQty}
+                onQtyKeyDown={handleQtyKeyDown}
+                onRemove={removeLine}
+              />
+
+              {lines.length > 0 && (
+                <OrderTotalPanel
+                  total={total}
+                  attachment={attachment}
+                  onAttachmentChange={onAttachmentChange}
+                  onRemoveAttachment={() => setAttachment(null)}
+                  confirming={confirming}
+                  onCancel={cancelOrderDraft}
+                  onConfirm={confirmOrder}
+                />
+              )}
+            </>
           )}
         </div>
 
-        <OrdersSidebar
-          orders={orders}
-          loading={loadingOrders}
-          onReceive={requestReceive}
-          onCancel={requestCancel}
-        />
+        <div className="flex flex-col gap-4">
+          <LowStockOrderWidget products={allProducts} onAdd={quickAddLowStock} />
+          <OrdersSidebar
+            orders={orders}
+            loading={loadingOrders}
+            openOrderId={openOrderId}
+            onOpen={openOrderForEditing}
+            onReceive={requestReceive}
+            onCancel={requestCancel}
+          />
+        </div>
       </div>
 
       {statusConfirm && (

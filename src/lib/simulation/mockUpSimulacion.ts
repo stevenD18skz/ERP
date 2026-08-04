@@ -308,16 +308,28 @@ const PEDIDOS: PedidoDemo[] = [
 function buildOrders(hoy: Date, products: Product[]): Order[] {
   const porSku = new Map(products.map((p) => [p.sku, p]));
 
-  return PEDIDOS.map((pedido) => {
+  return PEDIDOS.map((pedido, pedidoIdx) => {
     let total = 0;
-    const lineas = pedido.lineas.map((linea) => {
+    // La fase de cada línea sigue la del pedido completo: si ya se recibió o
+    // canceló, todas sus líneas quedan igual (el proveedor entrega todo
+    // junto). Si sigue pendiente, la primera línea queda "en_espera" y el
+    // resto "por_pedir", solo para que la demo muestre las dos fases.
+    const lineas = pedido.lineas.map((linea, lineaIdx) => {
       const producto = porSku.get(linea.sku)!;
       total += producto.cost_price * linea.quantity;
+      const status: Order["products"][number]["status"] =
+        pedido.status === "pendiente"
+          ? lineaIdx === 0
+            ? "en_espera"
+            : "por_pedir"
+          : pedido.status;
       return {
+        id: `${pedido.id}-l${pedidoIdx}${lineaIdx}`,
         product_id: producto.id,
         product: producto.name,
         quantity: linea.quantity,
         unit_cost: producto.cost_price,
+        status,
       };
     });
 

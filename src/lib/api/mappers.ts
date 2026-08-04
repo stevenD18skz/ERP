@@ -86,10 +86,12 @@ export function toSale(row: SaleRow): Sale {
 
 export function toOrderLine(row: OrderItemRow): OrderProductLine {
   return {
+    id: row.id,
     product_id: row.product_id ?? "",
     product: row.product_name,
     quantity: n(row.quantity),
     unit_cost: n(row.unit_cost),
+    status: row.status,
   };
 }
 

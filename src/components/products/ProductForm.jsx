@@ -744,10 +744,10 @@ export default function ProductForm({
             </div>
 
 
-            <div className="grid grid-cols-5 gap-4 sm:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
 
 
-              <div className="col-span-4 sm:col-span-3">
+              <div className="sm:col-span-3">
                 <span className="text-sm font-semibold text-slate-700">Foto</span>
                 {autofilled.has("photo") && (
                   <AutoBadge source={lookupSource?.label} />
@@ -861,7 +861,7 @@ export default function ProductForm({
               </div>
 
 
-              <div className="text-sm col-span-2 space-y-1.5">
+              <div className="text-sm sm:col-span-2 space-y-1.5">
                 <label htmlFor="form-sku" className="font-semibold text-slate-700">
                   SKU
                 </label>

@@ -181,16 +181,7 @@ export default function ExpensesPage() {
         </button>
       </div>
 
-      {/* Aviso sobre los datos importados */}
-      <div className="flex gap-3 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-        <p>
-          Los registros de 2025 vienen del Excel, que solo guardaba{" "}
-          <strong>un total de gasto por día</strong> sin decir en qué se fue. Por
-          eso aparecen sin detallar. Las entradas y salidas de caja solo se
-          llevaron de enero a abril.
-        </p>
-      </div>
+
 
       <ExpenseSummaryCards totals={totals} />
 

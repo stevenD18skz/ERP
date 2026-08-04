@@ -54,6 +54,14 @@ do $$ begin
   create type public.order_status as enum ('pendiente','recibido','cancelado');
 exception when duplicate_object then null; end $$;
 
+-- Fase de cada producto DENTRO de un pedido, aparte de order_status (que es
+-- del pedido completo). 'recibido' acá se pone solo, junto para todas las
+-- líneas, cuando se recibe el pedido entero: el proveedor siempre entrega
+-- todo de una vez, nunca por partes (ver receive_order más abajo).
+do $$ begin
+  create type public.order_item_status as enum ('por_pedir','en_espera','recibido','cancelado');
+exception when duplicate_object then null; end $$;
+
 do $$ begin
   create type public.expense_kind as enum ('gasto','entrada','salida');
 exception when duplicate_object then null; end $$;
@@ -280,8 +288,13 @@ create table if not exists public.order_items (
   quantity     numeric(12,3) not null check (quantity > 0),
   unit_cost    numeric(14,2) not null default 0 check (unit_cost >= 0),
   line_total   numeric(14,2) generated always as (round(quantity * unit_cost, 2)) stored,
+  status       public.order_item_status not null default 'por_pedir',
   created_at   timestamptz not null default now()
 );
+
+-- Instalaciones que ya tenían la tabla antes de que existiera esta columna.
+alter table public.order_items
+  add column if not exists status public.order_item_status not null default 'por_pedir';
 
 create index if not exists order_items_order_id_idx on public.order_items (order_id);
 create index if not exists order_items_product_id_idx on public.order_items (product_id);
@@ -585,13 +598,14 @@ begin
   )
   returning * into v_order;
 
-  insert into public.order_items (order_id, product_id, product_name, quantity, unit_cost)
+  insert into public.order_items (order_id, product_id, product_name, quantity, unit_cost, status)
   select
     v_order.id,
     p.id,
     coalesce(nullif(btrim(coalesce(it->>'product', '')), ''), p.name, 'Producto sin registrar'),
     coalesce((it->>'quantity')::numeric, 0),
-    coalesce((it->>'unit_cost')::numeric, p.cost_price, 0)
+    coalesce((it->>'unit_cost')::numeric, p.cost_price, 0),
+    coalesce((it->>'status')::public.order_item_status, 'por_pedir')
   from jsonb_array_elements(p_items) as it
   left join public.products p
     on p.id = nullif(it->>'product_id', '')::uuid
@@ -602,7 +616,7 @@ begin
   from (
     select coalesce(sum(oi.line_total), 0) as total
     from public.order_items oi
-    where oi.order_id = v_order.id
+    where oi.order_id = v_order.id and oi.status <> 'cancelado'
   ) t
   where o.id = v_order.id
   returning o.* into v_order;
@@ -615,6 +629,9 @@ $$;
 -- p_update_cost: si se pasa en true, además pisa el cost_price del catálogo
 -- con el costo del pedido. Va apagado por defecto porque cambia datos del
 -- negocio.
+-- El stock y el costo solo se toman de líneas no canceladas, y al recibir
+-- cada línea no cancelada pasa a 'recibido': el proveedor siempre entrega
+-- todo el pedido de una vez, nunca por partes.
 create or replace function public.receive_order(
   p_order_id     uuid,
   p_tienda_id    uuid,
@@ -645,7 +662,7 @@ begin
     from (
       select oi.product_id, sum(oi.quantity) as qty
       from public.order_items oi
-      where oi.order_id = p_order_id and oi.product_id is not null
+      where oi.order_id = p_order_id and oi.product_id is not null and oi.status <> 'cancelado'
       group by oi.product_id
     ) agg
     where p.id = agg.product_id and p.tienda_id = p_tienda_id;
@@ -657,11 +674,15 @@ begin
     from (
       select oi.product_id, max(oi.unit_cost) as cost
       from public.order_items oi
-      where oi.order_id = p_order_id and oi.product_id is not null and oi.unit_cost > 0
+      where oi.order_id = p_order_id and oi.product_id is not null and oi.unit_cost > 0 and oi.status <> 'cancelado'
       group by oi.product_id
     ) agg
     where p.id = agg.product_id and p.tienda_id = p_tienda_id;
   end if;
+
+  update public.order_items
+  set status = 'recibido'
+  where order_id = p_order_id and status <> 'cancelado';
 
   update public.orders
   set status = 'recibido', received_at = now()
@@ -672,7 +693,9 @@ begin
 end;
 $$;
 
--- Cancela un pedido. Si ya estaba recibido, descuenta lo que había sumado.
+-- Cancela un pedido. Si ya estaba recibido, descuenta lo que había sumado
+-- (solo lo no cancelado). Cancelar el pedido completo cancela también todas
+-- sus líneas: nada de eso llegó.
 create or replace function public.cancel_order(
   p_order_id     uuid,
   p_tienda_id    uuid,
@@ -698,16 +721,131 @@ begin
     from (
       select oi.product_id, sum(oi.quantity) as qty
       from public.order_items oi
-      where oi.order_id = p_order_id and oi.product_id is not null
+      where oi.order_id = p_order_id and oi.product_id is not null and oi.status <> 'cancelado'
       group by oi.product_id
     ) agg
     where p.id = agg.product_id and p.tienda_id = p_tienda_id;
   end if;
 
+  update public.order_items
+  set status = 'cancelado'
+  where order_id = p_order_id;
+
   update public.orders
   set status = 'cancelado', received_at = null
   where id = p_order_id
   returning * into v_order;
+
+  return v_order;
+end;
+$$;
+
+-- Agrega una línea a un pedido que sigue pendiente: permite ir sumando
+-- productos a lo largo de varios días mientras se arma "lo que necesito
+-- pedir", en vez de tener que saberlo todo el mismo día de crear el pedido.
+create or replace function public.add_order_item(
+  p_order_id     uuid,
+  p_tienda_id    uuid,
+  p_product_id   uuid,
+  p_product_name text default null,
+  p_quantity     numeric default null,
+  p_unit_cost    numeric default null
+)
+returns public.orders
+language plpgsql
+as $$
+declare
+  v_order   public.orders;
+  v_product public.products;
+begin
+  select * into v_order from public.orders where id = p_order_id and tienda_id = p_tienda_id;
+  if not found then
+    raise exception 'Pedido no encontrado' using errcode = 'P0002';
+  end if;
+  if v_order.status <> 'pendiente' then
+    raise exception 'Solo se pueden agregar productos a un pedido pendiente'
+      using errcode = '22023';
+  end if;
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'La cantidad debe ser mayor que cero' using errcode = '22023';
+  end if;
+
+  if p_product_id is not null then
+    select * into v_product from public.products where id = p_product_id and tienda_id = p_tienda_id;
+  end if;
+
+  insert into public.order_items (order_id, product_id, product_name, quantity, unit_cost, status)
+  values (
+    p_order_id,
+    p_product_id,
+    coalesce(nullif(btrim(coalesce(p_product_name, '')), ''), v_product.name, 'Producto sin registrar'),
+    p_quantity,
+    coalesce(p_unit_cost, v_product.cost_price, 0),
+    'por_pedir'
+  );
+
+  update public.orders o
+  set total_amount = t.total
+  from (
+    select coalesce(sum(oi.line_total), 0) as total
+    from public.order_items oi
+    where oi.order_id = p_order_id and oi.status <> 'cancelado'
+  ) t
+  where o.id = p_order_id
+  returning o.* into v_order;
+
+  return v_order;
+end;
+$$;
+
+-- Mueve un producto de un pedido pendiente entre por_pedir/en_espera, o lo
+-- cancela individualmente sin tocar el resto del pedido.
+-- 'recibido' no es un valor permitido acá: se pone solo, junto para todas las
+-- líneas, al recibir el pedido completo (receive_order de arriba), porque el
+-- proveedor siempre entrega todo de una.
+create or replace function public.update_order_item_status(
+  p_order_item_id uuid,
+  p_tienda_id     uuid,
+  p_status        public.order_item_status
+)
+returns public.orders
+language plpgsql
+as $$
+declare
+  v_order    public.orders;
+  v_order_id uuid;
+begin
+  if p_status = 'recibido' then
+    raise exception 'El estado "recibido" se pone al recibir todo el pedido, no producto por producto'
+      using errcode = '22023';
+  end if;
+
+  select oi.order_id into v_order_id
+  from public.order_items oi
+  join public.orders o on o.id = oi.order_id
+  where oi.id = p_order_item_id and o.tienda_id = p_tienda_id;
+
+  if v_order_id is null then
+    raise exception 'Producto del pedido no encontrado' using errcode = 'P0002';
+  end if;
+
+  select * into v_order from public.orders where id = v_order_id;
+  if v_order.status <> 'pendiente' then
+    raise exception 'El pedido ya está cerrado: no se puede cambiar el estado de sus productos'
+      using errcode = '22023';
+  end if;
+
+  update public.order_items set status = p_status where id = p_order_item_id;
+
+  update public.orders o
+  set total_amount = t.total
+  from (
+    select coalesce(sum(oi.line_total), 0) as total
+    from public.order_items oi
+    where oi.order_id = v_order_id and oi.status <> 'cancelado'
+  ) t
+  where o.id = v_order_id
+  returning o.* into v_order;
 
   return v_order;
 end;

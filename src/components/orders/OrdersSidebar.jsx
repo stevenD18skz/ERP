@@ -1,15 +1,27 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ListPlus, XCircle } from "lucide-react";
 import { currency } from "@/utils/converts";
-import { STATUS_STYLE, formatDeliveryDate, isOverdue } from "./ordersUtils";
+import {
+  STATUS_STYLE,
+  formatDeliveryDate,
+  isOverdue,
+  itemStatusBreakdown,
+} from "./ordersUtils";
 
 // Columna derecha: cuánto se ha comprado en total y el historial reciente.
 // Los pedidos cancelados no suman al histórico —no se compró nada— pero sí
 // siguen apareciendo en la lista, para no perder de vista que existieron.
+//
+// Un pedido "pendiente" completo es clicable: lo abre en el panel principal
+// para seguir agregándole productos o cambiarles la fase, sin un botón aparte
+// -es la acción más común sobre un pedido pendiente, así que es la que menos
+// clics debería pedir.
 export default function OrdersSidebar({
   orders,
   loading,
+  openOrderId,
+  onOpen,
   onReceive,
   onCancel,
 }) {
@@ -60,8 +72,33 @@ export default function OrdersSidebar({
             orders.slice(0, 8).map((order) => {
               const st = STATUS_STYLE[order.status] || STATUS_STYLE.pendiente;
               const overdue = isOverdue(order);
+              const pending = order.status === "pendiente";
+              const open = order.id === openOrderId;
+              const breakdown = pending
+                ? itemStatusBreakdown(order.products)
+                : "";
               return (
-                <div key={order.id} className="rounded-lg bg-slate-50 p-3">
+                <div
+                  key={order.id}
+                  role={pending ? "button" : undefined}
+                  tabIndex={pending ? 0 : undefined}
+                  onClick={pending ? () => onOpen(order) : undefined}
+                  onKeyDown={
+                    pending
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onOpen(order);
+                          }
+                        }
+                      : undefined
+                  }
+                  className={`rounded-lg p-3 transition-colors ${
+                    open
+                      ? "bg-indigo-50 ring-1 ring-inset ring-indigo-300"
+                      : "bg-slate-50"
+                  } ${pending ? "cursor-pointer hover:bg-indigo-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" : ""}`}
+                >
                   <div className="flex items-baseline justify-between gap-2">
                     <div className="truncate text-[14.5px] font-bold text-slate-900">
                       {order.supplier}
@@ -82,6 +119,12 @@ export default function OrdersSidebar({
                     >
                       {st.label}
                     </span>
+                    {open && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[11.5px] font-bold text-indigo-700">
+                        <ListPlus className="h-2.5 w-2.5" />
+                        Abierto
+                      </span>
+                    )}
                     {overdue && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11.5px] font-bold text-amber-800">
                         <AlertTriangle className="h-2.5 w-2.5" />
@@ -89,11 +132,19 @@ export default function OrdersSidebar({
                       </span>
                     )}
                   </div>
-                  {order.status === "pendiente" && (
+                  {breakdown && (
+                    <div className="mt-1.5 text-xs text-slate-400">
+                      {breakdown}
+                    </div>
+                  )}
+                  {pending && (
                     <div className="mt-2.5 flex gap-2">
                       <button
                         type="button"
-                        onClick={() => onReceive(order.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReceive(order.id);
+                        }}
                         className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-50 text-[12.5px] font-bold text-emerald-800 hover:bg-emerald-100"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
@@ -101,7 +152,10 @@ export default function OrdersSidebar({
                       </button>
                       <button
                         type="button"
-                        onClick={() => onCancel(order.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCancel(order.id);
+                        }}
                         className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md bg-red-50 text-[12.5px] font-bold text-red-700 hover:bg-red-100"
                       >
                         <XCircle className="h-3.5 w-3.5" />

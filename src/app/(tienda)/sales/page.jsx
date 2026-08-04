@@ -227,6 +227,7 @@ export default function SalePageEnhanced() {
           productId: product.id,
           name: product.name,
           sku: product.sku,
+          photo: product.photo ?? null,
           unitPrice: Number(product.price ?? 0),
           cost: Number(product.cost_price ?? 0),
           quantity: 1,

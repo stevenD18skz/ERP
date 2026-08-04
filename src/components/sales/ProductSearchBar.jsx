@@ -2,6 +2,7 @@
 
 import { Camera, ScanLine, Search } from "lucide-react";
 import { currency } from "@/utils/converts";
+import Thumb from "@/components/products/Thumb";
 
 /*
   Buscador único que alimenta el carrito. El estado (texto, índice resaltado,
@@ -91,17 +92,20 @@ export default function ProductSearchBar({
                         : "bg-white hover:bg-slate-50"
                   }`}
                 >
-                  <div className="min-w-0">
-                    <div className="truncate text-[14.5px] font-bold text-slate-900">
-                      {p.name}
-                    </div>
-                    <div className="truncate text-xs text-slate-400">
-                      SKU {p.sku} ·{" "}
-                      {outOfStock ? (
-                        <span className="font-bold text-red-500">Sin stock</span>
-                      ) : (
-                        `${p.stock} disp.`
-                      )}
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Thumb photo={p.photo} size="h-10 w-10" />
+                    <div className="min-w-0">
+                      <div className="truncate text-[14.5px] font-bold text-slate-900">
+                        {p.name}
+                      </div>
+                      <div className="truncate text-xs text-slate-400">
+                        SKU {p.sku} ·{" "}
+                        {outOfStock ? (
+                          <span className="font-bold text-red-500">Sin stock</span>
+                        ) : (
+                          `${p.stock} disp.`
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="shrink-0 whitespace-nowrap text-[14.5px] font-bold tabular-nums text-teal-700">

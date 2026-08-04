@@ -8,6 +8,7 @@ import {
 } from "@/services/dailyCloses.service";
 import { currency } from "@/utils/converts";
 import { localDateKey } from "@/utils/dates";
+import MoneyInput from "@/components/ui/MoneyInput";
 
 import {
   CalendarDays,
@@ -31,6 +32,9 @@ import {
 
 const PAGE_SIZE = 15;
 const GAIN_RATE = 0.19;
+
+const MONEY_FIELD_CLASS =
+  "h-10 w-full rounded-lg border border-slate-200 px-3 text-sm tabular-nums outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100";
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -192,6 +196,7 @@ export default function DailyCloseMode({ onNotify }) {
               <MoneyInput
                 value={form.sales_total}
                 onChange={(v) => setForm((f) => ({ ...f, sales_total: v }))}
+                className={MONEY_FIELD_CLASS}
                 autoFocus
               />
             </Field>
@@ -210,6 +215,7 @@ export default function DailyCloseMode({ onNotify }) {
                   setGainTouched(true);
                   setForm((f) => ({ ...f, gain: v }));
                 }}
+                className={MONEY_FIELD_CLASS}
               />
             </Field>
 
@@ -218,12 +224,14 @@ export default function DailyCloseMode({ onNotify }) {
                 <MoneyInput
                   value={form.expenses_total}
                   onChange={(v) => setForm((f) => ({ ...f, expenses_total: v }))}
+                  className={MONEY_FIELD_CLASS}
                 />
               </Field>
               <Field label="Compra">
                 <MoneyInput
                   value={form.purchases_total}
                   onChange={(v) => setForm((f) => ({ ...f, purchases_total: v }))}
+                  className={MONEY_FIELD_CLASS}
                 />
               </Field>
             </div>
@@ -233,12 +241,14 @@ export default function DailyCloseMode({ onNotify }) {
                 <MoneyInput
                   value={form.cash_in}
                   onChange={(v) => setForm((f) => ({ ...f, cash_in: v }))}
+                  className={MONEY_FIELD_CLASS}
                 />
               </Field>
               <Field label="Salida de caja">
                 <MoneyInput
                   value={form.cash_out}
                   onChange={(v) => setForm((f) => ({ ...f, cash_out: v }))}
+                  className={MONEY_FIELD_CLASS}
                 />
               </Field>
             </div>
@@ -406,22 +416,6 @@ function Field({ label, hint, children }) {
       {children}
       {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
     </label>
-  );
-}
-
-function MoneyInput({ value, onChange, autoFocus }) {
-  return (
-    <input
-      type="number"
-      min="0"
-      step="1"
-      inputMode="numeric"
-      autoFocus={autoFocus}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="0"
-      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm tabular-nums outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-    />
   );
 }
 

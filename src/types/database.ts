@@ -10,6 +10,7 @@
 import type {
   PaymentMethod,
   OrderStatus,
+  OrderItemStatus,
   ExpenseKind,
   DailyCloseSource,
 } from "@/types";
@@ -82,6 +83,7 @@ export interface OrderItemRow {
   quantity: number | string;
   unit_cost: number | string;
   line_total: number | string;
+  status: OrderItemStatus;
   created_at: string;
 }
 

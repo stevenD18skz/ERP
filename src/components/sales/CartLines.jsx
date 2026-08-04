@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { currency, formatMoney } from "@/utils/converts";
+import Thumb from "@/components/products/Thumb";
 import { lineBase, lineSubtotal } from "./salesUtils";
 
 export function CartEmptyState() {
@@ -91,11 +92,14 @@ function CartLine({ line, qtyRefs, onQtyChange, onQtyStep, onQtyKeyDown, onRemov
   return (
     <div className="border-b border-slate-100 p-3 last:border-0">
       <div className="flex flex-wrap items-center gap-2.5">
-        <div className="min-w-[140px] flex-1">
-          <div className="text-[18px] font-bold text-slate-900">
-            {line.name}
+        <div className="flex min-w-[140px] flex-1 items-center gap-2.5">
+          <Thumb photo={line.photo} size="h-11 w-11" />
+          <div className="min-w-0">
+            <div className="truncate text-[18px] font-bold text-slate-900">
+              {line.name}
+            </div>
+            <div className="mt-0.5 text-xs text-slate-400">SKU {line.sku}</div>
           </div>
-          <div className="mt-0.5 text-xs text-slate-400">SKU {line.sku}</div>
         </div>
 
         {/* Valor unitario: el subtotal de la derecha ya viene multiplicado, así
