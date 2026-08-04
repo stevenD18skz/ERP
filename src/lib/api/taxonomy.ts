@@ -1,8 +1,9 @@
-// Categorías y marcas: resolver el nombre que llega del formulario al id que
-// guarda el producto, creándolo si todavía no existe.
+// Categorías, marcas y proveedores: resolver el nombre que llega del
+// formulario al id que guarda el producto o el pedido, creándolo si todavía
+// no existe.
 //
-// Las dos tablas tienen exactamente la misma forma (id, tienda_id, name), así
-// que las dos se atienden con el mismo código y solo cambia el nombre de la
+// Las tres tablas tienen exactamente la misma forma (id, tienda_id, name), así
+// que las tres se atienden con el mismo código y solo cambia el nombre de la
 // tabla y cómo se llama la cosa cuando hay que explicar un error.
 //
 // El formulario manda las dos cosas: el id cuando se eligió algo de la lista, y
@@ -16,22 +17,26 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fromPostgrest, badRequest, notFound } from "./errors";
 import type { ProductRow } from "@/types/database";
 
-export type TaxonomyKind = "categories" | "brands";
+export type TaxonomyKind = "categories" | "brands" | "suppliers";
 
 const LABELS: Record<TaxonomyKind, string> = {
   categories: "la categoría",
   brands: "la marca",
+  suppliers: "el proveedor",
 };
 
-// La vista con el conteo de productos (ver 01_schema.sql) y la columna que en
-// ella identifica la fila: mismo par que usan las rutas GET de listado.
+// La vista con el conteo (de productos, o de pedidos para proveedores; ver
+// 01_schema.sql) y la columna que en ella identifica la fila: mismo par que
+// usan las rutas GET de listado.
 const COUNT_VIEWS: Record<TaxonomyKind, string> = {
   categories: "v_product_categories",
   brands: "v_product_brands",
+  suppliers: "v_order_suppliers",
 };
 const COUNT_ID_COLUMNS: Record<TaxonomyKind, string> = {
   categories: "category_id",
   brands: "brand_id",
+  suppliers: "supplier_id",
 };
 
 // La misma comparación que hace el índice único de Postgres

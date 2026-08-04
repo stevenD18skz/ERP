@@ -23,6 +23,7 @@ import {
   todayInBogota,
 } from "@/lib/api/query";
 import { toOrder, ORDER_SELECT } from "@/lib/api/mappers";
+import { resolveTaxonomyId } from "@/lib/api/taxonomy";
 import type { OrderRow } from "@/types/database";
 
 export const runtime = "nodejs";
@@ -105,7 +106,12 @@ export async function POST(request: NextRequest) {
 
     const f = new Fields(header);
     const orderDate = f.datetime("order_date");
+    // El proveedor se acepta por id (cuando se eligió de la lista) o por
+    // nombre. El nombre que no existe todavía se crea junto con el pedido:
+    // para quien registra es un solo "Registrar pedido" (mismo mecanismo que
+    // categoría/marca de productos, ver resolveTaxonomyId).
     const supplier = f.string("supplier", { required: true, max: 160 });
+    const supplierId = f.uuid("supplier_id", { nullable: true });
     const expectedDelivery = f.date("expected_delivery", { nullable: true });
     const notes = f.string("notes", { allowEmpty: true, max: 2000 });
     const status = f.oneOf("status", STATUSES);
@@ -137,10 +143,16 @@ export async function POST(request: NextRequest) {
     f.check();
 
     const db = getSupabaseAdmin();
+    const resolvedSupplierId = await resolveTaxonomyId(db, "suppliers", tiendaId, {
+      id: supplierId,
+      name: supplier,
+    });
+
     const { data: rpcData, error: rpcError } = await db.rpc("create_order", {
       p_order: {
         order_date: orderDate ?? null,
         supplier,
+        supplier_id: resolvedSupplierId ?? null,
         expected_delivery: expectedDelivery ?? null,
         notes: notes ?? "",
         status: status ?? "pendiente",

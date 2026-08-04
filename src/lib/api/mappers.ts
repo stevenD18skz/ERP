@@ -15,6 +15,7 @@ import type {
   SaleProductLine,
   Order,
   OrderProductLine,
+  Supplier,
   Expense,
   DailyClose,
 } from "@/types";
@@ -28,6 +29,7 @@ import type {
   DailyCloseRow,
   ProductCategoryRow,
   ProductBrandRow,
+  OrderSupplierRow,
 } from "@/types/database";
 
 const n = (value: unknown): number => {
@@ -100,6 +102,7 @@ export function toOrder(row: OrderRow): Order {
     id: row.id,
     order_date: row.order_date,
     supplier: row.supplier,
+    supplier_id: row.supplier_id ?? null,
     expected_delivery: row.expected_delivery ?? null,
     notes: row.notes ?? "",
     total_amount: n(row.total_amount),
@@ -151,6 +154,14 @@ export function toBrand(row: ProductBrandRow) {
     product_count: n(row.product_count),
     stock_units: n(row.stock_units),
     stock_value_cost: n(row.stock_value_cost),
+  };
+}
+
+export function toSupplier(row: OrderSupplierRow): Supplier {
+  return {
+    id: row.supplier_id,
+    name: row.supplier,
+    order_count: n(row.order_count),
   };
 }
 

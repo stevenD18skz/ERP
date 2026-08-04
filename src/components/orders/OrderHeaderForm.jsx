@@ -1,17 +1,18 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
+import CreatableSelect from "@/components/ui/CreatableSelect";
 
 // Proveedor, fecha de entrega y notas: el encabezado del pedido.
 //
-// Las sugerencias de proveedor usan onMouseDown con preventDefault en vez de
-// onClick: el clic normal llega después del blur del input, que ya cerró la
-// lista, y el botón nunca alcanzaba a dispararse.
+// El proveedor es un select con creación (igual que categoría/marca en
+// Productos): se elige uno ya guardado o se escribe uno nuevo, que se crea
+// junto con el pedido. `supplier` viaja como { id, name } | null.
 export default function OrderHeaderForm({
   supplier,
   onSupplierChange,
-  supplierSuggestions,
-  onPickSupplier,
+  suppliers,
+  onRenameSupplier,
   showRepeatLast,
   lastOrderItemCount,
   onRepeatLast,
@@ -30,38 +31,24 @@ export default function OrderHeaderForm({
 
   return (
     <div className="flex flex-col gap-4 rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
-      <div className="relative">
-        <label className="mb-1.5 block text-sm font-bold text-slate-900">
+      <div>
+        <label
+          htmlFor="order-supplier"
+          className="mb-1.5 block text-sm font-bold text-slate-900"
+        >
           Proveedor <span className="text-red-500">*</span>
         </label>
-        <input
-          type="text"
+        <CreatableSelect
+          id="order-supplier"
           value={supplier}
-          onChange={(e) => onSupplierChange(e.target.value)}
-          placeholder="Escribe o elige un proveedor"
-          aria-invalid={!!errors.supplier}
-          className={fieldClass(errors.supplier)}
+          onChange={onSupplierChange}
+          onRename={onRenameSupplier}
+          options={suppliers}
+          placeholder="Elige o crea un proveedor"
         />
         {errors.supplier && (
           <div className="mt-1.5 text-xs font-semibold text-red-600">
             {errors.supplier}
-          </div>
-        )}
-        {supplierSuggestions.length > 0 && (
-          <div className="absolute left-0 right-0 top-[74px] z-10 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
-            {supplierSuggestions.map((name) => (
-              <button
-                key={name}
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onPickSupplier(name);
-                }}
-                className="block w-full border-b border-slate-100 px-3.5 py-2.5 text-left text-[14.5px] font-semibold text-slate-900 last:border-0 hover:bg-slate-50"
-              >
-                {name}
-              </button>
-            ))}
           </div>
         )}
         {showRepeatLast && (

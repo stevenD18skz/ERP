@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, ListPlus, XCircle } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ListPlus,
+  History,
+  XCircle,
+} from "lucide-react";
 import { currency } from "@/utils/converts";
 import {
   STATUS_STYLE,
@@ -53,8 +60,17 @@ export default function OrdersSidebar({
       </div>
 
       <div className="rounded-xl bg-white p-[18px] shadow-sm ring-1 ring-slate-100">
-        <div className="mb-3 text-[13px] font-bold uppercase tracking-wide text-slate-500">
-          Historial de pedidos
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="text-[13px] font-bold uppercase tracking-wide text-slate-500">
+            Historial de pedidos
+          </div>
+          <Link
+            href="/orders/history"
+            className="flex shrink-0 items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+          >
+            <History className="h-3 w-3" />
+            Ver todo
+          </Link>
         </div>
         <div className="flex flex-col gap-2.5">
           {loading ? (
@@ -168,6 +184,14 @@ export default function OrdersSidebar({
             })
           )}
         </div>
+        {!loading && orders.length > 8 && (
+          <Link
+            href="/orders/history"
+            className="mt-3 block text-center text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+          >
+            Ver historial completo ({orders.length} pedidos) →
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, PackagePlus, XCircle } from "lucide-react";
 import { getProducts } from "@/services/products.service";
 import { currency } from "@/utils/converts";
@@ -12,6 +13,8 @@ import {
   cancelOrder,
   addOrderItem,
   updateOrderItemStatus,
+  getSuppliers,
+  renameSupplier,
 } from "@/services/orders.service";
 import { uid } from "@/utils/id";
 import { openPrintWindow } from "@/utils/print";
@@ -46,13 +49,18 @@ import {
 */
 
 export default function OrdersPageEnhanced() {
+  const router = useRouter();
+
   // data
   const [allProducts, setAllProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
 
-  // encabezado del pedido
-  const [supplierInput, setSupplierInput] = useState("");
+  // encabezado del pedido. El proveedor viaja como { id, name } | null (ver
+  // CreatableSelect): id cuando se eligió uno ya guardado, o null con solo el
+  // nombre cuando se acaba de escribir uno nuevo -se crea junto con el pedido.
+  const [supplierChoice, setSupplierChoice] = useState(null);
   const [expectedDelivery, setExpectedDelivery] = useState("");
   const [notes, setNotes] = useState("");
   const [attachment, setAttachment] = useState(null);
@@ -90,9 +98,28 @@ export default function OrdersPageEnhanced() {
       try {
         const p = await getProducts();
         const ord = await getOrders();
+        const sup = await getSuppliers();
         if (!mounted) return;
+        const ordersList = Array.isArray(ord) ? ord : [];
         setAllProducts(Array.isArray(p) ? p : []);
-        setOrders(Array.isArray(ord) ? ord : []);
+        setOrders(ordersList);
+        setSuppliers(Array.isArray(sup) ? sup : []);
+
+        // Deep-link desde el historial completo (/orders/history): abrir de
+        // una vez el pedido pendiente que se venía a editar, en vez de
+        // obligar a buscarlo otra vez en la lista de acá.
+        const openId = new URLSearchParams(window.location.search).get("open");
+        if (openId) {
+          const order = ordersList.find((o) => o.id === openId);
+          if (order && order.status === "pendiente") {
+            setOpenOrderId(order.id);
+          } else if (order) {
+            push("Ese pedido ya no está pendiente y no se puede editar", "info");
+          } else {
+            push("No se encontró ese pedido", "error");
+          }
+          router.replace("/orders");
+        }
       } catch (err) {
         console.error("Error fetching orders/products:", err);
         push("No se pudo cargar datos. Revisa conexión.", "error");
@@ -137,27 +164,23 @@ export default function OrdersPageEnhanced() {
     [orders, openOrderId],
   );
 
-  const knownSuppliers = useMemo(
-    () => Array.from(new Set(orders.map((o) => o.supplier).filter(Boolean))),
-    [orders],
-  );
-  const supplierSuggestions = useMemo(() => {
-    const q = supplierInput.trim().toLowerCase();
-    if (!q) return [];
-    return knownSuppliers
-      .filter((n) => n.toLowerCase().includes(q) && n.toLowerCase() !== q)
-      .slice(0, 5);
-  }, [supplierInput, knownSuppliers]);
-
+  // El último pedido a este proveedor: por id cuando se eligió uno ya
+  // guardado (la señal más precisa), y por nombre como respaldo -pedidos de
+  // antes de este cambio, o uno recién escrito que todavía no tiene id-.
   const lastMatchingOrder = useMemo(() => {
-    const q = supplierInput.trim().toLowerCase();
+    if (!supplierChoice) return null;
+    const q = supplierChoice.name.trim().toLowerCase();
     if (!q) return null;
     const matches = orders
-      .filter((o) => o.supplier.toLowerCase() === q)
+      .filter((o) =>
+        supplierChoice.id
+          ? o.supplier_id === supplierChoice.id
+          : o.supplier.trim().toLowerCase() === q,
+      )
       .slice()
       .sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
     return matches[0] || null;
-  }, [orders, supplierInput]);
+  }, [orders, supplierChoice]);
   const showRepeatLast = !!lastMatchingOrder && lines.length === 0;
 
   // Se copian las cantidades del pedido anterior pero los costos se leen del
@@ -332,7 +355,7 @@ export default function OrdersPageEnhanced() {
   const resetDraft = () => {
     setLines([]);
     setSearchQuery("");
-    setSupplierInput("");
+    setSupplierChoice(null);
     setExpectedDelivery("");
     setNotes("");
     setAttachment(null);
@@ -344,6 +367,24 @@ export default function OrdersPageEnhanced() {
     push("Pedido cancelado", "info");
   };
 
+  // Renombrar un proveedor desde el lápiz del select (ver CreatableSelect). El
+  // error se relanza para que el select se quede abierto en modo edición con
+  // el motivo debajo del campo, en vez de solo un toast que ya se cerró para
+  // cuando se vuelve a mirar (mismo patrón que categoría/marca en Productos).
+  const handleRenameSupplier = async (option, name) => {
+    try {
+      const updated = await renameSupplier(option, name);
+      const sup = await getSuppliers();
+      setSuppliers(Array.isArray(sup) ? sup : []);
+      push(`Proveedor renombrado a "${updated.name}"`, "success");
+      return updated;
+    } catch (err) {
+      console.error(err);
+      push(err?.message || "Error renombrando el proveedor", "error");
+      throw err;
+    }
+  };
+
   const confirmOrder = async () => {
     if (confirming) return;
     if (!lines.length) {
@@ -351,8 +392,8 @@ export default function OrdersPageEnhanced() {
       return;
     }
     const errors = {};
-    if (!supplierInput.trim())
-      errors.supplier = "Escribe el nombre del proveedor";
+    if (!supplierChoice?.name?.trim())
+      errors.supplier = "Elige o escribe un proveedor";
     if (!expectedDelivery) errors.fecha = "Elige la fecha de entrega esperada";
     setOrderErrors(errors);
     if (Object.keys(errors).length > 0) return;
@@ -360,7 +401,8 @@ export default function OrdersPageEnhanced() {
     const orderPayload = {
       total_amount: Number(total),
       order_date: new Date().toISOString(),
-      supplier: supplierInput.trim(),
+      supplier: supplierChoice.name.trim(),
+      supplier_id: supplierChoice.id ?? null,
       expected_delivery: expectedDelivery,
       notes: notes || "",
       status: "pendiente",
@@ -380,8 +422,12 @@ export default function OrdersPageEnhanced() {
     setConfirming(true);
     try {
       await createOrderWithDetails(orderPayload, productsFormat);
-      const updatedOrders = await getOrders();
+      const [updatedOrders, updatedSuppliers] = await Promise.all([
+        getOrders(),
+        getSuppliers(),
+      ]);
       setOrders(Array.isArray(updatedOrders) ? updatedOrders : []);
+      setSuppliers(Array.isArray(updatedSuppliers) ? updatedSuppliers : []);
 
       setOrderConfirmedData({
         total,
@@ -550,14 +596,14 @@ export default function OrdersPageEnhanced() {
           ) : (
             <>
               <OrderHeaderForm
-                supplier={supplierInput}
+                supplier={supplierChoice}
                 onSupplierChange={(value) => {
-                  setSupplierInput(value);
+                  setSupplierChoice(value);
                   if (orderErrors.supplier)
                     setOrderErrors((er) => ({ ...er, supplier: undefined }));
                 }}
-                supplierSuggestions={supplierSuggestions}
-                onPickSupplier={setSupplierInput}
+                suppliers={suppliers}
+                onRenameSupplier={handleRenameSupplier}
                 showRepeatLast={showRepeatLast}
                 lastOrderItemCount={lastMatchingOrder?.products.length ?? 0}
                 onRepeatLast={repeatLastOrder}
@@ -607,7 +653,6 @@ export default function OrdersPageEnhanced() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <LowStockOrderWidget products={allProducts} onAdd={quickAddLowStock} />
           <OrdersSidebar
             orders={orders}
             loading={loadingOrders}
@@ -616,6 +661,8 @@ export default function OrdersPageEnhanced() {
             onReceive={requestReceive}
             onCancel={requestCancel}
           />
+          <LowStockOrderWidget products={allProducts} onAdd={quickAddLowStock} />
+
         </div>
       </div>
 

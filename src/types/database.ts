@@ -91,6 +91,7 @@ export interface OrderRow {
   id: string;
   order_date: string;
   supplier: string;
+  supplier_id: string | null;
   expected_delivery: string | null;
   notes: string;
   total_amount: number | string;
@@ -141,4 +142,10 @@ export interface ProductBrandRow {
   product_count: number | string;
   stock_units: number | string;
   stock_value_cost: number | string;
+}
+
+export interface OrderSupplierRow {
+  supplier_id: string;
+  supplier: string;
+  order_count: number | string;
 }

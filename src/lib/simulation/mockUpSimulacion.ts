@@ -337,6 +337,9 @@ function buildOrders(hoy: Date, products: Product[]): Order[] {
       id: pedido.id,
       order_date: at(hoy, pedido.hace, 7, 30),
       supplier: pedido.supplier,
+      // La simulación no tiene una tabla propia de proveedores (se deducen
+      // de los pedidos, ver deriveSuppliersFromOrders en orders.service.js).
+      supplier_id: null,
       expected_delivery:
         pedido.entregaEnDias === null
           ? null

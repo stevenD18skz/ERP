@@ -256,3 +256,65 @@ export const updateOrderItemStatus = async (orderId, itemId, status) => {
   });
   return data;
 };
+
+/* --- proveedores ----------------------------------------------------------
+   Tabla propia en Supabase (igual que categorías y marcas de productos), así
+   que el listado completo se pide aparte: incluye los que todavía no tienen
+   ningún pedido, que es lo que hace posible crear un proveedor hoy y usarlo
+   en un pedido más adelante.
+
+   En simulación no hay base, así que se deducen de los pedidos que hay
+   cargados; ahí un proveedor vive solo mientras algún pedido lo nombre. */
+
+const deriveSuppliersFromOrders = () => {
+  const byName = new Map();
+  for (const order of all()) {
+    const name = String(order.supplier ?? "").trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const found = byName.get(key);
+    if (found) {
+      if (order.status !== "cancelado") found.order_count += 1;
+    } else {
+      byName.set(key, {
+        id: null,
+        name,
+        order_count: order.status !== "cancelado" ? 1 : 0,
+      });
+    }
+  }
+  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export const getSuppliers = async () => {
+  if (isSimulationOn()) return deriveSuppliersFromOrders();
+  const { data } = await apiFetch("/api/orders/suppliers");
+  return data || [];
+};
+
+// Renombrar un proveedor desde el lápiz del select del encabezado (ver
+// CreatableSelect). Los pedidos ya creados no cambian de texto: guardan el
+// nombre del proveedor tal como estaba ese día (igual que
+// order_items.product_name), así que el historial no se reescribe solo.
+// En simulación no hay tabla propia -son los mismos que
+// deriveSuppliersFromOrders saca de los pedidos-, así que ahí sí se reescribe
+// cada pedido que lo tenía (option.id sigue en null y no sirve para
+// identificarlo, por eso se busca por el nombre de antes).
+export const renameSupplier = async (option, name) => {
+  const nextName = String(name ?? "").trim();
+  if (isSimulationOn()) {
+    const oldKey = String(option.name ?? "").trim().toLowerCase();
+    for (const order of all()) {
+      if (String(order.supplier ?? "").trim().toLowerCase() === oldKey) {
+        order.supplier = nextName;
+      }
+    }
+    commit("orders");
+    return { id: option.id, name: nextName, order_count: option.order_count };
+  }
+  const { data } = await apiFetch(`/api/orders/suppliers/${option.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name: nextName }),
+  });
+  return data;
+};

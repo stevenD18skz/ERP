@@ -18,6 +18,7 @@ export interface Order {
   id: string;
   order_date: string;
   supplier: string;
+  supplier_id: string | null;
   expected_delivery: string | null;
   notes: string;
   total_amount: number;
@@ -31,10 +32,20 @@ export interface NewOrderInput {
   total_amount: number;
   order_date: string;
   supplier: string;
+  supplier_id: string | null;
   expected_delivery: string | null;
   notes: string;
   status: OrderStatus;
   attachment?: string | null;
+}
+
+// Un proveedor de la tienda (ver suppliers en supabase/sql/01_schema.sql).
+// order_count son los pedidos activos (no cancelados) que ya tiene, igual
+// que product_count en categorías/marcas.
+export interface Supplier {
+  id: string;
+  name: string;
+  order_count: number;
 }
 
 // Cada línea de producto que se envía a createOrderWithDetails

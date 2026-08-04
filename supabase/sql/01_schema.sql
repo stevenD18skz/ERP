@@ -254,12 +254,38 @@ create table if not exists public.sale_items (
 create index if not exists sale_items_sale_id_idx on public.sale_items (sale_id);
 create index if not exists sale_items_product_id_idx on public.sale_items (product_id);
 
+-- Proveedores de la tienda. Misma forma que categories/brands (id, tienda_id,
+-- name) para reutilizar el mismo mecanismo de "elegir de la lista o crear
+-- escribiendo" (ver src/lib/api/taxonomy.ts).
+create table if not exists public.suppliers (
+  id         uuid primary key default gen_random_uuid(),
+  tienda_id  uuid not null references public.tiendas(id) on delete cascade,
+  name       text not null check (length(btrim(name)) > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists suppliers_tienda_name_idx
+  on public.suppliers (tienda_id, lower(btrim(name)));
+
+drop trigger if exists suppliers_set_updated_at on public.suppliers;
+create trigger suppliers_set_updated_at
+  before update on public.suppliers
+  for each row execute function public.set_updated_at();
+
 -- ============================================================== PEDIDOS =====
+-- orders.supplier (texto) es "el nombre del proveedor en el momento de este
+-- pedido concreto" y se conserva tal cual aunque el proveedor se renombre
+-- después -igual que order_items.product_name se conserva aunque el producto
+-- cambie de nombre-. supplier_id es solo el enlace hacia la tabla de
+-- proveedores, para el select del formulario y para poder renombrar sin
+-- reescribir pedidos viejos.
 create table if not exists public.orders (
   id                uuid primary key default gen_random_uuid(),
   tienda_id         uuid not null references public.tiendas(id),
   order_date        timestamptz not null default now(),
   supplier          text not null check (length(btrim(supplier)) > 0),
+  supplier_id       uuid references public.suppliers(id) on delete set null,
   expected_delivery date,
   notes             text not null default '',
   total_amount      numeric(14,2) not null default 0 check (total_amount >= 0),
@@ -270,15 +296,41 @@ create table if not exists public.orders (
   updated_at        timestamptz not null default now()
 );
 
+-- Instalaciones que ya tenían la tabla antes de que existiera esta columna.
+alter table public.orders
+  add column if not exists supplier_id uuid references public.suppliers(id) on delete set null;
+
 create index if not exists orders_tienda_id_idx on public.orders (tienda_id);
 create index if not exists orders_order_date_idx on public.orders (order_date desc);
 create index if not exists orders_status_idx on public.orders (status);
 create index if not exists orders_supplier_idx on public.orders (supplier);
+create index if not exists orders_supplier_id_idx on public.orders (supplier_id);
 
 drop trigger if exists orders_set_updated_at on public.orders;
 create trigger orders_set_updated_at
   before update on public.orders
   for each row execute function public.set_updated_at();
+
+-- Backfill: una fila de suppliers por cada proveedor de texto que ya exista
+-- en pedidos (instalaciones que tenían orders.supplier antes de que existiera
+-- supplier_id), y enlazar esos pedidos con la fila correspondiente. En una
+-- instalación nueva no hay pedidos todavía, así que esto no hace nada.
+insert into public.suppliers (tienda_id, name)
+select distinct o.tienda_id, btrim(o.supplier)
+from public.orders o
+where o.supplier_id is null
+  and not exists (
+    select 1 from public.suppliers s
+    where s.tienda_id = o.tienda_id
+      and lower(btrim(s.name)) = lower(btrim(o.supplier))
+  );
+
+update public.orders o
+set supplier_id = s.id
+from public.suppliers s
+where o.supplier_id is null
+  and s.tienda_id = o.tienda_id
+  and lower(btrim(s.name)) = lower(btrim(o.supplier));
 
 create table if not exists public.order_items (
   id           uuid primary key default gen_random_uuid(),
@@ -439,6 +491,20 @@ from public.brands b
 left join public.products p on p.brand_id = b.id
 group by 1, 2, 3;
 
+-- Los proveedores de la tienda con cuántos pedidos activos tiene cada uno
+-- (los cancelados no cuentan, igual que "Compras históricas" en Pedidos).
+-- Salen de la tabla y no de los pedidos: un proveedor recién creado aparece
+-- aunque todavía no tenga ningún pedido.
+create or replace view public.v_order_suppliers with (security_invoker = true) as
+select
+  s.tienda_id,
+  s.id                                                as supplier_id,
+  s.name                                               as supplier,
+  count(o.id) filter (where o.status <> 'cancelado')  as order_count
+from public.suppliers s
+left join public.orders o on o.supplier_id = s.id
+group by 1, 2, 3;
+
 -- =========================================================== FUNCIONES ======
 -- Todo lo que toca dos tablas a la vez vive aquí: supabase-js no puede abrir
 -- una transacción desde el cliente, así que la venta + sus líneas + el
@@ -586,11 +652,12 @@ begin
       using errcode = '22023';
   end if;
 
-  insert into public.orders (tienda_id, order_date, supplier, expected_delivery, notes, status, attachment)
+  insert into public.orders (tienda_id, order_date, supplier, supplier_id, expected_delivery, notes, status, attachment)
   values (
     p_tienda_id,
     coalesce((p_order->>'order_date')::timestamptz, now()),
     btrim(coalesce(p_order->>'supplier', '')),
+    nullif(p_order->>'supplier_id', '')::uuid,
     nullif(p_order->>'expected_delivery', '')::date,
     coalesce(p_order->>'notes', ''),
     coalesce((p_order->>'status')::public.order_status, 'pendiente'),

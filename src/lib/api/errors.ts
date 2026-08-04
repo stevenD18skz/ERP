@@ -54,6 +54,7 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
     "Ese SKU ya existe en otra tienda. Falta actualizar el esquema: correr supabase/sql/01_schema.sql en Supabase.",
   categories_tienda_name_idx: "Ya tienes una categoría con ese nombre",
   brands_tienda_name_idx: "Ya tienes una marca con ese nombre",
+  suppliers_tienda_name_idx: "Ya tienes un proveedor con ese nombre",
   sales_fiado_needs_client:
     "Una venta a crédito necesita el nombre del cliente",
   sale_items_quantity_check:
